@@ -5,12 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(external/SDL)
-add_subdirectory(external/bgfx)
+add_subdirectory(external/bgfx.cmake)
 
 add_executable(flint-and-timber src/main.cpp)
 
 target_include_directories(flint-and-timber PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/bgfx/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/bgfx.cmake/bgfx/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/SDL/include>
 )
 
