@@ -11,6 +11,7 @@ add_executable(flint-and-timber src/main.cpp)
 
 target_include_directories(flint-and-timber PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/bgfx.cmake/bgfx/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/external/SDL/include>
 )
 
 target_link_libraries(flint-and-timber
