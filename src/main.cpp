@@ -1,5 +1,7 @@
-#include <SDL.h>
-#include <SDL_syswm.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_platform.h>
+#include <SDL3/SDL_properties.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
@@ -25,17 +27,19 @@ void run() {
         return;
     }
 
-    SDL_SysWMinfo wmi;
-    SDL_GetWindowWMInfo(window, &wmi, SDL_SYSWM_CURRENT_VERSION);
-
     bgfx::PlatformData pd;
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-    pd.ndt = wmi.info.x11.display;
-    pd.nwh = (void*)(uintptr_t)wmi.info.x11.window;
+    if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0) {
+        pd.ndt = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+        pd.nwh = (void*)SDL_GetNumberProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+    } else {
+        pd.ndt = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+        pd.nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+    }
 #elif BX_PLATFORM_OSX
-    pd.nwh = wmi.info.cocoa.window;
+    pd.nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
 #elif BX_PLATFORM_WINDOWS
-    pd.nwh = wmi.info.win.window;
+    pd.nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 #endif
 
     bgfx::Init bgfx_init;
@@ -59,7 +63,7 @@ void run() {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                if (event.key.key == SDLK_ESCAPE) {
                     running = false;
                 }
             } else if (event.type == SDL_EVENT_WINDOW_RESIZED) {
