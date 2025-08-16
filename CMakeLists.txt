@@ -9,6 +9,14 @@ add_subdirectory(external/bgfx.cmake)
 
 add_executable(flint-and-timber src/main.cpp)
 
+bgfx_shader_library(shaders
+    SHADERS
+        src/shaders/v_simple.sc
+        src/shaders/f_simple.sc
+    TYPE "all"
+    OUTPUT_DIR "src/shaders/autogen"
+)
+
 target_include_directories(flint-and-timber PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/bgfx.cmake/bgfx/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/SDL/include>
@@ -18,6 +26,7 @@ target_link_libraries(flint-and-timber
     PRIVATE
     SDL3-shared
     bgfx
+    shaders
 )
 
 if(WIN32)
