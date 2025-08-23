@@ -15,7 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_subdirectory(external/SDL build_sdl)
 
 # Add Diligent Engine
-add_subdirectory(external/DiligentEngine)
+add_subdirectory(external/DiligentEngine build_diligent)
 
 
 # Create the executable for our project from main.cpp
