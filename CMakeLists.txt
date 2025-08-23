@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Define the project name, version, and language
-project(SDL3_Basic_Window VERSION 1.0 LANGUAGES CXX)
+project(DiligentApp VERSION 1.0 LANGUAGES CXX)
 
 # Set the C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -14,12 +14,26 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
+# Add Diligent Engine
+add_subdirectory(external/DiligentEngine)
+
+
 # Create the executable for our project from main.cpp
-add_executable(YourAppName src/main.cpp)
+add_executable(YourAppName src/main.cpp src/DiligentApp.cpp)
 
 # Link our application against the SDL3 library.
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
+
+# Link against Diligent Engine libraries
+target_link_libraries(YourAppName PRIVATE
+    Diligent-Core
+    Diligent-Graphics
+    Diligent-Tools
+    Diligent-FX
+    Diligent-NativeApp-SDL
+)
+
 
 # --- Platform-Specific Adjustments ---
 
