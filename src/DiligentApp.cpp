@@ -1,5 +1,7 @@
 #include "DiligentApp.hpp"
 
+#include <SDL3/SDL_properties.h>
+
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
