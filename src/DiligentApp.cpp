@@ -98,7 +98,7 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
     Diligent::IEngineFactoryD3D11* pFactoryD3D11 = Diligent::GetEngineFactoryD3D11();
     Diligent::EngineD3D11CreateInfo EngineCI;
     pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
-    void* hWnd = SDL_GetProperty(props, "SDL.window.win32.hwnd", NULL);
+    void* hWnd = SDL_GetPointerProperty(props, "SDL.window.win32.hwnd", NULL);
     Diligent::Win32NativeWindow Window{hWnd};
     pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, Diligent::FullScreenModeDesc{}, Window, &m_pSwapChain);
 #elif PLATFORM_LINUX
@@ -110,13 +110,13 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
         Diligent::LinuxNativeWindow LinuxWindow;
         if (strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0)
         {
-            LinuxWindow.pDisplay = SDL_GetProperty(props, "SDL.window.x11.display", NULL);
-            LinuxWindow.WindowId = (unsigned long)SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
+            LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
+            LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
         }
         else
         {
-            LinuxWindow.pWLDisplay = SDL_GetProperty(props, "SDL.window.wayland.display", NULL);
-            LinuxWindow.pWLSurface = SDL_GetProperty(props, "SDL.window.wayland.surface", NULL);
+            LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
+            LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
         }
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
     }
@@ -124,7 +124,7 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
     pFactoryMtl->CreateDeviceAndContextsMtl(EngineCI, &m_pDevice, &m_pImmediateContext);
-    void* pNSWindow = SDL_GetProperty(props, "SDL.window.cocoa.window", NULL);
+    void* pNSWindow = SDL_GetPointerProperty(props, "SDL.window.cocoa.window", NULL);
     Diligent::MacOSNativeWindow Window{pNSWindow};
     pFactoryMtl->CreateSwapChainMtl(m_pDevice, m_pImmediateContext, SCDesc, Window, &m_pSwapChain);
 #endif
