@@ -22,7 +22,7 @@
 #    include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/EngineFactoryD3D11.h"
 #    include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/EngineFactoryD3D12.h"
 #elif PLATFORM_LINUX
-#    include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVulkan.h"
+#    include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVk.h"
 #elif PLATFORM_MACOS
 #    include "DiligentCore/Graphics/GraphicsEngineMetal/interface/EngineFactoryMetal.h"
 #endif
