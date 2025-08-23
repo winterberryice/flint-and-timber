@@ -27,9 +27,6 @@
 #    include "DiligentCore/Graphics/GraphicsEngineMetal/interface/EngineFactoryMetal.h"
 #endif
 
-#include "imgui.h"
-#include "ImGuiImplDiligent.hpp"
-#include "ImGuiImplSDL3.h"
 #include <SDL_syswm.h>
 
 namespace Diligent
