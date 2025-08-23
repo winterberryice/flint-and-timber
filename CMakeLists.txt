@@ -23,12 +23,13 @@ add_executable(YourAppName src/main.cpp src/DiligentApp.cpp)
 
 # Add include directories for Diligent Engine
 target_include_directories(YourAppName PRIVATE
+    "external/DiligentEngine"
     "external/DiligentEngine/DiligentCore/include"
-    "external/DiligentEngine/DiligentGraphics/include"
+    "external/DiligentEngine/DiligentCore/Common/interface"
+    "external/DiligentEngine/DiligentGraphics/interface"
     "external/DiligentEngine/DiligentTools/include"
     "external/DiligentEngine/DiligentFX/include"
     "external/DiligentEngine/DiligentNativeApp/include"
-    "external/DiligentEngine/DiligentCore/Common/interface"
 )
 
 # Link our application against the SDL3 library.
