@@ -26,6 +26,7 @@ target_include_directories(YourAppName PRIVATE
     "external/DiligentEngine"
     "external/DiligentEngine/DiligentCore/include"
     "external/DiligentEngine/DiligentCore/Common/interface"
+    "external/DiligentEngine/DiligentCore/Graphics/GraphicsEngine/interface"
     "external/DiligentEngine/DiligentGraphics/interface"
     "external/DiligentEngine/DiligentTools/include"
     "external/DiligentEngine/DiligentFX/include"
