@@ -19,16 +19,12 @@
 
 #if PLATFORM_WIN32
 #    include "Windows.h"
-#    include "Graphics/GraphicsEngineD3D11/interface/EngineFactoryD3D11.h"
-#    include "Graphics/GraphicsEngineD3D12/interface/EngineFactoryD3D12.h"
-#endif
-
-#if PLATFORM_LINUX
-#    include "Graphics/GraphicsEngineOpenGL/interface/EngineFactoryOpenGL.h"
-#endif
-
-#if PLATFORM_MACOS
-#    include "Graphics/GraphicsEngineMetal/interface/EngineFactoryMetal.h"
+#    include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/EngineFactoryD3D11.h"
+#    include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/EngineFactoryD3D12.h"
+#elif PLATFORM_LINUX
+#    include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVulkan.h"
+#elif PLATFORM_MACOS
+#    include "DiligentCore/Graphics/GraphicsEngineMetal/interface/EngineFactoryMetal.h"
 #endif
 
 #include "imgui.h"
@@ -139,10 +135,18 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
     Diligent::Win32NativeWindow Window{Diligent::GetWin32WindowHandle(window)};
     pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, Diligent::FullScreenModeDesc{}, Window, &m_pSwapChain);
 #elif PLATFORM_LINUX
-    Diligent::IEngineFactoryOpenGL* pFactoryOpenGL = Diligent::GetEngineFactoryOpenGL();
-    Diligent::EngineGLCreateInfo EngineCI;
-    EngineCI.Window.pDisplay = Diligent::GetX11Display(window);
-    pFactoryOpenGL->CreateDeviceAndSwapChainGL(EngineCI, &m_pDevice, &m_pImmediateContext, SCDesc, &m_pSwapChain);
+    Diligent::IEngineFactoryVk* pFactoryVk = Diligent::GetEngineFactoryVk();
+    Diligent::EngineVkCreateInfo EngineCI;
+    pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
+    if(m_pDevice)
+    {
+        SDL_SysWMinfo wmInfo;
+        SDL_GetWindowWMInfo(window, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
+        Diligent::LinuxNativeWindow LinuxWindow;
+        LinuxWindow.pDisplay = wmInfo.info.x11.display;
+        LinuxWindow.WindowId = wmInfo.info.x11.window;
+        pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
+    }
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
