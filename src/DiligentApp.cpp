@@ -108,8 +108,16 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
     if(m_pDevice)
     {
         Diligent::LinuxNativeWindow LinuxWindow;
-        LinuxWindow.pDisplay = SDL_GetProperty(props, "SDL.window.x11.display", NULL);
-        LinuxWindow.WindowId = (unsigned long)SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
+        if (strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0)
+        {
+            LinuxWindow.pDisplay = SDL_GetProperty(props, "SDL.window.x11.display", NULL);
+            LinuxWindow.WindowId = (unsigned long)SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
+        }
+        else
+        {
+            LinuxWindow.pWLDisplay = SDL_GetProperty(props, "SDL.window.wayland.display", NULL);
+            LinuxWindow.pWLSurface = SDL_GetProperty(props, "SDL.window.wayland.surface", NULL);
+        }
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
     }
 #elif PLATFORM_MACOS
