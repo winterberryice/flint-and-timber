@@ -21,6 +21,16 @@ add_subdirectory(external/DiligentEngine)
 # Create the executable for our project from main.cpp
 add_executable(YourAppName src/main.cpp src/DiligentApp.cpp)
 
+# Add include directories for Diligent Engine
+target_include_directories(YourAppName PRIVATE
+    "external/DiligentEngine/DiligentCore/include"
+    "external/DiligentEngine/DiligentGraphics/include"
+    "external/DiligentEngine/DiligentTools/include"
+    "external/DiligentEngine/DiligentFX/include"
+    "external/DiligentEngine/DiligentNativeApp/include"
+    "external/DiligentEngine/DiligentCore/Common/interface"
+)
+
 # Link our application against the SDL3 library.
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
