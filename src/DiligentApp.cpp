@@ -27,42 +27,8 @@
 #    include "DiligentCore/Graphics/GraphicsEngineMetal/interface/EngineFactoryMetal.h"
 #endif
 
-#include <SDL_syswm.h>
-
 namespace Diligent
 {
-#if PLATFORM_WIN32
-void* GetWin32WindowHandle(SDL_Window* pWindow)
-{
-    SDL_SysWMinfo wmInfo;
-    SDL_GetWindowWMInfo(pWindow, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
-    return wmInfo.info.win.window;
-}
-#endif
-
-#if PLATFORM_LINUX
-void* GetX11WindowHandle(SDL_Window* pWindow)
-{
-    SDL_SysWMinfo wmInfo;
-    SDL_GetWindowWMInfo(pWindow, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
-    return reinterpret_cast<void*>(wmInfo.info.x11.window);
-}
-Display* GetX11Display(SDL_Window* pWindow)
-{
-    SDL_SysWMinfo wmInfo;
-    SDL_GetWindowWMInfo(pWindow, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
-    return wmInfo.info.x11.display;
-}
-#endif
-
-#if PLATFORM_MACOS
-void* GetMetalLayer(SDL_Window* pWindow)
-{
-    SDL_SysWMinfo wmInfo;
-    SDL_GetWindowWMInfo(pWindow, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
-    return wmInfo.info.cocoa.window;
-}
-#endif
 } // namespace Diligent
 
 
@@ -124,12 +90,14 @@ DiligentApp::~DiligentApp()
 void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
 {
     Diligent::SwapChainDesc SCDesc;
+    SDL_PropertiesID props = SDL_GetWindowProperties(window);
 
 #if PLATFORM_WIN32
     Diligent::IEngineFactoryD3D11* pFactoryD3D11 = Diligent::GetEngineFactoryD3D11();
     Diligent::EngineD3D11CreateInfo EngineCI;
     pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
-    Diligent::Win32NativeWindow Window{Diligent::GetWin32WindowHandle(window)};
+    void* hWnd = SDL_GetProperty(props, "SDL.window.win32.hwnd", NULL);
+    Diligent::Win32NativeWindow Window{hWnd};
     pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, Diligent::FullScreenModeDesc{}, Window, &m_pSwapChain);
 #elif PLATFORM_LINUX
     Diligent::IEngineFactoryVk* pFactoryVk = Diligent::GetEngineFactoryVk();
@@ -137,18 +105,17 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
     pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
     if(m_pDevice)
     {
-        SDL_SysWMinfo wmInfo;
-        SDL_GetWindowWMInfo(window, &wmInfo, SDL_SYSWM_CURRENT_VERSION);
         Diligent::LinuxNativeWindow LinuxWindow;
-        LinuxWindow.pDisplay = wmInfo.info.x11.display;
-        LinuxWindow.WindowId = wmInfo.info.x11.window;
+        LinuxWindow.pDisplay = SDL_GetProperty(props, "SDL.window.x11.display", NULL);
+        LinuxWindow.WindowId = (unsigned long)SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
     }
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
     pFactoryMtl->CreateDeviceAndContextsMtl(EngineCI, &m_pDevice, &m_pImmediateContext);
-    Diligent::MacOSNativeWindow Window{Diligent::GetMetalLayer(window)};
+    void* pNSWindow = SDL_GetProperty(props, "SDL.window.cocoa.window", NULL);
+    Diligent::MacOSNativeWindow Window{pNSWindow};
     pFactoryMtl->CreateSwapChainMtl(m_pDevice, m_pImmediateContext, SCDesc, Window, &m_pSwapChain);
 #endif
 }
