@@ -14,13 +14,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
-# Add Diligent Engine using FetchContent
-include(FetchContent)
-FetchContent_Declare(
-    DiligentEngine
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/DiligentEngine"
-)
-FetchContent_MakeAvailable(DiligentEngine)
+# Disable building the DiligentEngine samples as they are not needed and cause build errors.
+set(DILIGENT_BUILD_SAMPLES OFF CACHE BOOL "Build DiligentSamples module" FORCE)
+
+# Add the DiligentEngine submodule directory to the CMake build.
+add_subdirectory(external/DiligentEngine)
 
 
 # Create the executable for our project from main.cpp
@@ -42,14 +40,18 @@ target_include_directories(YourAppName PRIVATE
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
 
+# Get the list of supported engine backend libraries (e.g. Diligent-GraphicsEngineD3D11-shared)
+get_supported_backends(ENGINE_LIBRARIES)
+
 # Link against Diligent Engine libraries
 target_link_libraries(YourAppName PRIVATE
-    Diligent::BuildSettings
-    Diligent::Core
-    Diligent::Graphics
-    Diligent::Tools
-    Diligent::FX
-    Diligent::NativeApp-SDL
+    Diligent-BuildSettings
+    Diligent-Common
+    Diligent-GraphicsTools
+    Diligent-TextureLoader
+    DiligentFX
+    Diligent-NativeAppBase
+    ${ENGINE_LIBRARIES}
 )
 
 
