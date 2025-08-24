@@ -15,7 +15,9 @@ jobs:
         submodules: 'recursive'
 
     - name: Initialize DiligentEngine Submodule
-      run: git submodule update --init --recursive external/DiligentEngine
+      run: |
+        rm -rf external/DiligentEngine
+        git submodule update --init --recursive external/DiligentEngine
 
     - name: Install dependencies
       run: |
