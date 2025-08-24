@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Add the SDL3 submodule directory to the CMake build.
-# This allows us to use the SDL3 targets defined in its own CMakeLists.txt.
+# Add the SDL2 submodule directory to the CMake build.
+# This allows us to use the SDL2 targets defined in its own CMakeLists.txt.
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
@@ -36,9 +36,9 @@ target_include_directories(flint-and-timber PRIVATE
     "external/DiligentEngine/DiligentNativeApp/include"
 )
 
-# Link our application against the SDL3 library.
-# CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
-target_link_libraries(flint-and-timber PRIVATE SDL3::SDL3)
+# Link our application against the SDL2 library.
+# CMake knows about the "SDL2::SDL2" target because we used add_subdirectory().
+target_link_libraries(flint-and-timber PRIVATE SDL2::SDL2)
 
 # Get the list of supported engine backend libraries (e.g. Diligent-GraphicsEngineD3D11-shared)
 get_supported_backends(ENGINE_LIBRARIES)
