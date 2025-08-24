@@ -14,13 +14,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
-# Add Diligent Engine using FetchContent
-include(FetchContent)
-FetchContent_Declare(
-    DiligentEngine
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/DiligentEngine"
-)
-FetchContent_MakeAvailable(DiligentEngine)
+# Add the DiligentEngine submodule directory to the CMake build.
+add_subdirectory(external/DiligentEngine)
 
 
 # Create the executable for our project from main.cpp
