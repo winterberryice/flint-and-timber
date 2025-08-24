@@ -10,28 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
 
-    - name: Initialize Submodules From Scratch
-      run: |
-        git submodule add --force https://github.com/DiligentGraphics/DiligentEngine.git external/DiligentEngine
-        git submodule update --init --recursive
+    - name: Get submodules hash
+      id: submodules-hash
+      run: echo "hash=$(git submodule status --recursive | git hash-object --stdin)" >> $GITHUB_OUTPUT
+
+    - name: Cache build directory
+      uses: actions/cache@v4
+      id: cache-build
+      with:
+        path: build
+        key: ${{ runner.os }}-release-build-${{ hashFiles('**/CMakeLists.txt', 'CMakePresets.json') }}-${{ steps.submodules-hash.outputs.hash }}
+        restore-keys: |
+          ${{ runner.os }}-release-build-
 
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev libxinerama-dev
 
+    - name: Configure CMake
+      if: steps.cache-build.outputs.cache-hit != 'true'
+      run: cmake --preset release
+
     - name: Build
-      run: |
-        rm -rf build
-        mkdir build
-        cd build
-        cmake ..
-        cmake --build . --config Release
+      run: cmake --build build/release
 
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: flint-and-timber-Linux
-        path: build/flint-and-timber
+        path: build/release/flint-and-timber
