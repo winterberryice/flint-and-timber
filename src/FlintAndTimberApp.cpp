@@ -108,23 +108,28 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
     if(m_pDevice)
     {
-        Diligent::LinuxNativeWindow LinuxWindow;
+        Diligent::LinuxNativeWindow LinuxWindow{};
         const char* videoDriver = SDL_GetCurrentVideoDriver();
-        if (strcmp(videoDriver, "x11") == 0)
+        std::cout << "DEBUG: SDL Video Driver: " << (videoDriver ? videoDriver : "null") << std::endl;
+        if (videoDriver && strcmp(videoDriver, "x11") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
             LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
+            std::cout << "DEBUG: Using X11. Display: " << LinuxWindow.pDisplay << ", Window: " << LinuxWindow.WindowId << std::endl;
         }
-        else if (strcmp(videoDriver, "wayland") == 0)
+        else if (videoDriver && strcmp(videoDriver, "wayland") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
             LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
+            std::cout << "DEBUG: Using Wayland. Display: " << LinuxWindow.pDisplay << ", Surface Ptr: " << (void*)LinuxWindow.WindowId << std::endl;
         }
         else
         {
-            VERIFY_EX(false, "Unsupported video driver");
+            VERIFY_EX(false, "Unsupported or null video driver");
         }
+        std::cout << "DEBUG: Calling CreateSwapChainVk" << std::endl;
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
+        std::cout << "DEBUG: CreateSwapChainVk returned" << std::endl;
         VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
     std::cout << "DEBUG: Leaving InitializeDiligentEngine" << std::endl;
