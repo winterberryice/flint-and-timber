@@ -158,6 +158,7 @@ void FlintAndTimberApp::CreatePipelineState()
         ShaderCI.Desc.Name = "Triangle vertex shader";
         ShaderCI.Source = VSSource;
         m_pDevice->CreateShader(ShaderCI, &pVS);
+        VERIFY_EX(pVS, "Failed to create vertex shader.");
     }
 
     Diligent::RefCntAutoPtr<Diligent::IShader> pPS;
@@ -167,12 +168,14 @@ void FlintAndTimberApp::CreatePipelineState()
         ShaderCI.Desc.Name = "Triangle pixel shader";
         ShaderCI.Source = PSSource;
         m_pDevice->CreateShader(ShaderCI, &pPS);
+        VERIFY_EX(pPS, "Failed to create pixel shader.");
     }
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
     m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO);
+    VERIFY_EX(m_pPSO, "Failed to create pipeline state object.");
 }
 
 void FlintAndTimberApp::Render()
