@@ -1,4 +1,4 @@
-#include "DiligentApp.hpp"
+#include "FlintAndTimberApp.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     }
 
     SDL_Window* window = SDL_CreateWindow(
-        "Diligent Engine Triangle with SDL3",
+        "Flint & Timber",
         800,
         600,
         SDL_WINDOW_RESIZABLE);
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
     try
     {
-        DiligentApp app(window);
+        FlintAndTimberApp app(window);
 
         bool is_running = true;
         SDL_Event event;
