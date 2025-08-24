@@ -14,6 +14,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
+# Disable building the DiligentEngine samples as they are not needed and cause build errors.
+set(DILIGENT_BUILD_SAMPLES OFF CACHE BOOL "Build DiligentSamples module" FORCE)
+
 # Add the DiligentEngine submodule directory to the CMake build.
 add_subdirectory(external/DiligentEngine)
 
