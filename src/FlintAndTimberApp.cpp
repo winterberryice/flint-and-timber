@@ -1,5 +1,7 @@
 #include "FlintAndTimberApp.hpp"
 
+#include <stdexcept>
+
 #include <SDL3/SDL_properties.h>
 
 #include "RenderDevice.h"
@@ -8,16 +10,12 @@
 #include "RefCntAutoPtr.hpp"
 #include "BasicMath.hpp"
 
-#if DILIGENT_EXCEPTIONS_ENABLED
-#    define VERIFY_EX(expr, msg) \
-        do                         \
-        {                          \
-            if (!(expr))           \
-                throw std::runtime_error(msg); \
-        } while (false)
-#else
-#    define VERIFY_EX(expr, msg) Diligent::VERIFY(expr, msg)
-#endif
+#define VERIFY_EX(expr, msg)                                                   \
+    do                                                                         \
+    {                                                                          \
+        if (!(expr))                                                           \
+            throw std::runtime_error(msg); \
+    } while (false)
 
 #if PLATFORM_WIN32
 #    include "Windows.h"
