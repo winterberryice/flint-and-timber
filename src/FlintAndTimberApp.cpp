@@ -86,7 +86,8 @@ FlintAndTimberApp::FlintAndTimberApp(SDL_Window* window)
 
 FlintAndTimberApp::~FlintAndTimberApp()
 {
-    m_pImmediateContext->Flush();
+    if (m_pImmediateContext)
+        m_pImmediateContext->Flush();
 }
 
 void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
@@ -108,17 +109,23 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     if(m_pDevice)
     {
         Diligent::LinuxNativeWindow LinuxWindow;
-        if (strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0)
+        const char* videoDriver = SDL_GetCurrentVideoDriver();
+        if (strcmp(videoDriver, "x11") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
             LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
         }
-        else
+        else if (strcmp(videoDriver, "wayland") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
             LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
         }
+        else
+        {
+            VERIFY_EX(false, "Unsupported video driver");
+        }
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
+        VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
