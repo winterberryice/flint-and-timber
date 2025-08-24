@@ -39,7 +39,7 @@ target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
 
 # Link against Diligent Engine libraries
 target_link_libraries(YourAppName PRIVATE
-    Diligent::BuildSettings
+    Diligent-BuildSettings
     Diligent::Core
     Diligent::Graphics
     Diligent::Tools
