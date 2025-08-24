@@ -118,12 +118,16 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
             LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
         }
+
+        if (LinuxWindow.WindowId != 0)
+        {
+            pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
+            VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
+        }
         else
         {
-            VERIFY_EX(false, "Unsupported or null video driver");
+            VERIFY_EX(false, "Failed to get native window handle");
         }
-        pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
-        VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();

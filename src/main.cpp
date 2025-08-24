@@ -6,7 +6,6 @@
 
 int main(int argc, char* argv[])
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
