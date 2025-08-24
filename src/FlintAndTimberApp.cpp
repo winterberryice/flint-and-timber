@@ -1,6 +1,5 @@
 #include "FlintAndTimberApp.hpp"
 
-#include <iostream>
 #include <stdexcept>
 
 #include <SDL3/SDL_properties.h>
@@ -91,7 +90,6 @@ FlintAndTimberApp::~FlintAndTimberApp()
 
 void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 {
-    std::cout << "DEBUG: Entering InitializeDiligentEngine" << std::endl;
     Diligent::SwapChainDesc SCDesc;
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
 
@@ -110,29 +108,23 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     {
         Diligent::LinuxNativeWindow LinuxWindow{};
         const char* videoDriver = SDL_GetCurrentVideoDriver();
-        std::cout << "DEBUG: SDL Video Driver: " << (videoDriver ? videoDriver : "null") << std::endl;
         if (videoDriver && strcmp(videoDriver, "x11") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
             LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
-            std::cout << "DEBUG: Using X11. Display: " << LinuxWindow.pDisplay << ", Window: " << LinuxWindow.WindowId << std::endl;
         }
         else if (videoDriver && strcmp(videoDriver, "wayland") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
             LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
-            std::cout << "DEBUG: Using Wayland. Display: " << LinuxWindow.pDisplay << ", Surface Ptr: " << (void*)LinuxWindow.WindowId << std::endl;
         }
         else
         {
             VERIFY_EX(false, "Unsupported or null video driver");
         }
-        std::cout << "DEBUG: Calling CreateSwapChainVk" << std::endl;
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
-        std::cout << "DEBUG: CreateSwapChainVk returned" << std::endl;
         VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
-    std::cout << "DEBUG: Leaving InitializeDiligentEngine" << std::endl;
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
@@ -145,7 +137,6 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 
 void FlintAndTimberApp::CreatePipelineState()
 {
-    std::cout << "DEBUG: Entering CreatePipelineState" << std::endl;
     Diligent::GraphicsPipelineStateCreateInfo PSOCreateInfo;
     PSOCreateInfo.PSODesc.Name = "Flint & Timber PSO";
     PSOCreateInfo.PSODesc.PipelineType = Diligent::PIPELINE_TYPE_GRAPHICS;
@@ -156,7 +147,6 @@ void FlintAndTimberApp::CreatePipelineState()
     PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode = Diligent::CULL_MODE_NONE;
     PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
 
-    std::cout << "DEBUG: Creating Shaders" << std::endl;
     Diligent::ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = Diligent::SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.Desc.UseCombinedTextureSamplers = true;
@@ -178,14 +168,11 @@ void FlintAndTimberApp::CreatePipelineState()
         ShaderCI.Source = PSSource;
         m_pDevice->CreateShader(ShaderCI, &pPS);
     }
-    std::cout << "DEBUG: Shaders created" << std::endl;
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
-    std::cout << "DEBUG: Creating Graphics Pipeline State" << std::endl;
     m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO);
-    std::cout << "DEBUG: Leaving CreatePipelineState" << std::endl;
 }
 
 void FlintAndTimberApp::Render()

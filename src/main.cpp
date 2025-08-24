@@ -2,9 +2,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
+#include <SDL3/SDL_hints.h>
 
 int main(int argc, char* argv[])
 {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
