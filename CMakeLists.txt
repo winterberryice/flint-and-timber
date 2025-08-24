@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Define the project name, version, and language
-project(DiligentApp VERSION 1.0 LANGUAGES CXX)
+project(FlintAndTimber VERSION 1.0 LANGUAGES CXX)
 
 # Set the C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -22,10 +22,10 @@ add_subdirectory(external/DiligentEngine)
 
 
 # Create the executable for our project from main.cpp
-add_executable(YourAppName src/main.cpp src/DiligentApp.cpp)
+add_executable(flint-and-timber src/main.cpp src/FlintAndTimberApp.cpp)
 
 # Add include directories for Diligent Engine
-target_include_directories(YourAppName PRIVATE
+target_include_directories(flint-and-timber PRIVATE
     "external/DiligentEngine"
     "external/DiligentEngine/DiligentCore/include"
     "external/DiligentEngine/DiligentCore/Common/interface"
@@ -38,13 +38,13 @@ target_include_directories(YourAppName PRIVATE
 
 # Link our application against the SDL3 library.
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
-target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
+target_link_libraries(flint-and-timber PRIVATE SDL3::SDL3)
 
 # Get the list of supported engine backend libraries (e.g. Diligent-GraphicsEngineD3D11-shared)
 get_supported_backends(ENGINE_LIBRARIES)
 
 # Link against Diligent Engine libraries
-target_link_libraries(YourAppName PRIVATE
+target_link_libraries(flint-and-timber PRIVATE
     Diligent-BuildSettings
     Diligent-Common
     Diligent-GraphicsTools
@@ -59,12 +59,12 @@ target_link_libraries(YourAppName PRIVATE
 
 # For Windows, we want a windowed application, not a console one.
 if(WIN32)
-    set_target_properties(YourAppName PROPERTIES WIN32_EXECUTABLE ON)
+    set_target_properties(flint-and-timber PROPERTIES WIN32_EXECUTABLE ON)
 endif()
 
 # For macOS, we need to create an application bundle to handle events correctly.
 if(APPLE)
-    set_target_properties(YourAppName PROPERTIES MACOSX_BUNDLE ON)
+    set_target_properties(flint-and-timber PROPERTIES MACOSX_BUNDLE ON)
     
     # This helps locate the bundle resources correctly when running from the build dir
     set(CMAKE_MACOSX_RPATH 1)

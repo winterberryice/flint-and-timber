@@ -33,5 +33,5 @@ jobs:
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: YourAppName-Linux
-        path: build/YourAppName
+        name: flint-and-timber-Linux
+        path: build/flint-and-timber

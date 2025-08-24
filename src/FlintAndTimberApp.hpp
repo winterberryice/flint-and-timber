@@ -8,10 +8,10 @@
 #include "SwapChain.h"
 #include "PipelineState.h"
 
-class DiligentApp {
+class FlintAndTimberApp {
 public:
-    DiligentApp(SDL_Window* window);
-    ~DiligentApp();
+    FlintAndTimberApp(SDL_Window* window);
+    ~FlintAndTimberApp();
 
     void Render();
 

@@ -1,4 +1,4 @@
-#include "DiligentApp.hpp"
+#include "FlintAndTimberApp.hpp"
 
 #include <SDL3/SDL_properties.h>
 
@@ -78,18 +78,18 @@ void main(in  PSInput  PSIn,
 }
 )";
 
-DiligentApp::DiligentApp(SDL_Window* window)
+FlintAndTimberApp::FlintAndTimberApp(SDL_Window* window)
 {
     InitializeDiligentEngine(window);
     CreatePipelineState();
 }
 
-DiligentApp::~DiligentApp()
+FlintAndTimberApp::~FlintAndTimberApp()
 {
     m_pImmediateContext->Flush();
 }
 
-void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
+void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 {
     Diligent::SwapChainDesc SCDesc;
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
@@ -130,10 +130,10 @@ void DiligentApp::InitializeDiligentEngine(SDL_Window* window)
 #endif
 }
 
-void DiligentApp::CreatePipelineState()
+void FlintAndTimberApp::CreatePipelineState()
 {
     Diligent::GraphicsPipelineStateCreateInfo PSOCreateInfo;
-    PSOCreateInfo.PSODesc.Name = "Simple triangle PSO";
+    PSOCreateInfo.PSODesc.Name = "Flint & Timber PSO";
     PSOCreateInfo.PSODesc.PipelineType = Diligent::PIPELINE_TYPE_GRAPHICS;
     PSOCreateInfo.GraphicsPipeline.NumRenderTargets = 1;
     PSOCreateInfo.GraphicsPipeline.RTVFormats[0] = m_pSwapChain->GetDesc().ColorBufferFormat;
@@ -170,7 +170,7 @@ void DiligentApp::CreatePipelineState()
     m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO);
 }
 
-void DiligentApp::Render()
+void FlintAndTimberApp::Render()
 {
     auto* pRTV = m_pSwapChain->GetCurrentBackBufferRTV();
     auto* pDSV = m_pSwapChain->GetDepthBufferDSV();
