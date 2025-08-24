@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-#include <SDL3/SDL_properties.h>
+#include <SDL2/SDL_syswm.h>
 
 #include "RenderDevice.h"
 #include "DeviceContext.h"
@@ -91,13 +91,15 @@ FlintAndTimberApp::~FlintAndTimberApp()
 void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 {
     Diligent::SwapChainDesc SCDesc;
-    SDL_PropertiesID props = SDL_GetWindowProperties(window);
+    SDL_SysWMinfo wmi;
+    SDL_VERSION(&wmi.version);
+    SDL_GetWindowWMInfo(window, &wmi);
 
 #if PLATFORM_WIN32
     Diligent::IEngineFactoryD3D11* pFactoryD3D11 = Diligent::GetEngineFactoryD3D11();
     Diligent::EngineD3D11CreateInfo EngineCI;
     pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
-    void* hWnd = SDL_GetPointerProperty(props, "SDL.window.win32.hwnd", NULL);
+    HWND hWnd = wmi.info.win.window;
     Diligent::Win32NativeWindow Window{hWnd};
     pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, Diligent::FullScreenModeDesc{}, Window, &m_pSwapChain);
 #elif PLATFORM_LINUX
@@ -107,21 +109,8 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     if(m_pDevice)
     {
         Diligent::LinuxNativeWindow LinuxWindow{};
-        const char* videoDriver = SDL_GetCurrentVideoDriver();
-        if (videoDriver && strcmp(videoDriver, "x11") == 0)
-        {
-            LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
-            LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
-        }
-        else if (videoDriver && strcmp(videoDriver, "wayland") == 0)
-        {
-            LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
-            LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
-        }
-        else
-        {
-            VERIFY_EX(false, "Unsupported or null video driver");
-        }
+        LinuxWindow.pDisplay = wmi.info.x11.display;
+        LinuxWindow.WindowId = wmi.info.x11.window;
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
         VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
@@ -129,7 +118,7 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
     pFactoryMtl->CreateDeviceAndContextsMtl(EngineCI, &m_pDevice, &m_pImmediateContext);
-    void* pNSWindow = SDL_GetPointerProperty(props, "SDL.window.cocoa.window", NULL);
+    id pNSWindow = wmi.info.cocoa.window;
     Diligent::MacOSNativeWindow Window{pNSWindow};
     pFactoryMtl->CreateSwapChainMtl(m_pDevice, m_pImmediateContext, SCDesc, Window, &m_pSwapChain);
 #endif

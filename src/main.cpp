@@ -1,12 +1,9 @@
 #include "FlintAndTimberApp.hpp"
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
+#include <SDL2/SDL.h>
 #include <iostream>
-#include <SDL3/SDL_hints.h>
 
 int main(int argc, char* argv[])
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
@@ -37,7 +34,7 @@ int main(int argc, char* argv[])
         {
             while (SDL_PollEvent(&event))
             {
-                if (event.type == SDL_EVENT_QUIT)
+                if (event.type == SDL_QUIT)
                 {
                     is_running = false;
                 }
