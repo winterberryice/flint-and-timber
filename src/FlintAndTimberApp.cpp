@@ -109,8 +109,20 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     if(m_pDevice)
     {
         Diligent::LinuxNativeWindow LinuxWindow{};
-        LinuxWindow.pDisplay = wmi.info.x11.display;
-        LinuxWindow.WindowId = wmi.info.x11.window;
+        if (wmi.subsystem == SDL_SYSWM_X11)
+        {
+            LinuxWindow.pDisplay = wmi.info.x11.display;
+            LinuxWindow.WindowId = wmi.info.x11.window;
+        }
+        else if (wmi.subsystem == SDL_SYSWM_WAYLAND)
+        {
+            LinuxWindow.pDisplay = wmi.info.wl.display;
+            LinuxWindow.WindowId = (uint64_t)(uintptr_t)wmi.info.wl.surface;
+        }
+        else
+        {
+            VERIFY_EX(false, "Unsupported Linux windowing system");
+        }
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
         VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
