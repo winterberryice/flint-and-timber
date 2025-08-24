@@ -46,8 +46,8 @@ target_link_libraries(YourAppName PRIVATE
     Diligent-Common
     Diligent-GraphicsTools
     Diligent-TextureLoader
-    Diligent-FX
-    Diligent-NativeApp-SDL
+    DiligentFX
+    Diligent-NativeAppBase
     ${ENGINE_LIBRARIES}
 )
 
