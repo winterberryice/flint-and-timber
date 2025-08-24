@@ -14,6 +14,9 @@ jobs:
       with:
         submodules: 'recursive'
 
+    - name: Initialize DiligentEngine Submodule
+      run: git submodule update --init --recursive external/DiligentEngine
+
     - name: Install dependencies
       run: |
         sudo apt-get update
