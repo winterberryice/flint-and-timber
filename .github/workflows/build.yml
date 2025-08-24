@@ -11,13 +11,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
 
-    - name: Initialize DiligentEngine Submodule
+    - name: Initialize Submodules From Scratch
       run: |
-        rm -rf external/DiligentEngine
-        git submodule update --init --recursive external/DiligentEngine
+        git submodule add --force https://github.com/DiligentGraphics/DiligentEngine.git external/DiligentEngine
+        git submodule update --init --recursive
 
     - name: Install dependencies
       run: |
