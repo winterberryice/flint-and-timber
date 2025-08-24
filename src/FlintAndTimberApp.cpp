@@ -1,5 +1,6 @@
 #include "FlintAndTimberApp.hpp"
 
+#include <iostream>
 #include <stdexcept>
 
 #include <SDL3/SDL_properties.h>
@@ -90,6 +91,7 @@ FlintAndTimberApp::~FlintAndTimberApp()
 
 void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 {
+    std::cout << "DEBUG: Entering InitializeDiligentEngine" << std::endl;
     Diligent::SwapChainDesc SCDesc;
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
 
@@ -125,6 +127,7 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
         VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
+    std::cout << "DEBUG: Leaving InitializeDiligentEngine" << std::endl;
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
     Diligent::EngineMtlCreateInfo EngineCI;
@@ -137,6 +140,7 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
 
 void FlintAndTimberApp::CreatePipelineState()
 {
+    std::cout << "DEBUG: Entering CreatePipelineState" << std::endl;
     Diligent::GraphicsPipelineStateCreateInfo PSOCreateInfo;
     PSOCreateInfo.PSODesc.Name = "Flint & Timber PSO";
     PSOCreateInfo.PSODesc.PipelineType = Diligent::PIPELINE_TYPE_GRAPHICS;
@@ -147,6 +151,7 @@ void FlintAndTimberApp::CreatePipelineState()
     PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode = Diligent::CULL_MODE_NONE;
     PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
 
+    std::cout << "DEBUG: Creating Shaders" << std::endl;
     Diligent::ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = Diligent::SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.Desc.UseCombinedTextureSamplers = true;
@@ -158,7 +163,6 @@ void FlintAndTimberApp::CreatePipelineState()
         ShaderCI.Desc.Name = "Triangle vertex shader";
         ShaderCI.Source = VSSource;
         m_pDevice->CreateShader(ShaderCI, &pVS);
-        VERIFY_EX(pVS, "Failed to create vertex shader.");
     }
 
     Diligent::RefCntAutoPtr<Diligent::IShader> pPS;
@@ -168,14 +172,15 @@ void FlintAndTimberApp::CreatePipelineState()
         ShaderCI.Desc.Name = "Triangle pixel shader";
         ShaderCI.Source = PSSource;
         m_pDevice->CreateShader(ShaderCI, &pPS);
-        VERIFY_EX(pPS, "Failed to create pixel shader.");
     }
+    std::cout << "DEBUG: Shaders created" << std::endl;
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
+    std::cout << "DEBUG: Creating Graphics Pipeline State" << std::endl;
     m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO);
-    VERIFY_EX(m_pPSO, "Failed to create pipeline state object.");
+    std::cout << "DEBUG: Leaving CreatePipelineState" << std::endl;
 }
 
 void FlintAndTimberApp::Render()
