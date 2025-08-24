@@ -37,14 +37,18 @@ target_include_directories(YourAppName PRIVATE
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(YourAppName PRIVATE SDL3::SDL3)
 
+# Get the list of supported engine backend libraries (e.g. Diligent-GraphicsEngineD3D11-shared)
+get_supported_backends(ENGINE_LIBRARIES)
+
 # Link against Diligent Engine libraries
 target_link_libraries(YourAppName PRIVATE
     Diligent-BuildSettings
-    Diligent-Core
-    Diligent-Graphics
-    Diligent-Tools
+    Diligent-Common
+    Diligent-GraphicsTools
+    Diligent-TextureLoader
     Diligent-FX
     Diligent-NativeApp-SDL
+    ${ENGINE_LIBRARIES}
 )
 
 
