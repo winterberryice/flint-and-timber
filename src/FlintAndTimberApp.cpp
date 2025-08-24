@@ -1,5 +1,7 @@
 #include "FlintAndTimberApp.hpp"
 
+#include <stdexcept>
+
 #include <SDL3/SDL_properties.h>
 
 #include "RenderDevice.h"
@@ -8,16 +10,12 @@
 #include "RefCntAutoPtr.hpp"
 #include "BasicMath.hpp"
 
-#if DILIGENT_EXCEPTIONS_ENABLED
-#    define VERIFY_EX(expr, msg) \
-        do                         \
-        {                          \
-            if (!(expr))           \
-                throw std::runtime_error(msg); \
-        } while (false)
-#else
-#    define VERIFY_EX(expr, msg) Diligent::VERIFY(expr, msg)
-#endif
+#define VERIFY_EX(expr, msg)                                                   \
+    do                                                                         \
+    {                                                                          \
+        if (!(expr))                                                           \
+            throw std::runtime_error(msg); \
+    } while (false)
 
 #if PLATFORM_WIN32
 #    include "Windows.h"
@@ -86,7 +84,8 @@ FlintAndTimberApp::FlintAndTimberApp(SDL_Window* window)
 
 FlintAndTimberApp::~FlintAndTimberApp()
 {
-    m_pImmediateContext->Flush();
+    if (m_pImmediateContext)
+        m_pImmediateContext->Flush();
 }
 
 void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
@@ -107,18 +106,24 @@ void FlintAndTimberApp::InitializeDiligentEngine(SDL_Window* window)
     pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
     if(m_pDevice)
     {
-        Diligent::LinuxNativeWindow LinuxWindow;
-        if (strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0)
+        Diligent::LinuxNativeWindow LinuxWindow{};
+        const char* videoDriver = SDL_GetCurrentVideoDriver();
+        if (videoDriver && strcmp(videoDriver, "x11") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.x11.display", NULL);
             LinuxWindow.WindowId = SDL_GetNumberProperty(props, "SDL.window.x11.window", 0);
         }
-        else
+        else if (videoDriver && strcmp(videoDriver, "wayland") == 0)
         {
             LinuxWindow.pDisplay = SDL_GetPointerProperty(props, "SDL.window.wayland.display", NULL);
             LinuxWindow.WindowId = (uint64_t)(uintptr_t)SDL_GetPointerProperty(props, "SDL.window.wayland.surface", NULL);
         }
+        else
+        {
+            VERIFY_EX(false, "Unsupported or null video driver");
+        }
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, LinuxWindow, &m_pSwapChain);
+        VERIFY_EX(m_pSwapChain, "Failed to create swap chain");
     }
 #elif PLATFORM_MACOS
     Diligent::IEngineFactoryMtl* pFactoryMtl = Diligent::GetEngineFactoryMtl();
@@ -174,6 +179,7 @@ void FlintAndTimberApp::Render()
 {
     auto* pRTV = m_pSwapChain->GetCurrentBackBufferRTV();
     auto* pDSV = m_pSwapChain->GetDepthBufferDSV();
+    m_pImmediateContext->SetRenderTargets(1, &pRTV, pDSV, Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     const float ClearColor[] = {0.350f, 0.350f, 0.350f, 1.0f};
     m_pImmediateContext->ClearRenderTarget(pRTV, ClearColor, Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
