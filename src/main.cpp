@@ -1,4 +1,3 @@
-#include "FlintAndTimberApp.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
@@ -26,31 +25,34 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    try
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL, SDL_RENDERER_ACCELERATED);
+    if (!renderer)
     {
-        FlintAndTimberApp app(window);
+        std::cerr << "Error creating renderer: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
 
-        bool is_running = true;
-        SDL_Event event;
+    bool is_running = true;
+    SDL_Event event;
 
-        while (is_running)
+    while (is_running)
+    {
+        while (SDL_PollEvent(&event))
         {
-            while (SDL_PollEvent(&event))
+            if (event.type == SDL_EVENT_QUIT)
             {
-                if (event.type == SDL_EVENT_QUIT)
-                {
-                    is_running = false;
-                }
+                is_running = false;
             }
-
-            app.Render();
         }
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
+
+        SDL_SetRenderDrawColor(renderer, 89, 89, 89, 255);
+        SDL_RenderClear(renderer);
+        SDL_RenderPresent(renderer);
     }
 
+    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
