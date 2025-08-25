@@ -1,3 +1,6 @@
 [submodule "external/SDL"]
 	path = external/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "external/TheForge"]
+	path = external/TheForge
+	url = https://github.com/ConfettiFX/The-Forge.git
