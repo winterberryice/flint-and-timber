@@ -14,45 +14,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # The second argument specifies the build directory for SDL.
 add_subdirectory(external/SDL build_sdl)
 
-# Disable building the DiligentEngine samples as they are not needed and cause build errors.
-set(DILIGENT_BUILD_SAMPLES OFF CACHE BOOL "Build DiligentSamples module" FORCE)
-
-# Add the DiligentEngine submodule directory to the CMake build.
-add_subdirectory(external/DiligentEngine)
 
 
 # Create the executable for our project from main.cpp
-add_executable(flint-and-timber src/main.cpp src/FlintAndTimberApp.cpp)
+add_executable(flint-and-timber src/main.cpp )
 
-# Add include directories for Diligent Engine
-target_include_directories(flint-and-timber PRIVATE
-    "external/DiligentEngine"
-    "external/DiligentEngine/DiligentCore/include"
-    "external/DiligentEngine/DiligentCore/Common/interface"
-    "external/DiligentEngine/DiligentCore/Graphics/GraphicsEngine/interface"
-    "external/DiligentEngine/DiligentGraphics/interface"
-    "external/DiligentEngine/DiligentTools/include"
-    "external/DiligentEngine/DiligentFX/include"
-    "external/DiligentEngine/DiligentNativeApp/include"
-)
 
 # Link our application against the SDL3 library.
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(flint-and-timber PRIVATE SDL3::SDL3)
-
-# Get the list of supported engine backend libraries (e.g. Diligent-GraphicsEngineD3D11-shared)
-get_supported_backends(ENGINE_LIBRARIES)
-
-# Link against Diligent Engine libraries
-target_link_libraries(flint-and-timber PRIVATE
-    Diligent-BuildSettings
-    Diligent-Common
-    Diligent-GraphicsTools
-    Diligent-TextureLoader
-    DiligentFX
-    Diligent-NativeAppBase
-    ${ENGINE_LIBRARIES}
-)
 
 
 # --- Platform-Specific Adjustments ---

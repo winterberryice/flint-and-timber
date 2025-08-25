@@ -1,19 +1,18 @@
-#include "FlintAndTimberApp.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
 #include <SDL3/SDL_hints.h>
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
+    // SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow(
+    SDL_Window *window = SDL_CreateWindow(
         "Flint & Timber",
         800,
         600,
@@ -28,7 +27,6 @@ int main(int argc, char* argv[])
 
     try
     {
-        FlintAndTimberApp app(window);
 
         bool is_running = true;
         SDL_Event event;
@@ -42,11 +40,9 @@ int main(int argc, char* argv[])
                     is_running = false;
                 }
             }
-
-            app.Render();
         }
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "Error: " << e.what() << std::endl;
     }
