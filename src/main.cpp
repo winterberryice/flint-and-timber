@@ -3,16 +3,16 @@
 #include <iostream>
 #include <SDL3/SDL_hints.h>
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
+    // SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cerr << "Error initializing SDL: " << SDL_GetError() << std::endl;
         return 1;
     }
 
-    SDL_Window* window = SDL_CreateWindow(
+    SDL_Window *window = SDL_CreateWindow(
         "Flint & Timber",
         800,
         600,
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer)
     {
         std::cerr << "Error creating renderer: " << SDL_GetError() << std::endl;
@@ -33,6 +33,23 @@ int main(int argc, char* argv[])
         SDL_Quit();
         return 1;
     }
+
+    // In SDL3, we use the properties system.
+    SDL_PropertiesID props = SDL_GetWindowProperties(window);
+
+    // Check for the existence of platform-specific properties.
+    if (SDL_HasProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER))
+    {
+        std::cout << "Running on Wayland" << std::endl;
+    }
+    if (SDL_HasProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER))
+    {
+        std::cout << "Running on X11" << std::endl;
+    }
+    // else
+    // {
+    //     std::cout << "Running on an unknown or unsupported windowing system" << std::endl;
+    // }
 
     bool is_running = true;
     SDL_Event event;
