@@ -2,23 +2,33 @@ cmake_minimum_required(VERSION 3.13)
 project(app)
 set(CMAKE_CXX_STANDARD 20)
 
-set(DAWN_FETCH_DEPENDENCIES ON)
-add_subdirectory("dawn")
+# Add GLFW first
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-# First, let's see what webgpu header generators are available
-get_property(all_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dawn" PROPERTY BUILDSYSTEM_TARGETS)
-foreach(target ${all_targets})
-    if(target MATCHES "webgpu.*gen" OR target MATCHES ".*headers.*gen")
-        message(STATUS "Found generator target: ${target}")
-    endif()
-endforeach()
+# You have a few options for GLFW:
+
+# Option 1: Use system GLFW (if installed)
+find_package(glfw3 QUIET)
+if(glfw3_FOUND)
+    message(STATUS "Using system GLFW")
+else()
+    # Option 2: Fetch GLFW from GitHub
+    include(FetchContent)
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 3.3.8
+    )
+    FetchContent_MakeAvailable(glfw)
+endif()
+
+# Use the WebGPU distribution
+set(WEBGPU_BACKEND "DAWN" CACHE STRING "Backend to use")
+add_subdirectory(webgpu)
 
 add_executable(app "main.cpp")
 
-# Only use GLFW for now until we resolve the generator issue
-target_link_libraries(app PRIVATE glfw)
-
-target_include_directories(app PRIVATE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/dawn/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/dawn/third_party/glfw/include"
-)
+# Link both WebGPU and GLFW
+target_link_libraries(app PRIVATE webgpu glfw)
