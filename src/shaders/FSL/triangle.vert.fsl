@@ -1,0 +1,21 @@
+#include "FSL/vulkan_srt.h"
+
+struct VSInput
+{
+    float3 Position : POSITION;
+    float4 Color    : COLOR;
+};
+
+struct VSOutput
+{
+    float4 Position : SV_Position;
+    float4 Color    : COLOR;
+};
+
+VSOutput main(VSInput In)
+{
+    VSOutput Out;
+    Out.Position = float4(In.Position, 1.0);
+    Out.Color = In.Color;
+    return Out;
+}

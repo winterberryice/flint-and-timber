@@ -17,9 +17,19 @@ add_subdirectory(external/SDL build_sdl)
 # Create the executable for our project from main.cpp
 add_executable(flint-and-timber src/main.cpp)
 
+# Add The Forge include directory.
+# This allows including headers like #include "Common_3/OS/Interfaces/IOperatingSystem.h"
+target_include_directories(flint-and-timber PRIVATE external/TheForge)
+
 # Link our application against the SDL3 library.
 # CMake knows about the "SDL3::SDL3" target because we used add_subdirectory().
 target_link_libraries(flint-and-timber PRIVATE SDL3::SDL3)
+
+# NOTE: You will need to build The Forge libraries separately and link them to this target.
+# The Forge does not use CMake, so this cannot be done automatically here.
+# You will need to add target_link_libraries() with the correct paths to The Forge libs.
+# Example for Linux with Vulkan backend:
+# target_link_libraries(flint-and-timber PRIVATE Renderer-Vulkan OS)
 
 
 # --- Platform-Specific Adjustments ---

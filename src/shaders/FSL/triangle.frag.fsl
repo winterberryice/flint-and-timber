@@ -1,0 +1,12 @@
+#include "FSL/vulkan_srt.h"
+
+struct FSInput
+{
+    float4 Position : SV_Position;
+    float4 Color    : COLOR;
+};
+
+float4 main(FSInput In) : SV_Target0
+{
+    return In.Color;
+}
