@@ -30,14 +30,7 @@ add_subdirectory(webgpu)
 
 add_executable(app "main.cpp")
 
-if(APPLE)
-    # For macOS, we need to link against the QuartzCore framework for CAMetalLayer
-    find_library(QUARTZ_CORE_FRAMEWORK QuartzCore REQUIRED)
-    target_link_libraries(app PRIVATE ${QUARTZ_CORE_FRAMEWORK})
-
-    # Compile main.cpp as Objective-C++ on macOS
-    set_source_files_properties(main.cpp PROPERTIES LANGUAGE OBJCXX)
-endif()
+target_include_directories(app PRIVATE webgpu/dawn/include)
 
 # Link both WebGPU and GLFW
-target_link_libraries(app PRIVATE webgpu glfw)
+target_link_libraries(app PRIVATE webgpu glfw webgpu_glfw)

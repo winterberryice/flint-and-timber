@@ -1,18 +1,9 @@
 #include <GLFW/glfw3.h>
-#if defined(WIN32)
-#define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(__linux__)
-#define GLFW_EXPOSE_NATIVE_X11
-#elif defined(__APPLE__)
-#define GLFW_EXPOSE_NATIVE_COCOA
-#endif
-#include <GLFW/glfw3native.h>
-#if defined(__APPLE__)
-#include <QuartzCore/CAMetalLayer.h>
-#endif
 #include <webgpu/webgpu.h>
+#include <webgpu/webgpu_glfw.h>
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 const uint32_t kWidth = 512;
 const uint32_t kHeight = 512;
@@ -182,37 +173,7 @@ void Start()
     std::cout << "WebGPU instance created successfully!" << std::endl;
 
     // Create a surface
-    {
-#if defined(WIN32)
-        WGPUSurfaceDescriptorFromWindowsHWND hwnd_desc = {};
-        hwnd_desc.chain.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
-        hwnd_desc.hinstance = GetModuleHandle(NULL);
-        hwnd_desc.hwnd = glfwGetWin32Window(window);
-        WGPUSurfaceDescriptor surfaceDesc = {};
-        surfaceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct *>(&hwnd_desc);
-        surface = wgpuInstanceCreateSurface(instance, &surfaceDesc);
-#elif defined(__linux__)
-        WGPUSurfaceDescriptorFromXlibWindow xlib_desc = {};
-        xlib_desc.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
-        xlib_desc.display = glfwGetX11Display();
-        xlib_desc.window = glfwGetX11Window(window);
-        WGPUSurfaceDescriptor surfaceDesc = {};
-        surfaceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct *>(&xlib_desc);
-        surface = wgpuInstanceCreateSurface(instance, &surfaceDesc);
-#elif defined(__APPLE__)
-        NSWindow *nsWindow = glfwGetCocoaWindow(window);
-        [nsWindow.contentView setWantsLayer:YES];
-        CAMetalLayer *metalLayer = [CAMetalLayer layer];
-        [nsWindow.contentView setLayer:metalLayer];
-        WGPUSurfaceDescriptorFromMetalLayer metal_desc = {};
-        metal_desc.chain.sType = WGPUSType_SurfaceDescriptorFromMetalLayer;
-        metal_desc.layer = metalLayer;
-        WGPUSurfaceDescriptor surfaceDesc = {};
-        surfaceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct *>(&metal_desc);
-        surface = wgpuInstanceCreateSurface(instance, &surfaceDesc);
-#endif
-    }
-
+    surface = wgpuGlfwCreateSurfaceForWindow(instance, window);
     if (!surface)
     {
         std::cerr << "Failed to create WebGPU surface!" << std::endl;
@@ -343,7 +304,7 @@ void Start()
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
 
-        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal && surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal)
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success)
         {
             if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Timeout &&
                 surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Outdated)
