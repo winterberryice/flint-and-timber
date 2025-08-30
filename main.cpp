@@ -281,34 +281,83 @@ bool initWebGPU(SDL_Window *window)
 
 void render()
 {
+    static int renderCount = 0;
+    renderCount++;
+
     if (!surface || !device || !queue)
+    {
+        std::cout << "ERROR: Missing WebGPU resources!" << std::endl;
         return;
+    }
 
     // Get next surface texture
     WGPUSurfaceTexture surfaceTexture;
     wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
 
-    if (!surfaceTexture.texture)
+    // Check for any success status (1 = SuccessOptimal, 2 = SuccessSuboptimal)
+    if (!surfaceTexture.texture || (surfaceTexture.status != 1 && surfaceTexture.status != 2))
     {
+        std::cout << "ERROR: Surface texture failed, status: " << surfaceTexture.status << std::endl;
         return;
     }
 
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Got surface texture successfully (status: " << surfaceTexture.status << ")" << std::endl;
+    }
+
+    // Create texture view
+    WGPUTextureViewDescriptor textureViewDesc = {};
+    textureViewDesc.nextInChain = nullptr;
+    textureViewDesc.label = makeStringView("Surface texture view");
+    textureViewDesc.format = WGPUTextureFormat_Undefined; // Use surface format
+    textureViewDesc.dimension = WGPUTextureViewDimension_2D;
+    textureViewDesc.baseMipLevel = 0;
+    textureViewDesc.mipLevelCount = 1;
+    textureViewDesc.baseArrayLayer = 0;
+    textureViewDesc.arrayLayerCount = 1;
+    textureViewDesc.aspect = WGPUTextureAspect_All;
+
+    WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, &textureViewDesc);
+    if (!textureView)
+    {
+        std::cout << "ERROR: Failed to create texture view!" << std::endl;
+        return;
+    }
+
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Created texture view" << std::endl;
+    }
+
     // Create command encoder
-    WGPUCommandEncoderDescriptor commandEncoderDesc = {};
-    commandEncoderDesc.nextInChain = nullptr;
-    commandEncoderDesc.label = makeStringView("Command Encoder");
+    WGPUCommandEncoderDescriptor encoderDesc = {};
+    encoderDesc.nextInChain = nullptr;
+    encoderDesc.label = makeStringView("Command Encoder");
 
-    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &commandEncoderDesc);
+    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &encoderDesc);
+    if (!encoder)
+    {
+        std::cout << "ERROR: Failed to create command encoder!" << std::endl;
+        wgpuTextureViewRelease(textureView);
+        return;
+    }
 
-    // Create render pass
-    WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Created command encoder" << std::endl;
+    }
 
+    // Create render pass with PURPLE clear color
     WGPURenderPassColorAttachment colorAttachment = {};
+    colorAttachment.nextInChain = nullptr;
     colorAttachment.view = textureView;
+    colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
     colorAttachment.resolveTarget = nullptr;
-    colorAttachment.loadOp = WGPULoadOp_Clear;
-    colorAttachment.storeOp = WGPUStoreOp_Store;
-    colorAttachment.clearValue = {0.5, 0.0, 0.5, 1.0}; // Purple background
+    colorAttachment.loadOp = WGPULoadOp_Clear;   // Clear the screen
+    colorAttachment.storeOp = WGPUStoreOp_Store; // Store the result
+    // BRIGHT PURPLE clear color!
+    colorAttachment.clearValue = {0.8f, 0.2f, 0.8f, 1.0f}; // Bright purple
 
     WGPURenderPassDescriptor renderPassDesc = {};
     renderPassDesc.nextInChain = nullptr;
@@ -316,27 +365,58 @@ void render()
     renderPassDesc.colorAttachmentCount = 1;
     renderPassDesc.colorAttachments = &colorAttachment;
     renderPassDesc.depthStencilAttachment = nullptr;
+    renderPassDesc.timestampWrites = nullptr;
 
     WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+    if (!renderPass)
+    {
+        std::cout << "ERROR: Failed to create render pass!" << std::endl;
+        wgpuCommandEncoderRelease(encoder);
+        wgpuTextureViewRelease(textureView);
+        return;
+    }
+
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Created render pass with BRIGHT PURPLE clear (0.8, 0.2, 0.8, 1.0)" << std::endl;
+    }
+
+    // End render pass - this performs the clear!
     wgpuRenderPassEncoderEnd(renderPass);
+    wgpuRenderPassEncoderRelease(renderPass);
+
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Render pass ended - CLEAR EXECUTED!" << std::endl;
+    }
+
+    // Finish command buffer
+    WGPUCommandBufferDescriptor cmdBufferDesc = {};
+    cmdBufferDesc.nextInChain = nullptr;
+    cmdBufferDesc.label = makeStringView("Command Buffer");
+
+    WGPUCommandBuffer commandBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
 
     // Submit commands
-    WGPUCommandBufferDescriptor commandBufferDesc = {};
-    commandBufferDesc.nextInChain = nullptr;
-    commandBufferDesc.label = makeStringView("Command Buffer");
-
-    WGPUCommandBuffer commandBuffer = wgpuCommandEncoderFinish(encoder, &commandBufferDesc);
     wgpuQueueSubmit(queue, 1, &commandBuffer);
 
-    // Present
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": Commands submitted - executing GPU clear now!" << std::endl;
+    }
+
+    // Present the frame
     wgpuSurfacePresent(surface);
 
-    // Cleanup frame resources immediately
+    if (renderCount <= 5)
+    {
+        std::cout << "Frame " << renderCount << ": *** FRAME PRESENTED - WINDOW SHOULD BE BRIGHT PURPLE NOW! ***" << std::endl;
+    }
+
+    // Clean up
     wgpuCommandBufferRelease(commandBuffer);
     wgpuCommandEncoderRelease(encoder);
-    wgpuRenderPassEncoderRelease(renderPass);
     wgpuTextureViewRelease(textureView);
-    wgpuTextureRelease(surfaceTexture.texture);
 }
 
 void cleanup()
@@ -421,11 +501,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Create window
+    // Set SDL hints for WebGPU compatibility (use string directly)
+    SDL_SetHint("SDL_VIDEO_EXTERNAL_CONTEXT", "1"); // Don't create OpenGL context
+
+    // Additional hints that might help
+    SDL_SetHint("SDL_VIDEO_ALLOW_SCREENSAVER", "1"); // Allow screensaver
+
+    // Create window WITHOUT any graphics API flags
     SDL_Window *window = SDL_CreateWindow(
         "SDL3 + WebGPU (Dawn 7187)",
         800, 600,
-        SDL_WINDOW_RESIZABLE);
+        SDL_WINDOW_RESIZABLE // Only basic window flags, no graphics API
+    );
 
     if (!window)
     {
@@ -434,7 +521,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::cout << "SDL window created successfully" << std::endl;
+    std::cout << "SDL window created successfully (no graphics context)" << std::endl;
 
     // Initialize WebGPU
     if (!initWebGPU(window))
