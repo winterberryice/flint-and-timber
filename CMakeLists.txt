@@ -16,10 +16,23 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
+# ============ WebGPU Configuration ============
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
 set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
 
-# Add WebGPU-distribution (Dawn)
+# NEW: Tell WebGPU-distribution to build Dawn from source with Wayland support
+set(WEBGPU_BUILD_FROM_SOURCE ON CACHE BOOL "Build Dawn from source")
+set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
+set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
+set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
+
+# Speed up build by disabling unnecessary Dawn features
+set(TINT_BUILD_TESTS OFF CACHE BOOL "Skip Tint tests")
+set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
+set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
+
+# Add WebGPU-distribution (Dawn) - now it will build from source!
 add_subdirectory(webgpu)
 
 # Add SDL3WebGPU helper
