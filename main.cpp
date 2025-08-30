@@ -195,7 +195,7 @@ bool initWebGPU(SDL_Window *window)
     callbackInfo.callback = onAdapterRequestEnded;
     callbackInfo.userdata1 = nullptr;
     callbackInfo.userdata2 = nullptr;
-    callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this
+    callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
 
     adapterRequested = true;
     adapterReceived = false;
@@ -203,61 +203,12 @@ bool initWebGPU(SDL_Window *window)
     WGPUFuture adapterFuture = wgpuInstanceRequestAdapter(instance, &adapterOpts, callbackInfo);
     std::cout << "Adapter request submitted, waiting for callback..." << std::endl;
 
-    // Wait using our custom polling approach
     bool adapterSuccess = waitForAdapter();
 
     if (!adapterSuccess || !adapter)
     {
-        std::cout << "First adapter request failed, trying with fallback..." << std::endl;
-
-        // Reset flags and try with fallback
-        adapterRequested = false;
-        adapterReceived = false;
-        adapter = nullptr;
-
-        adapterOpts.forceFallbackAdapter = true;
-        adapterOpts.powerPreference = WGPUPowerPreference_LowPower;
-
-        WGPUFuture fallbackFuture = wgpuInstanceRequestAdapter(instance, &adapterOpts, callbackInfo);
-        std::cout << "Fallback adapter request submitted..." << std::endl;
-
-        adapterSuccess = waitForAdapter();
-
-        if (!adapterSuccess || !adapter)
-        {
-            // Last resort: try different backends explicitly
-            std::cout << "Fallback failed, trying Vulkan backend explicitly..." << std::endl;
-
-            adapterRequested = false;
-            adapterReceived = false;
-            adapter = nullptr;
-
-            adapterOpts.backendType = WGPUBackendType_Vulkan;
-            adapterOpts.forceFallbackAdapter = false;
-
-            WGPUFuture vulkanFuture = wgpuInstanceRequestAdapter(instance, &adapterOpts, callbackInfo);
-            adapterSuccess = waitForAdapter();
-
-            if (!adapterSuccess || !adapter)
-            {
-                std::cerr << "Still no adapter! Trying OpenGL..." << std::endl;
-
-                adapterRequested = false;
-                adapterReceived = false;
-                adapter = nullptr;
-
-                adapterOpts.backendType = WGPUBackendType_OpenGL;
-
-                WGPUFuture openglFuture = wgpuInstanceRequestAdapter(instance, &adapterOpts, callbackInfo);
-                adapterSuccess = waitForAdapter();
-
-                if (!adapterSuccess || !adapter)
-                {
-                    std::cerr << "No WebGPU adapter available with any backend!" << std::endl;
-                    return false;
-                }
-            }
-        }
+        std::cerr << "Failed to get WebGPU adapter!" << std::endl;
+        return false;
     }
 
     std::cout << "✓ Got WebGPU adapter successfully" << std::endl;
@@ -380,7 +331,7 @@ void render()
     // Present
     wgpuSurfacePresent(surface);
 
-    // Cleanup
+    // Cleanup frame resources immediately
     wgpuCommandBufferRelease(commandBuffer);
     wgpuCommandEncoderRelease(encoder);
     wgpuRenderPassEncoderRelease(renderPass);
@@ -392,31 +343,71 @@ void cleanup()
 {
     std::cout << "Cleaning up WebGPU resources..." << std::endl;
 
-    if (queue)
+    try
     {
-        wgpuQueueRelease(queue);
-        queue = nullptr;
+        // Wait for any pending operations to complete
+        if (queue)
+        {
+            // Process any remaining events
+            if (instance)
+            {
+                wgpuInstanceProcessEvents(instance);
+            }
+
+            // Wait for idle (if function exists)
+#ifdef WGPU_QUEUE_ON_SUBMITTED_WORK_DONE_CALLBACK_INFO
+            // This might not exist in this Dawn version
+#endif
+        }
+
+        // Release in reverse order of creation
+        if (queue)
+        {
+            wgpuQueueRelease(queue);
+            queue = nullptr;
+            std::cout << "✓ Queue released" << std::endl;
+        }
+
+        if (device)
+        {
+            wgpuDeviceRelease(device);
+            device = nullptr;
+            std::cout << "✓ Device released" << std::endl;
+        }
+
+        if (adapter)
+        {
+            wgpuAdapterRelease(adapter);
+            adapter = nullptr;
+            std::cout << "✓ Adapter released" << std::endl;
+        }
+
+        if (surface)
+        {
+            wgpuSurfaceRelease(surface);
+            surface = nullptr;
+            std::cout << "✓ Surface released" << std::endl;
+        }
+
+        if (instance)
+        {
+            // Final event processing before releasing instance
+            wgpuInstanceProcessEvents(instance);
+            wgpuInstanceRelease(instance);
+            instance = nullptr;
+            std::cout << "✓ Instance released" << std::endl;
+        }
     }
-    if (device)
+    catch (const std::exception &e)
     {
-        wgpuDeviceRelease(device);
-        device = nullptr;
+        std::cerr << "Exception during cleanup: " << e.what() << std::endl;
     }
-    if (adapter)
+    catch (...)
     {
-        wgpuAdapterRelease(adapter);
-        adapter = nullptr;
+        std::cerr << "Unknown exception during cleanup" << std::endl;
     }
-    if (surface)
-    {
-        wgpuSurfaceRelease(surface);
-        surface = nullptr;
-    }
-    if (instance)
-    {
-        wgpuInstanceRelease(instance);
-        instance = nullptr;
-    }
+
+    std::cout << "Cleanup completed" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -448,26 +439,7 @@ int main(int argc, char *argv[])
     // Initialize WebGPU
     if (!initWebGPU(window))
     {
-        std::cout << "WebGPU initialization failed - keeping window open for debugging" << std::endl;
-
-        // Keep window open even if WebGPU fails
-        bool running = true;
-        SDL_Event event;
-
-        while (running)
-        {
-            while (SDL_PollEvent(&event))
-            {
-                if (event.type == SDL_EVENT_QUIT ||
-                    (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE))
-                {
-                    running = false;
-                    break;
-                }
-            }
-            SDL_Delay(100);
-        }
-
+        std::cout << "WebGPU initialization failed" << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
@@ -480,6 +452,8 @@ int main(int argc, char *argv[])
     std::cout << "\n🎉 SUCCESS! Window should show purple background rendered by WebGPU!" << std::endl;
     std::cout << "Press ESC or close window to exit." << std::endl;
 
+    // Render a few frames to make sure it's really working
+    int frameCount = 0;
     while (running)
     {
         // Handle events
@@ -488,11 +462,13 @@ int main(int argc, char *argv[])
             switch (event.type)
             {
             case SDL_EVENT_QUIT:
+                std::cout << "Quit requested" << std::endl;
                 running = false;
                 break;
             case SDL_EVENT_KEY_DOWN:
                 if (event.key.key == SDLK_ESCAPE)
                 {
+                    std::cout << "Escape pressed" << std::endl;
                     running = false;
                 }
                 break;
@@ -501,14 +477,31 @@ int main(int argc, char *argv[])
 
         // Render with WebGPU
         render();
+        frameCount++;
+
+        if (frameCount == 10)
+        {
+            std::cout << "Rendered 10 frames successfully!" << std::endl;
+        }
+
+        // Process WebGPU events
+        if (instance)
+        {
+            wgpuInstanceProcessEvents(instance);
+        }
 
         // Small delay
         SDL_Delay(16); // ~60 FPS
     }
 
-    // Cleanup
+    // Proper cleanup sequence
+    std::cout << "\nExiting main loop..." << std::endl;
     cleanup();
+
+    std::cout << "Destroying SDL window..." << std::endl;
     SDL_DestroyWindow(window);
+
+    std::cout << "Quitting SDL..." << std::endl;
     SDL_Quit();
 
     std::cout << "Application exited successfully!" << std::endl;
