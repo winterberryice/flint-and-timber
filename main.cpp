@@ -94,6 +94,9 @@ int main() {
 
 bool Application::Initialize() {
 	// Open window
+#if defined(__linux__)
+	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
