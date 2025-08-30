@@ -5,6 +5,28 @@ project(
 	LANGUAGES CXX C
 )
 
+include(FetchContent)
+
+  FetchContent_Declare(
+    sdl3
+    URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.2.8.zip
+    URL_HASH MD5=1a4affbf987808da38a0d6c8aa802a5e
+  )
+  FetchContent_MakeAvailable(sdl3)
+
+  function(target_copy_sdl3_binaries Target)
+    add_custom_command(
+      TARGET ${Target}
+      POST_BUILD
+      COMMAND
+        ${CMAKE_COMMAND}
+        -E copy_if_different
+        $<TARGET_FILE:SDL3::SDL3>
+        $<TARGET_FILE_DIR:${Target}>
+    )
+  endfunction()
+
+
 set(WEBGPU_BACKEND DAWN)
 
 add_subdirectory(webgpu)
@@ -14,7 +36,7 @@ add_executable(App
 	main.cpp
 )
 
-target_link_libraries(App PRIVATE webgpu sdl3webgpu)
+target_link_libraries(App PRIVATE webgpu sdl3webgpu SDL3::SDL3)
 
 target_copy_webgpu_binaries(App)
 
