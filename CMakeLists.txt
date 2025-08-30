@@ -5,21 +5,16 @@ project(
 	LANGUAGES CXX C
 )
 
-if (NOT EMSCRIPTEN)
-	add_subdirectory(glfw)
-else()
-	add_library(glfw INTERFACE)
-	target_link_options(glfw INTERFACE -sUSE_GLFW=3)
-endif()
+set(WEBGPU_BACKEND DAWN)
 
 add_subdirectory(webgpu)
-add_subdirectory(glfw3webgpu)
+add_subdirectory(sdl3webgpu)
 
 add_executable(App
 	main.cpp
 )
 
-target_link_libraries(App PRIVATE glfw webgpu glfw3webgpu)
+target_link_libraries(App PRIVATE webgpu sdl3webgpu)
 
 target_copy_webgpu_binaries(App)
 
