@@ -127,6 +127,7 @@ bool waitForAdapter(int timeoutMs = 5000)
 
 bool waitForDevice(int timeoutMs = 5000)
 {
+    //
     auto start = std::chrono::steady_clock::now();
 
     while (!deviceReceived)
