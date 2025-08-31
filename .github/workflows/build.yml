@@ -13,11 +13,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Cache Dependencies
+    - name: Cache Build
       uses: actions/cache@v4
       with:
-        path: build/release/_deps
-        key: ${{ runner.os }}-deps-${{ hashFiles('webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
+        path: build/release
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
 
     - name: Install dependencies
       run: >
