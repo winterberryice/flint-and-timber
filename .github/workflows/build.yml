@@ -8,15 +8,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: dockcross/manylinux_2_28-x64:latest
-    env:
-      SCCACHE_GHA_ENABLED: "true"
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up sccache
-      uses: mozilla-actions/sccache-action@v0.0.5
+    - name: Cache Build
+      uses: actions/cache@v4
+      with:
+        path: build/release
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
 
     - name: Install dependencies
       run: >

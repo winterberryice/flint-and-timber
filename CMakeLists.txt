@@ -10,10 +10,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # Fetch SDL3
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/sdl3-git-tag.txt SDL3_GIT_TAG)
+string(STRIP ${SDL3_GIT_TAG} SDL3_GIT_TAG)
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-3.2.20
+    GIT_TAG ${SDL3_GIT_TAG}
 )
 
 FetchContent_MakeAvailable(SDL3)
