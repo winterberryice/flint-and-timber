@@ -8,15 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container: dockcross/manylinux_2_28-x64:latest
-    env:
-      SCCACHE_GHA_ENABLED: "true"
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-
-    - name: Set up sccache
-      uses: mozilla-actions/sccache-action@v0.0.5
 
     - name: Cache Dependencies
       uses: actions/cache@v4
