@@ -53,7 +53,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 # Set RPATH to $ORIGIN so the executable can find shared libraries
 # in the same directory as the executable.
 if(UNIX AND NOT APPLE)
-    target_link_options(${TARGET_NAME} PRIVATE "-Wl,-rpath,'$ORIGIN'")
+    target_link_options(${TARGET_NAME} PRIVATE "-Wl,-rpath=\\$ORIGIN")
 endif()
 
 # Include directories
