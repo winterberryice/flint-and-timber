@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
 
     // Create window WITHOUT any graphics API flags
     SDL_Window *window = SDL_CreateWindow(
-        "SDL3 + WebGPU (Dawn 7187)",
+        "Flint & Timber",
         800, 600,
         SDL_WINDOW_RESIZABLE // Only basic window flags, no graphics API
     );
