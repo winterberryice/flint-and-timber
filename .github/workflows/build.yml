@@ -1,0 +1,45 @@
+name: C++ CI
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: dockcross/manylinux_2_28-x64:latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache build directory
+      uses: actions/cache@v4
+      id: cache-build
+      with:
+        path: build
+        key: ${{ runner.os }}-release-build-${{ hashFiles('**/CMakeLists.txt', 'CMakePresets.json', '**/*.c', '**/*.h', '**/*.cpp') }}
+        restore-keys: |
+          ${{ runner.os }}-release-build-
+
+    - name: Set up sccache
+      uses: mozilla-actions/sccache-action@v0.0.5
+
+    - name: Install dependencies
+      run: >
+        dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel
+
+    - name: Configure CMake
+      if: steps.cache-build.outputs.cache-hit != 'true'
+      run: cmake --preset release
+
+    - name: Build
+      run: cmake --build --preset release
+
+    - name: Upload Executable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flint-and-timber-Linux
+        path: build/release/flint-and-timber
