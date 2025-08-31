@@ -21,7 +21,7 @@ jobs:
 
     - name: Install dependencies
       run: >
-        dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel zip
+        dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel
 
     - name: Configure CMake
       run: cmake --preset release
@@ -29,14 +29,10 @@ jobs:
     - name: Build
       run: cmake --build --preset release
 
-    - name: Package Artifact
-      run: |
-        mkdir -p dist
-        cp build/release/flint-and-timber dist/
-        cp build/release/libwebgpu_dawn.so dist/
-        (cd dist && zip -r ../flint-and-timber-Linux.zip .)
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: flint-and-timber-Linux
-        path: flint-and-timber-Linux.zip
+        path: |
+          build/release/flint-and-timber
+          build/release/libwebgpu_dawn.so
