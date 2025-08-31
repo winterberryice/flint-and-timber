@@ -28,6 +28,9 @@ jobs:
     - name: Build
       run: cmake --build --preset release
 
+    - name: Verify RPATH
+      run: readelf -d build/release/flint-and-timber | grep 'RPATH'
+
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:

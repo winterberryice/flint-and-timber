@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(FlintAndTimber)
 
-# Use relative RPATH so the executable can find shared libs in the same directory
-set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-
 set(TARGET_NAME "flint-and-timber")
 
 set(CMAKE_CXX_STANDARD 17)
@@ -52,6 +49,12 @@ target_link_libraries(${TARGET_NAME} PRIVATE
     webgpu
     sdl3webgpu
 )
+
+# Set RPATH to $ORIGIN so the executable can find shared libraries
+# in the same directory as the executable.
+if(UNIX AND NOT APPLE)
+    target_link_options(${TARGET_NAME} PRIVATE "-Wl,-rpath,'$ORIGIN'")
+endif()
 
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
