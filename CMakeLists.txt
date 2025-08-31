@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(FlintAndTimber)
 
+# Use relative RPATH so the executable can find shared libs in the same directory
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+
 set(TARGET_NAME "flint-and-timber")
 
 set(CMAKE_CXX_STANDARD 17)
