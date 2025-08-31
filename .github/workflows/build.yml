@@ -65,8 +65,8 @@ jobs:
       run: |
         sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-13
-        echo "CXX=g++-13" >> $GITHUB_ENV
+        sudo apt-get install -y g++-15
+        echo "CXX=g++-15" >> $GITHUB_ENV
 
     - name: Configure CMake
       if: steps.cache-build.outputs.cache-hit != 'true'
