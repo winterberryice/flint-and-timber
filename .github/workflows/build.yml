@@ -58,7 +58,8 @@ jobs:
           libwayland-dev \
           libdecor-0-dev \
           liburing-dev \
-          libxinerama-dev
+          libxinerama-dev \
+          libx11-xcb-dev
 
     - name: Configure CMake
       if: steps.cache-build.outputs.cache-hit != 'true'
