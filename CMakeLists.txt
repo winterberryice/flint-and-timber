@@ -52,6 +52,16 @@ target_link_libraries(${TARGET_NAME} PRIVATE
     sdl3webgpu
 )
 
+# Set RPATH for Linux to find shared libraries in the executable's directory
+if(UNIX AND NOT APPLE)
+    set_target_properties(${TARGET_NAME} PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+    set_target_properties(${TARGET_NAME} PROPERTIES
+        INSTALL_RPATH "$ORIGIN"
+    )
+endif()
+
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/webgpu/include
