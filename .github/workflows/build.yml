@@ -33,11 +33,10 @@ jobs:
 
     - name: Configure CMake
       if: steps.cache-build.outputs.cache-hit != 'true'
-      run: >
-        cmake -S . -B build/release -C .github/workflows/dawn-ci.cmake -DCMAKE_BUILD_TYPE=Release
+      run: cmake --preset release
 
     - name: Build
-      run: cmake --build build/release --config Release
+      run: cmake --build --preset release
 
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
