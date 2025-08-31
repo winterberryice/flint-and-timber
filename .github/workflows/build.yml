@@ -15,15 +15,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Cache build directory
-      uses: actions/cache@v4
-      id: cache-build
-      with:
-        path: build
-        key: ${{ runner.os }}-release-build-${{ hashFiles('**/CMakeLists.txt', 'CMakePresets.json', '**/*.c', '**/*.h', '**/*.cpp') }}
-        restore-keys: |
-          ${{ runner.os }}-release-build-
-
     - name: Set up sccache
       uses: mozilla-actions/sccache-action@v0.0.5
 
@@ -32,7 +23,6 @@ jobs:
         dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel
 
     - name: Configure CMake
-      if: steps.cache-build.outputs.cache-hit != 'true'
       run: cmake --preset release
 
     - name: Build
