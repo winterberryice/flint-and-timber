@@ -29,8 +29,14 @@ jobs:
     - name: Build
       run: cmake --build --preset release
 
+    - name: Package Artifact
+      run: |
+        mkdir -p dist
+        cp build/release/flint-and-timber dist/
+        cp build/release/libwebgpu_dawn.so dist/
+        tar -czvf flint-and-timber-Linux.tar.gz -C dist .
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: flint-and-timber-Linux
-        path: build/release/flint-and-timber
+        path: flint-and-timber-Linux.tar.gz
