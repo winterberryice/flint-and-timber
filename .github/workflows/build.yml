@@ -61,6 +61,13 @@ jobs:
           libxinerama-dev \
           libx11-xcb-dev
 
+    - name: Install newer compiler
+      run: |
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install -y g++-13
+        echo "CXX=g++-13" >> $GITHUB_ENV
+
     - name: Configure CMake
       if: steps.cache-build.outputs.cache-hit != 'true'
       run: cmake --preset release
