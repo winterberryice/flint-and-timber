@@ -54,12 +54,10 @@ jobs:
       uses: microsoft/setup-msbuild@v1.3
 
     - name: Configure CMake
-      shell: cmd
-      run: cmake --preset release
+      run: cmake -S . -B build/release -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      shell: cmd
-      run: cmake --build --preset release
+      run: cmake --build build/release --config Release
 
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
