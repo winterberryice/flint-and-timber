@@ -3,7 +3,7 @@ project(FlintAndTimber)
 
 set(TARGET_NAME "flint-and-timber")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Enable FetchContent
@@ -24,11 +24,13 @@ FetchContent_MakeAvailable(SDL3)
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
 set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
 
-# NEW: Tell WebGPU-distribution to build Dawn from source with Wayland support
+# NEW: Tell WebGPU-distribution to build Dawn from source
 set(WEBGPU_BUILD_FROM_SOURCE ON CACHE BOOL "Build Dawn from source")
-set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
-set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
-set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+if(UNIX AND NOT APPLE)
+    set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
+    set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
+    set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+endif()
 set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
 
 # Speed up build by disabling unnecessary Dawn features
@@ -68,10 +70,6 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/sdl3webgpu/include
 )
 
-# Platform-specific settings
-if(WIN32)
-    target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3-static)
-endif()
 
 # Copy WebGPU binaries using the proper function provided by WebGPU-distribution
 # This should handle the Dawn binary copying automatically
