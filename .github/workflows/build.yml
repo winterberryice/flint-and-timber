@@ -59,10 +59,6 @@ jobs:
     - name: Build
       run: cmake --build build/release --config Release
 
-    - name: Find SDL3.dll
-      run: dir /s /b build\release\SDL3.dll
-      shell: cmd
-
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
@@ -70,4 +66,4 @@ jobs:
         path: |
           build/release/Release/flint-and-timber.exe
           build/release/Release/webgpu_dawn.dll
-          build/release/Release/SDL3.dll
+          build/release/_deps/sdl3-build/Release/SDL3.dll
