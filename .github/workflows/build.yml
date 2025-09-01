@@ -50,10 +50,15 @@ jobs:
         path: build/release
         key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
 
+    - name: Set up MSBuild
+      uses: microsoft/setup-msbuild@v1.3
+
     - name: Configure CMake
+      shell: cmd
       run: cmake --preset release
 
     - name: Build
+      shell: cmd
       run: cmake --build --preset release
 
     - name: Upload Executable Artifact

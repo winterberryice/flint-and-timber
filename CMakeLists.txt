@@ -38,10 +38,6 @@ set(TINT_BUILD_TESTS OFF CACHE BOOL "Skip Tint tests")
 set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
 set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
 
-# Disable D3D backends on Windows to avoid dependency on dxcapi.h
-set(DAWN_ENABLE_D3D11_BACKEND OFF)
-set(DAWN_ENABLE_D3D12_BACKEND OFF)
-
 # Add WebGPU-distribution (Dawn) - now it will build from source!
 add_subdirectory(webgpu)
 
