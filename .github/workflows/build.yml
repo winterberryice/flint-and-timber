@@ -63,3 +63,4 @@ jobs:
         path: |
           build/release/flint-and-timber.exe
           build/release/webgpu_dawn.dll
+          build/release/SDL3.dll

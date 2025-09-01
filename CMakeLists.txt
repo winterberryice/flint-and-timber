@@ -70,10 +70,6 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/sdl3webgpu/include
 )
 
-# Platform-specific settings
-if(WIN32)
-    target_link_libraries(${TARGET_NAME} PRIVATE SDL3::SDL3-static)
-endif()
 
 # Copy WebGPU binaries using the proper function provided by WebGPU-distribution
 # This should handle the Dawn binary copying automatically
