@@ -317,11 +317,10 @@ bool initWebGPU(SDL_Window *window)
 
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
-    shaderCodeDesc.chain.next = nullptr;
-    shaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-    shaderCodeDesc.code = shaderSource;
+    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011; // WGPUSType_ShaderModuleWGSLDescriptor
+    shaderCodeDesc.code = makeStringView(shaderSource);
     WGPUShaderModuleDescriptor shaderDesc = {};
-    shaderDesc.nextInChain = &shaderCodeDesc.chain;
+    shaderDesc.nextInChain = (WGPUChainedStruct*)&shaderCodeDesc;
     WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(device, &shaderDesc);
     std::cout << "✓ Shader module created" << std::endl;
 
@@ -331,7 +330,7 @@ bool initWebGPU(SDL_Window *window)
 
     // Vertex shader
     pipelineDesc.vertex.module = shaderModule;
-    pipelineDesc.vertex.entryPoint = "vs_main";
+    pipelineDesc.vertex.entryPoint = makeStringView("vs_main");
     pipelineDesc.vertex.constantCount = 0;
     pipelineDesc.vertex.constants = nullptr;
 
@@ -360,7 +359,7 @@ bool initWebGPU(SDL_Window *window)
     WGPUFragmentState fragmentState = {};
     fragmentState.nextInChain = nullptr;
     fragmentState.module = shaderModule;
-    fragmentState.entryPoint = "fs_main";
+    fragmentState.entryPoint = makeStringView("fs_main");
     fragmentState.constantCount = 0;
     fragmentState.constants = nullptr;
     pipelineDesc.fragment = &fragmentState;
