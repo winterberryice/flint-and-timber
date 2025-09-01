@@ -169,7 +169,7 @@ const char *shaderSource = R"(
 
     @fragment
     fn fs_main() -> @location(0) vec4f {
-        return vec4f(0.3, 0.4, 0.5, 1.0);
+        return vec4f(1.0, 0.0, 0.0, 1.0); // Red
     }
 )";
 
@@ -479,7 +479,7 @@ void render()
     colorAttachment.resolveTarget = nullptr;
     colorAttachment.loadOp = WGPULoadOp_Clear;   // Clear the screen
     colorAttachment.storeOp = WGPUStoreOp_Store; // Store the result
-    colorAttachment.clearValue = {0.0f, 0.0f, 0.0f, 1.0f}; // Black
+    colorAttachment.clearValue = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
 
     WGPURenderPassDescriptor renderPassDesc = {};
     renderPassDesc.nextInChain = nullptr;
