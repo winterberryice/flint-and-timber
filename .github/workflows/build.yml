@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     container: dockcross/manylinux_2_28-x64:latest
 
@@ -36,3 +36,30 @@ jobs:
         path: |
           build/release/flint-and-timber
           build/release/libwebgpu_dawn.so
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache Build
+      uses: actions/cache@v4
+      with:
+        path: build/release
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
+
+    - name: Configure CMake
+      run: cmake --preset release
+
+    - name: Build
+      run: cmake --build --preset release
+
+    - name: Upload Executable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flint-and-timber-Windows
+        path: |
+          build/release/flint-and-timber.exe
+          build/release/webgpu_dawn.dll

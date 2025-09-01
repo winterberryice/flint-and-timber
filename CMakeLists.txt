@@ -24,11 +24,13 @@ FetchContent_MakeAvailable(SDL3)
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
 set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
 
-# NEW: Tell WebGPU-distribution to build Dawn from source with Wayland support
+# NEW: Tell WebGPU-distribution to build Dawn from source
 set(WEBGPU_BUILD_FROM_SOURCE ON CACHE BOOL "Build Dawn from source")
-set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
-set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
-set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+if(UNIX AND NOT APPLE)
+    set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
+    set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
+    set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+endif()
 set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
 
 # Speed up build by disabling unnecessary Dawn features
