@@ -59,11 +59,16 @@ jobs:
     - name: Build
       run: cmake --build build/release --config Release
 
+    - name: Stage Artifacts
+      shell: cmd
+      run: |
+        mkdir artifact
+        copy build\release\Release\flint-and-timber.exe artifact\
+        copy build\release\Release\webgpu_dawn.dll artifact\
+        copy build\release\_deps\sdl3-build\Release\SDL3.dll artifact\
+
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
       with:
         name: flint-and-timber-Windows
-        path: |
-          build/release/Release/flint-and-timber.exe
-          build/release/Release/webgpu_dawn.dll
-          build/release/_deps/sdl3-build/Release/SDL3.dll
+        path: artifact/
