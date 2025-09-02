@@ -319,7 +319,7 @@ bool initWebGPU(SDL_Window *window)
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
     shaderCodeDesc.chain.next = nullptr;
-    shaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011;
     shaderCodeDesc.code = makeStringView(shaderSource);
 
     WGPUShaderModuleDescriptor shaderDesc = {};
