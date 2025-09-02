@@ -6,6 +6,7 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 // Global WebGPU objects
 WGPUInstance instance = nullptr;
@@ -13,6 +14,11 @@ WGPUAdapter adapter = nullptr;
 WGPUDevice device = nullptr;
 WGPUQueue queue = nullptr;
 WGPUSurface surface = nullptr;
+
+// Additions for triangle rendering
+WGPURenderPipeline pipeline = nullptr;
+WGPUBuffer vertexBuffer = nullptr;
+std::vector<float> vertexData;
 
 // Global flags for async operations
 volatile bool adapterRequested = false;
@@ -155,6 +161,18 @@ bool waitForDevice(int timeoutMs = 5000)
     return device != nullptr;
 }
 
+const char *shaderSource = R"(
+    @vertex
+    fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
+        return vec4f(in_vertex_position, 0.0, 1.0);
+    }
+
+    @fragment
+    fn fs_main() -> @location(0) vec4f {
+        return vec4f(1.0, 0.0, 0.0, 1.0); // Red
+    }
+)";
+
 bool initWebGPU(SDL_Window *window)
 {
     std::cout << "\n=== Initializing WebGPU ===" << std::endl;
@@ -273,8 +291,112 @@ bool initWebGPU(SDL_Window *window)
     surfaceConfig.presentMode = WGPUPresentMode_Fifo;
     surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
 
+    // Store the surface format
+    WGPUTextureFormat surfaceFormat = surfaceCaps.formats[0];
+
     wgpuSurfaceConfigure(surface, &surfaceConfig);
     std::cout << "✓ Surface configured successfully" << std::endl;
+
+    // Create vertex buffer
+    vertexData = {
+        // x0, y0
+        0.0f, 0.5f,
+        // x1, y1
+        -0.5f, -0.5f,
+        // x2, y2
+        0.5f, -0.5f};
+
+    WGPUBufferDescriptor bufferDesc = {};
+    bufferDesc.nextInChain = nullptr;
+    bufferDesc.size = vertexData.size() * sizeof(float);
+    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
+    bufferDesc.mappedAtCreation = false;
+    vertexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
+    wgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertexData.data(), bufferDesc.size);
+    std::cout << "✓ Vertex buffer created and populated" << std::endl;
+
+    // Create shader module
+    WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
+    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011; // WGPUSType_ShaderModuleWGSLDescriptor
+    shaderCodeDesc.code = makeStringView(shaderSource);
+    WGPUShaderModuleDescriptor shaderDesc = {};
+    shaderDesc.nextInChain = (WGPUChainedStruct*)&shaderCodeDesc;
+    WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(device, &shaderDesc);
+    std::cout << "✓ Shader module created" << std::endl;
+
+    // Create render pipeline
+    WGPURenderPipelineDescriptor pipelineDesc = {};
+    pipelineDesc.nextInChain = nullptr;
+
+    // Vertex shader
+    pipelineDesc.vertex.module = shaderModule;
+    pipelineDesc.vertex.entryPoint = makeStringView("vs_main");
+    pipelineDesc.vertex.constantCount = 0;
+    pipelineDesc.vertex.constants = nullptr;
+
+    // Vertex fetch
+    WGPUVertexAttribute attribute = {};
+    attribute.shaderLocation = 0;
+    attribute.offset = 0;
+    attribute.format = WGPUVertexFormat_Float32x2;
+
+    WGPUVertexBufferLayout vertexBufferLayout = {};
+    vertexBufferLayout.arrayStride = 2 * sizeof(float);
+    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+    vertexBufferLayout.attributeCount = 1;
+    vertexBufferLayout.attributes = &attribute;
+
+    pipelineDesc.vertex.bufferCount = 1;
+    pipelineDesc.vertex.buffers = &vertexBufferLayout;
+
+    // Primitive assembly and rasterization
+    pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    pipelineDesc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+    pipelineDesc.primitive.frontFace = WGPUFrontFace_CCW;
+    pipelineDesc.primitive.cullMode = WGPUCullMode_None;
+
+    // Fragment shader
+    WGPUFragmentState fragmentState = {};
+    fragmentState.nextInChain = nullptr;
+    fragmentState.module = shaderModule;
+    fragmentState.entryPoint = makeStringView("fs_main");
+    fragmentState.constantCount = 0;
+    fragmentState.constants = nullptr;
+    pipelineDesc.fragment = &fragmentState;
+
+    // Configure blend state
+    WGPUBlendState blendState = {};
+    blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+    blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+    blendState.color.operation = WGPUBlendOperation_Add;
+    blendState.alpha.srcFactor = WGPUBlendFactor_Zero;
+    blendState.alpha.dstFactor = WGPUBlendFactor_One;
+    blendState.alpha.operation = WGPUBlendOperation_Add;
+
+    WGPUColorTargetState colorTarget = {};
+    colorTarget.format = surfaceFormat;
+    colorTarget.blend = &blendState;
+    colorTarget.writeMask = WGPUColorWriteMask_All;
+
+    fragmentState.targetCount = 1;
+    fragmentState.targets = &colorTarget;
+
+    // Depth and stencil buffers
+    pipelineDesc.depthStencil = nullptr;
+
+    // Multi-sampling
+    pipelineDesc.multisample.count = 1;
+    pipelineDesc.multisample.mask = ~0u;
+    pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+    // Pipeline layout
+    pipelineDesc.layout = nullptr;
+
+    pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
+    std::cout << "✓ Render pipeline created" << std::endl;
+
+    // We no longer need the shader module
+    wgpuShaderModuleRelease(shaderModule);
 
     std::cout << "=== WebGPU initialization complete! ===" << std::endl;
     return true;
@@ -349,7 +471,7 @@ void render()
         std::cout << "Frame " << renderCount << ": Created command encoder" << std::endl;
     }
 
-    // Create render pass with PURPLE clear color
+    // Create render pass with BLACK clear color
     WGPURenderPassColorAttachment colorAttachment = {};
     colorAttachment.nextInChain = nullptr;
     colorAttachment.view = textureView;
@@ -357,8 +479,7 @@ void render()
     colorAttachment.resolveTarget = nullptr;
     colorAttachment.loadOp = WGPULoadOp_Clear;   // Clear the screen
     colorAttachment.storeOp = WGPUStoreOp_Store; // Store the result
-    // BRIGHT PURPLE clear color!
-    colorAttachment.clearValue = {0.8f, 0.2f, 0.8f, 1.0f}; // Bright purple
+    colorAttachment.clearValue = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
 
     WGPURenderPassDescriptor renderPassDesc = {};
     renderPassDesc.nextInChain = nullptr;
@@ -377,19 +498,13 @@ void render()
         return;
     }
 
-    if (renderCount <= 5)
-    {
-        std::cout << "Frame " << renderCount << ": Created render pass with BRIGHT PURPLE clear (0.8, 0.2, 0.8, 1.0)" << std::endl;
-    }
+    // Draw the triangle
+    wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
+    wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, vertexData.size() * sizeof(float));
+    wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 
-    // End render pass - this performs the clear!
     wgpuRenderPassEncoderEnd(renderPass);
     wgpuRenderPassEncoderRelease(renderPass);
-
-    if (renderCount <= 5)
-    {
-        std::cout << "Frame " << renderCount << ": Render pass ended - CLEAR EXECUTED!" << std::endl;
-    }
 
     // Finish command buffer
     WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -426,6 +541,19 @@ void cleanup()
 
     try
     {
+        if (pipeline)
+        {
+            wgpuRenderPipelineRelease(pipeline);
+            pipeline = nullptr;
+            std::cout << "✓ Pipeline released" << std::endl;
+        }
+        if (vertexBuffer)
+        {
+            wgpuBufferDestroy(vertexBuffer);
+            wgpuBufferRelease(vertexBuffer);
+            vertexBuffer = nullptr;
+            std::cout << "✓ Vertex buffer released" << std::endl;
+        }
         // Wait for any pending operations to complete
         if (queue)
         {
