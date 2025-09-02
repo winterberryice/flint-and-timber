@@ -311,13 +311,16 @@ bool initWebGPU(SDL_Window *window)
     }
     std::cout << "Selected alpha mode: " << alphaMode << std::endl;
 
+    int width, height;
+    SDL_GetWindowSizeInPixels(window, &width, &height);
+
     WGPUSurfaceConfiguration surfaceConfig = {};
     surfaceConfig.nextInChain = nullptr;
     surfaceConfig.device = device;
     surfaceConfig.format = surfaceCaps.formats[0]; // Use first available format
     surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
-    surfaceConfig.width = 800;
-    surfaceConfig.height = 600;
+    surfaceConfig.width = width;
+    surfaceConfig.height = height;
     surfaceConfig.presentMode = WGPUPresentMode_Fifo;
     surfaceConfig.alphaMode = alphaMode;
 
