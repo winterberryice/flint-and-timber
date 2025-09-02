@@ -282,6 +282,32 @@ bool initWebGPU(SDL_Window *window)
 
     std::cout << "Available surface formats: " << surfaceCaps.formatCount << std::endl;
 
+    // Select alpha mode
+    WGPUCompositeAlphaMode alphaMode = WGPUCompositeAlphaMode_Auto;
+    if (surfaceCaps.alphaModeCount > 0)
+    {
+        // Prefer Opaque if available
+        bool opaqueSupported = false;
+        for (uint32_t i = 0; i < surfaceCaps.alphaModeCount; ++i)
+        {
+            if (surfaceCaps.alphaModes[i] == WGPUCompositeAlphaMode_Opaque)
+            {
+                opaqueSupported = true;
+                break;
+            }
+        }
+        if (opaqueSupported)
+        {
+            alphaMode = WGPUCompositeAlphaMode_Opaque;
+        }
+        else
+        {
+            // Fallback to the first supported mode
+            alphaMode = surfaceCaps.alphaModes[0];
+        }
+    }
+    std::cout << "Selected alpha mode: " << alphaMode << std::endl;
+
     WGPUSurfaceConfiguration surfaceConfig = {};
     surfaceConfig.nextInChain = nullptr;
     surfaceConfig.device = device;
@@ -290,7 +316,7 @@ bool initWebGPU(SDL_Window *window)
     surfaceConfig.width = 800;
     surfaceConfig.height = 600;
     surfaceConfig.presentMode = WGPUPresentMode_Fifo;
-    surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
+    surfaceConfig.alphaMode = alphaMode;
 
     // Store the surface format
     surfaceFormat = surfaceCaps.formats[0];
