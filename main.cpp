@@ -14,6 +14,7 @@ WGPUAdapter adapter = nullptr;
 WGPUDevice device = nullptr;
 WGPUQueue queue = nullptr;
 WGPUSurface surface = nullptr;
+WGPUTextureFormat surfaceFormat = WGPUTextureFormat_Undefined;
 
 // Additions for triangle rendering
 WGPURenderPipeline pipeline = nullptr;
@@ -292,7 +293,7 @@ bool initWebGPU(SDL_Window *window)
     surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
 
     // Store the surface format
-    WGPUTextureFormat surfaceFormat = surfaceCaps.formats[0];
+    surfaceFormat = surfaceCaps.formats[0];
 
     wgpuSurfaceConfigure(surface, &surfaceConfig);
     std::cout << "✓ Surface configured successfully" << std::endl;
@@ -317,10 +318,12 @@ bool initWebGPU(SDL_Window *window)
 
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
-    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011; // WGPUSType_ShaderModuleWGSLDescriptor
+    shaderCodeDesc.chain.next = nullptr;
+    shaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
     shaderCodeDesc.code = makeStringView(shaderSource);
+
     WGPUShaderModuleDescriptor shaderDesc = {};
-    shaderDesc.nextInChain = (WGPUChainedStruct*)&shaderCodeDesc;
+    shaderDesc.nextInChain = (WGPUChainedStruct *)&shaderCodeDesc;
     WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(device, &shaderDesc);
     std::cout << "✓ Shader module created" << std::endl;
 
@@ -433,7 +436,7 @@ void render()
     WGPUTextureViewDescriptor textureViewDesc = {};
     textureViewDesc.nextInChain = nullptr;
     textureViewDesc.label = makeStringView("Surface texture view");
-    textureViewDesc.format = WGPUTextureFormat_Undefined; // Use surface format
+    textureViewDesc.format = surfaceFormat; // Use surface format
     textureViewDesc.dimension = WGPUTextureViewDimension_2D;
     textureViewDesc.baseMipLevel = 0;
     textureViewDesc.mipLevelCount = 1;
@@ -479,7 +482,7 @@ void render()
     colorAttachment.resolveTarget = nullptr;
     colorAttachment.loadOp = WGPULoadOp_Clear;   // Clear the screen
     colorAttachment.storeOp = WGPUStoreOp_Store; // Store the result
-    colorAttachment.clearValue = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+    colorAttachment.clearValue = {0.0f, 0.0f, 0.0f, 1.0f}; // Black
 
     WGPURenderPassDescriptor renderPassDesc = {};
     renderPassDesc.nextInChain = nullptr;
@@ -526,7 +529,7 @@ void render()
 
     if (renderCount <= 5)
     {
-        std::cout << "Frame " << renderCount << ": *** FRAME PRESENTED - WINDOW SHOULD BE BRIGHT PURPLE NOW! ***" << std::endl;
+        std::cout << "Frame " << renderCount << ": *** FRAME PRESENTED - WINDOW SHOULD BE BLACK NOW! ***" << std::endl;
     }
 
     // Clean up
@@ -788,7 +791,7 @@ int main(int argc, char *argv[])
     bool running = true;
     SDL_Event event;
 
-    std::cout << "\n🎉 SUCCESS! Window should show purple background rendered by WebGPU!" << std::endl;
+    std::cout << "\n🎉 SUCCESS! Window should show a black background rendered by WebGPU!" << std::endl;
     std::cout << "Press ESC or close window to exit." << std::endl;
 
     // Render a few frames to make sure it's really working
