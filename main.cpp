@@ -18,8 +18,6 @@ WGPUTextureFormat surfaceFormat = WGPUTextureFormat_Undefined;
 
 // Additions for triangle rendering
 WGPURenderPipeline pipeline = nullptr;
-WGPUBuffer vertexBuffer = nullptr;
-std::vector<float> vertexData;
 
 // Global flags for async operations
 volatile bool adapterRequested = false;
@@ -164,8 +162,13 @@ bool waitForDevice(int timeoutMs = 5000)
 
 const char *shaderSource = R"(
     @vertex
-    fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
-        return vec4f(in_vertex_position, 0.0, 1.0);
+    fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
+        var pos = array<vec2f, 3>(
+            vec2f(0.0, 0.5),
+            vec2f(-0.5, -0.5),
+            vec2f(0.5, -0.5)
+        );
+        return vec4f(pos[in_vertex_index], 0.0, 1.0);
     }
 
     @fragment
@@ -324,24 +327,6 @@ bool initWebGPU(SDL_Window *window)
     wgpuSurfaceConfigure(surface, &surfaceConfig);
     std::cout << "✓ Surface configured successfully" << std::endl;
 
-    // Create vertex buffer
-    vertexData = {
-        // x0, y0
-        0.0f, 0.5f,
-        // x1, y1
-        -0.5f, -0.5f,
-        // x2, y2
-        0.5f, -0.5f};
-
-    WGPUBufferDescriptor bufferDesc = {};
-    bufferDesc.nextInChain = nullptr;
-    bufferDesc.size = vertexData.size() * sizeof(float);
-    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-    bufferDesc.mappedAtCreation = false;
-    vertexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-    wgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertexData.data(), bufferDesc.size);
-    std::cout << "✓ Vertex buffer created and populated" << std::endl;
-
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
     shaderCodeDesc.chain.next = nullptr;
@@ -364,19 +349,8 @@ bool initWebGPU(SDL_Window *window)
     pipelineDesc.vertex.constants = nullptr;
 
     // Vertex fetch
-    WGPUVertexAttribute attribute = {};
-    attribute.shaderLocation = 0;
-    attribute.offset = 0;
-    attribute.format = WGPUVertexFormat_Float32x2;
-
-    WGPUVertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.arrayStride = 2 * sizeof(float);
-    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-    vertexBufferLayout.attributeCount = 1;
-    vertexBufferLayout.attributes = &attribute;
-
-    pipelineDesc.vertex.bufferCount = 1;
-    pipelineDesc.vertex.buffers = &vertexBufferLayout;
+    pipelineDesc.vertex.bufferCount = 0;
+    pipelineDesc.vertex.buffers = nullptr;
 
     // Primitive assembly and rasterization
     pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
@@ -529,7 +503,6 @@ void render()
 
     // Draw the triangle
     wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
-    wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, vertexData.size() * sizeof(float));
     wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 
     wgpuRenderPassEncoderEnd(renderPass);
@@ -575,13 +548,6 @@ void cleanup()
             wgpuRenderPipelineRelease(pipeline);
             pipeline = nullptr;
             std::cout << "✓ Pipeline released" << std::endl;
-        }
-        if (vertexBuffer)
-        {
-            wgpuBufferDestroy(vertexBuffer);
-            wgpuBufferRelease(vertexBuffer);
-            vertexBuffer = nullptr;
-            std::cout << "✓ Vertex buffer released" << std::endl;
         }
         // Wait for any pending operations to complete
         if (queue)
