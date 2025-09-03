@@ -14,11 +14,10 @@ WGPUAdapter adapter = nullptr;
 WGPUDevice device = nullptr;
 WGPUQueue queue = nullptr;
 WGPUSurface surface = nullptr;
+WGPUTextureFormat surfaceFormat = WGPUTextureFormat_Undefined;
 
 // Additions for triangle rendering
 WGPURenderPipeline pipeline = nullptr;
-WGPUBuffer vertexBuffer = nullptr;
-std::vector<float> vertexData;
 
 // Global flags for async operations
 volatile bool adapterRequested = false;
@@ -163,8 +162,13 @@ bool waitForDevice(int timeoutMs = 5000)
 
 const char *shaderSource = R"(
     @vertex
-    fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
-        return vec4f(in_vertex_position, 0.0, 1.0);
+    fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
+        var pos = array<vec2f, 3>(
+            vec2f(0.0, 0.5),
+            vec2f(-0.5, -0.5),
+            vec2f(0.5, -0.5)
+        );
+        return vec4f(pos[in_vertex_index], 0.0, 1.0);
     }
 
     @fragment
@@ -207,7 +211,7 @@ bool initWebGPU(SDL_Window *window)
     adapterOpts.nextInChain = nullptr;
     adapterOpts.compatibleSurface = surface;
     adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
-    adapterOpts.backendType = WGPUBackendType_Undefined;
+    adapterOpts.backendType = (WGPUBackendType)3; // Force Vulkan
     adapterOpts.forceFallbackAdapter = false;
 
     WGPURequestAdapterCallbackInfo callbackInfo = {};
@@ -281,46 +285,62 @@ bool initWebGPU(SDL_Window *window)
 
     std::cout << "Available surface formats: " << surfaceCaps.formatCount << std::endl;
 
+    // Select alpha mode
+    WGPUCompositeAlphaMode alphaMode = WGPUCompositeAlphaMode_Auto;
+    if (surfaceCaps.alphaModeCount > 0)
+    {
+        // Prefer Opaque if available
+        bool opaqueSupported = false;
+        for (uint32_t i = 0; i < surfaceCaps.alphaModeCount; ++i)
+        {
+            if (surfaceCaps.alphaModes[i] == WGPUCompositeAlphaMode_Opaque)
+            {
+                opaqueSupported = true;
+                break;
+            }
+        }
+        if (opaqueSupported)
+        {
+            alphaMode = WGPUCompositeAlphaMode_Opaque;
+        }
+        else
+        {
+            // Fallback to the first supported mode
+            alphaMode = surfaceCaps.alphaModes[0];
+        }
+    }
+    std::cout << "Selected alpha mode: " << alphaMode << std::endl;
+
+    int width, height;
+    SDL_GetWindowSizeInPixels(window, &width, &height);
+
     WGPUSurfaceConfiguration surfaceConfig = {};
     surfaceConfig.nextInChain = nullptr;
     surfaceConfig.device = device;
     surfaceConfig.format = surfaceCaps.formats[0]; // Use first available format
     surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
-    surfaceConfig.width = 800;
-    surfaceConfig.height = 600;
+    surfaceConfig.width = width;
+    surfaceConfig.height = height;
     surfaceConfig.presentMode = WGPUPresentMode_Fifo;
-    surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
+    surfaceConfig.alphaMode = alphaMode;
 
     // Store the surface format
-    WGPUTextureFormat surfaceFormat = surfaceCaps.formats[0];
+    surfaceFormat = surfaceCaps.formats[0];
 
     wgpuSurfaceConfigure(surface, &surfaceConfig);
     std::cout << "✓ Surface configured successfully" << std::endl;
 
-    // Create vertex buffer
-    vertexData = {
-        // x0, y0
-        0.0f, 0.5f,
-        // x1, y1
-        -0.5f, -0.5f,
-        // x2, y2
-        0.5f, -0.5f};
-
-    WGPUBufferDescriptor bufferDesc = {};
-    bufferDesc.nextInChain = nullptr;
-    bufferDesc.size = vertexData.size() * sizeof(float);
-    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
-    bufferDesc.mappedAtCreation = false;
-    vertexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-    wgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertexData.data(), bufferDesc.size);
-    std::cout << "✓ Vertex buffer created and populated" << std::endl;
+    // Free the capabilities memory
+    wgpuSurfaceCapabilitiesFreeMembers(&surfaceCaps);
 
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
-    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011; // WGPUSType_ShaderModuleWGSLDescriptor
+    shaderCodeDesc.chain.next = nullptr;
+    shaderCodeDesc.chain.sType = (WGPUSType)0x00000011;
     shaderCodeDesc.code = makeStringView(shaderSource);
+
     WGPUShaderModuleDescriptor shaderDesc = {};
-    shaderDesc.nextInChain = (WGPUChainedStruct*)&shaderCodeDesc;
+    shaderDesc.nextInChain = (WGPUChainedStruct *)&shaderCodeDesc;
     WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(device, &shaderDesc);
     std::cout << "✓ Shader module created" << std::endl;
 
@@ -335,19 +355,8 @@ bool initWebGPU(SDL_Window *window)
     pipelineDesc.vertex.constants = nullptr;
 
     // Vertex fetch
-    WGPUVertexAttribute attribute = {};
-    attribute.shaderLocation = 0;
-    attribute.offset = 0;
-    attribute.format = WGPUVertexFormat_Float32x2;
-
-    WGPUVertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.arrayStride = 2 * sizeof(float);
-    vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-    vertexBufferLayout.attributeCount = 1;
-    vertexBufferLayout.attributes = &attribute;
-
-    pipelineDesc.vertex.bufferCount = 1;
-    pipelineDesc.vertex.buffers = &vertexBufferLayout;
+    pipelineDesc.vertex.bufferCount = 0;
+    pipelineDesc.vertex.buffers = nullptr;
 
     // Primitive assembly and rasterization
     pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
@@ -433,7 +442,7 @@ void render()
     WGPUTextureViewDescriptor textureViewDesc = {};
     textureViewDesc.nextInChain = nullptr;
     textureViewDesc.label = makeStringView("Surface texture view");
-    textureViewDesc.format = WGPUTextureFormat_Undefined; // Use surface format
+    textureViewDesc.format = surfaceFormat; // Use surface format
     textureViewDesc.dimension = WGPUTextureViewDimension_2D;
     textureViewDesc.baseMipLevel = 0;
     textureViewDesc.mipLevelCount = 1;
@@ -479,7 +488,7 @@ void render()
     colorAttachment.resolveTarget = nullptr;
     colorAttachment.loadOp = WGPULoadOp_Clear;   // Clear the screen
     colorAttachment.storeOp = WGPUStoreOp_Store; // Store the result
-    colorAttachment.clearValue = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+    colorAttachment.clearValue = {0.0f, 0.0f, 0.0f, 1.0f}; // Black
 
     WGPURenderPassDescriptor renderPassDesc = {};
     renderPassDesc.nextInChain = nullptr;
@@ -500,7 +509,6 @@ void render()
 
     // Draw the triangle
     wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
-    wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, vertexData.size() * sizeof(float));
     wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 
     wgpuRenderPassEncoderEnd(renderPass);
@@ -526,7 +534,7 @@ void render()
 
     if (renderCount <= 5)
     {
-        std::cout << "Frame " << renderCount << ": *** FRAME PRESENTED - WINDOW SHOULD BE BRIGHT PURPLE NOW! ***" << std::endl;
+        std::cout << "Frame " << renderCount << ": *** FRAME PRESENTED - WINDOW SHOULD BE BLACK NOW! ***" << std::endl;
     }
 
     // Clean up
@@ -546,13 +554,6 @@ void cleanup()
             wgpuRenderPipelineRelease(pipeline);
             pipeline = nullptr;
             std::cout << "✓ Pipeline released" << std::endl;
-        }
-        if (vertexBuffer)
-        {
-            wgpuBufferDestroy(vertexBuffer);
-            wgpuBufferRelease(vertexBuffer);
-            vertexBuffer = nullptr;
-            std::cout << "✓ Vertex buffer released" << std::endl;
         }
         // Wait for any pending operations to complete
         if (queue)
@@ -788,7 +789,7 @@ int main(int argc, char *argv[])
     bool running = true;
     SDL_Event event;
 
-    std::cout << "\n🎉 SUCCESS! Window should show purple background rendered by WebGPU!" << std::endl;
+    std::cout << "\n🎉 SUCCESS! Window should show a black background rendered by WebGPU!" << std::endl;
     std::cout << "Press ESC or close window to exit." << std::endl;
 
     // Render a few frames to make sure it's really working
