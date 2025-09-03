@@ -45,7 +45,7 @@ add_subdirectory(webgpu)
 add_subdirectory(sdl3webgpu)
 
 # Create executable
-add_executable(${TARGET_NAME} main.cpp)
+add_executable(${TARGET_NAME} main.cpp webgpu-utils.cpp webgpu-utils.h Application.h Application.cpp)
 
 # Link libraries
 target_link_libraries(${TARGET_NAME} PRIVATE 
