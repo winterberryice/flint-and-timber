@@ -211,7 +211,7 @@ bool initWebGPU(SDL_Window *window)
     adapterOpts.nextInChain = nullptr;
     adapterOpts.compatibleSurface = surface;
     adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
-    adapterOpts.backendType = WGPUBackendType_Undefined;
+    adapterOpts.backendType = (WGPUBackendType)3; // Force Vulkan
     adapterOpts.forceFallbackAdapter = false;
 
     WGPURequestAdapterCallbackInfo callbackInfo = {};
@@ -329,6 +329,9 @@ bool initWebGPU(SDL_Window *window)
 
     wgpuSurfaceConfigure(surface, &surfaceConfig);
     std::cout << "✓ Surface configured successfully" << std::endl;
+
+    // Free the capabilities memory
+    wgpuSurfaceCapabilitiesFreeMembers(&surfaceCaps);
 
     // Create shader module
     WGPUShaderModuleWGSLDescriptor shaderCodeDesc = {};
