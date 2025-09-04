@@ -59,3 +59,24 @@ index b5594dea6..8fc80e30a 100644
  
      for submodule in required_submodules:
          if submodule not in deps:
+diff --git a/src/dawn/utils/CommandLineParser.h b/src/dawn/utils/CommandLineParser.h
+--- a/src/dawn/utils/CommandLineParser.h
++++ b/src/dawn/utils/CommandLineParser.h
+@@ -203,7 +203,7 @@
+     EnumOption(std::vector<std::pair<absl::string_view, E>> conversions,
+                absl::string_view name,
+                absl::string_view desc);
+-    ~EnumOption<E>() override;
++    ~EnumOption() override;
+
+     E GetValue() const;
+     std::string GetParameter() const override;
+@@ -242,7 +242,7 @@
+     : Option<EnumOption<E>>(name, desc), mConversions(conversions) {}
+
+ template <typename E>
+-CommandLineParser::EnumOption<E>::~EnumOption<E>() = default;
++CommandLineParser::EnumOption<E>::~EnumOption() = default;
+
+ template <typename E>
+ E CommandLineParser::EnumOption<E>::GetValue() const {
