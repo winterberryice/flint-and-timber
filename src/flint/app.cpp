@@ -30,16 +30,15 @@ namespace
             std::cerr << "Failed to get adapter: " << errorMsg << " (status: " << status << ")" << std::endl;
         }
         data->done = true;
+        std::cout << "Adapter callback completed. Done: " << data->done << std::endl;
     }
 
-    // Add this struct after AdapterRequestData
     struct DeviceRequestData
     {
         WGPUDevice device = nullptr;
         bool done = false;
     };
 
-    // Add this callback function
     static void OnDeviceReceived(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void *userdata1, void *userdata2)
     {
         std::cout << "OnDeviceReceived called with status: " << status << std::endl;
@@ -60,60 +59,38 @@ namespace
             std::cerr << "Failed to get device: " << errorMsg << " (status: " << status << ")" << std::endl;
         }
         data->done = true;
+        std::cout << "Device callback completed. Done: " << data->done << std::endl;
     }
-}
 
-const char *getFormatName(WGPUTextureFormat format)
-{
-    switch (format)
+    // Helper function to create WGPUStringView from const char*
+    WGPUStringView makeStringView(const char *str)
     {
-    case 18:
-        return "RGBA8Unorm";
-    case 19:
-        return "RGBA8UnormSrgb";
-    case 23:
-        return "BGRA8Unorm";
-    case 24:
-        return "BGRA8UnormSrgb";
-    case 26:
-        return "RGB10A2Unorm";
-    case 34:
-        return "RGBA16Float";
-    default:
-    {
-        static char buffer[32];
-        snprintf(buffer, sizeof(buffer), "Format_%d", (int)format);
-        return buffer;
+        return WGPUStringView{
+            .data = str,
+            .length = str ? strlen(str) : 0};
     }
-    }
-}
+
+} // namespace
 
 namespace flint
 {
-
-    App::App()
-    {
-        // Constructor
-    }
-
-    App::~App()
-    {
-        // Destructor - cleanup will be in Terminate()
-    }
-
-    bool App::Initialize(int width, int height)
+    bool App::Initialize(int windowWidth, int windowHeight)
     {
         std::cout << "Initializing app..." << std::endl;
 
-        m_windowWidth = width;
-        m_windowHeight = height;
+        m_windowWidth = windowWidth;
+        m_windowHeight = windowHeight;
 
         // Initialize SDL
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        if (!SDL_Init(SDL_INIT_VIDEO))
         {
-            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+            std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
             return false;
         }
+        std::cout << "SDL initialized successfully" << std::endl;
+
+        // Set SDL hints for WebGPU compatibility
+        SDL_SetHint("SDL_VIDEO_EXTERNAL_CONTEXT", "1");
 
         // Create window - SDL3 syntax (windows are shown by default)
         m_window = SDL_CreateWindow("Flint and Timber",
@@ -124,20 +101,21 @@ namespace flint
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
             return false;
         }
+        std::cout << "SDL window created successfully" << std::endl;
 
-        std::cout << "SDL initialized successfully" << std::endl;
+        // Create WebGPU instance
+        WGPUInstanceDescriptor instanceDesc = {};
+        instanceDesc.nextInChain = nullptr;
 
-        // Initialize WebGPU instance
-        m_instance = wgpuCreateInstance(nullptr);
+        m_instance = wgpuCreateInstance(&instanceDesc);
         if (!m_instance)
         {
             std::cerr << "Failed to create WebGPU instance" << std::endl;
             return false;
         }
-
         std::cout << "WebGPU instance created" << std::endl;
 
-        // Create surface BEFORE requesting adapter - this is important!
+        // Create surface FIRST
         m_surface = SDL_GetWGPUSurface(m_instance, m_window);
         if (!m_surface)
         {
@@ -146,43 +124,37 @@ namespace flint
         }
         std::cout << "WebGPU surface created successfully" << std::endl;
 
-        // Request adapter WITH the surface
-        WGPURequestAdapterOptions adapterOptions = {};
-        adapterOptions.compatibleSurface = m_surface; // IMPORTANT: Pass the surface here!
-        adapterOptions.powerPreference = WGPUPowerPreference_HighPerformance;
-        adapterOptions.backendType = WGPUBackendType_Undefined;
-        adapterOptions.forceFallbackAdapter = false;
+        // Request adapter with surface compatibility
+        std::cout << "Requesting WebGPU adapter..." << std::endl;
 
-        AdapterRequestData adapterData;
+        AdapterRequestData adapterData = {};
+
+        WGPURequestAdapterOptions adapterOpts = {};
+        adapterOpts.nextInChain = nullptr;
+        adapterOpts.compatibleSurface = m_surface; // CRITICAL: Pass surface
+        adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
+        adapterOpts.backendType = WGPUBackendType_Undefined;
+        adapterOpts.forceFallbackAdapter = false;
 
         WGPURequestAdapterCallbackInfo callbackInfo = {};
-        callbackInfo.nextInChain = nullptr;
-        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
         callbackInfo.callback = OnAdapterReceived;
         callbackInfo.userdata1 = &adapterData;
         callbackInfo.userdata2 = nullptr;
+        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
 
-        std::cout << "Requesting WebGPU adapter..." << std::endl;
-        wgpuInstanceRequestAdapter(m_instance, &adapterOptions, callbackInfo);
+        wgpuInstanceRequestAdapter(m_instance, &adapterOpts, callbackInfo);
 
+        // Process events until adapter callback completes
         std::cout << "Processing events until adapter callback..." << std::endl;
-        // Process events until callback is called
-        int attempts = 0;
-        while (!adapterData.done && attempts < 1000)
+        while (!adapterData.done)
         {
             wgpuInstanceProcessEvents(m_instance);
-            attempts++;
-            if (attempts % 100 == 0)
-            {
-                std::cout << "Still waiting... attempt " << attempts << std::endl;
-            }
+            SDL_Delay(1);
         }
-
-        std::cout << "Adapter callback completed. Done: " << adapterData.done << std::endl;
 
         if (!adapterData.adapter)
         {
-            std::cerr << "No suitable WebGPU adapter found" << std::endl;
+            std::cerr << "Failed to get WebGPU adapter" << std::endl;
             return false;
         }
 
@@ -190,107 +162,92 @@ namespace flint
         std::cout << "WebGPU adapter obtained successfully" << std::endl;
 
         // Request device
+        std::cout << "Requesting WebGPU device..." << std::endl;
+
+        DeviceRequestData deviceData = {};
+
         WGPUDeviceDescriptor deviceDesc = {};
         deviceDesc.nextInChain = nullptr;
-        deviceDesc.label = {nullptr, 0};
-        deviceDesc.requiredFeatureCount = 0;
-        deviceDesc.requiredFeatures = nullptr;
-        deviceDesc.requiredLimits = nullptr;
-        deviceDesc.defaultQueue.nextInChain = nullptr;
-        deviceDesc.defaultQueue.label = {nullptr, 0};
-
-        DeviceRequestData deviceData;
+        deviceDesc.label = makeStringView("Main Device");
 
         WGPURequestDeviceCallbackInfo deviceCallbackInfo = {};
-        deviceCallbackInfo.nextInChain = nullptr;
-        deviceCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
         deviceCallbackInfo.callback = OnDeviceReceived;
         deviceCallbackInfo.userdata1 = &deviceData;
         deviceCallbackInfo.userdata2 = nullptr;
+        deviceCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
 
-        std::cout << "Requesting WebGPU device..." << std::endl;
         wgpuAdapterRequestDevice(m_adapter, &deviceDesc, deviceCallbackInfo);
 
+        // Process events until device callback completes
         std::cout << "Processing events until device callback..." << std::endl;
-        attempts = 0;
-        while (!deviceData.done && attempts < 1000)
+        while (!deviceData.done)
         {
             wgpuInstanceProcessEvents(m_instance);
-            attempts++;
-            if (attempts % 100 == 0)
-            {
-                std::cout << "Still waiting for device... attempt " << attempts << std::endl;
-            }
+            SDL_Delay(1);
         }
-
-        std::cout << "Device callback completed. Done: " << deviceData.done << std::endl;
 
         if (!deviceData.device)
         {
-            std::cerr << "Failed to create WebGPU device" << std::endl;
+            std::cerr << "Failed to get WebGPU device" << std::endl;
             return false;
         }
 
         m_device = deviceData.device;
         std::cout << "WebGPU device created successfully" << std::endl;
 
-        // Get the queue
+        // Get queue
         m_queue = wgpuDeviceGetQueue(m_device);
+        if (!m_queue)
+        {
+            std::cerr << "Failed to get WebGPU queue" << std::endl;
+            return false;
+        }
         std::cout << "WebGPU queue obtained" << std::endl;
 
-        // Get surface capabilities
-        WGPUSurfaceCapabilities caps = {};
-        caps.nextInChain = nullptr;
+        // Configure surface
+        WGPUSurfaceCapabilities surfaceCaps = {};
+        wgpuSurfaceGetCapabilities(m_surface, m_adapter, &surfaceCaps);
 
-        WGPUStatus status = wgpuSurfaceGetCapabilities(m_surface, m_adapter, &caps);
-        if (status != WGPUStatus_Success)
+        if (surfaceCaps.formatCount == 0)
         {
-            std::cerr << "Failed to get surface capabilities" << std::endl;
+            std::cerr << "No surface formats available!" << std::endl;
             return false;
         }
 
         std::cout << "Supported surface formats: ";
-        for (size_t i = 0; i < caps.formatCount; i++)
+        for (uint32_t i = 0; i < surfaceCaps.formatCount; ++i)
         {
-            std::cout << caps.formats[i] << " ";
+            std::cout << surfaceCaps.formats[i] << " ";
         }
         std::cout << std::endl;
 
-        // Choose format
-        WGPUTextureFormat preferredFormat = WGPUTextureFormat_Undefined;
-        for (size_t i = 0; i < caps.formatCount; i++)
+        WGPUTextureFormat preferredFormat = surfaceCaps.formats[0];
+        std::cout << "Using format: " << preferredFormat;
+
+        // Add format name for clarity
+        switch (preferredFormat)
         {
-            if (caps.formats[i] == 23) // BGRA8Unorm
-            {
-                preferredFormat = caps.formats[i];
-                break;
-            }
-            else if (caps.formats[i] == 18) // RGBA8Unorm
-            {
-                preferredFormat = caps.formats[i];
-            }
+        case WGPUTextureFormat_BGRA8Unorm:
+            std::cout << " (BGRA8Unorm)";
+            break;
+        case WGPUTextureFormat_RGBA8Unorm:
+            std::cout << " (RGBA8Unorm)";
+            break;
+        default:
+            std::cout << " (Other)";
+            break;
         }
+        std::cout << std::endl;
 
-        if (preferredFormat == WGPUTextureFormat_Undefined)
-        {
-            preferredFormat = caps.formats[0];
-        }
-
-        std::cout << "Using format: " << preferredFormat << " (" << getFormatName(preferredFormat) << ")" << std::endl;
-        m_surfaceFormat = preferredFormat;
-
-        // Configure surface
         WGPUSurfaceConfiguration surfaceConfig = {};
         surfaceConfig.nextInChain = nullptr;
         surfaceConfig.device = m_device;
         surfaceConfig.format = preferredFormat;
         surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
-        surfaceConfig.width = m_windowWidth;
-        surfaceConfig.height = m_windowHeight;
-        surfaceConfig.presentMode = caps.presentModes[0];
-        surfaceConfig.alphaMode = caps.alphaModes[0];
-        surfaceConfig.viewFormatCount = 0;
-        surfaceConfig.viewFormats = nullptr;
+        surfaceConfig.width = static_cast<uint32_t>(m_windowWidth);
+        surfaceConfig.height = static_cast<uint32_t>(m_windowHeight);
+        surfaceConfig.presentMode = WGPUPresentMode_Fifo;
+        surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
 
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
@@ -304,49 +261,43 @@ namespace flint
         std::cout << "Running app..." << std::endl;
         std::cout << "Window should now be visible" << std::endl;
 
-        SDL_Event e;
+        SDL_Event event;
         int frameCount = 0;
 
         while (m_running)
         {
-            frameCount++;
-            if (frameCount % 60 == 0)
+            // Handle SDL events
+            while (SDL_PollEvent(&event))
             {
-                std::cout << "Frame " << frameCount << std::endl;
-            }
-
-            // Handle events
-            while (SDL_PollEvent(&e))
-            {
-                if (e.type == SDL_EVENT_QUIT)
+                switch (event.type)
                 {
+                case SDL_EVENT_QUIT:
                     std::cout << "Quit event received" << std::endl;
                     m_running = false;
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
-                {
-                    std::cout << "Escape key pressed" << std::endl;
-                    m_running = false;
+                    break;
+                case SDL_EVENT_KEY_DOWN:
+                    if (event.key.key == SDLK_ESCAPE)
+                    {
+                        std::cout << "Escape key pressed" << std::endl;
+                        m_running = false;
+                    }
+                    break;
                 }
             }
+
+            frameCount++;
 
             // Get surface texture
             WGPUSurfaceTexture surfaceTexture;
             wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-            if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
+            if (!surfaceTexture.texture || (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal &&
+                                            surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal))
             {
-                std::cerr << "Surface texture status: " << surfaceTexture.status << std::endl;
-                if (surfaceTexture.texture)
+                if (frameCount <= 5)
                 {
-                    wgpuTextureRelease(surfaceTexture.texture);
+                    std::cerr << "Failed to get surface texture, status: " << surfaceTexture.status << std::endl;
                 }
-                continue;
-            }
-
-            if (!surfaceTexture.texture)
-            {
-                std::cerr << "Surface texture is null!" << std::endl;
                 continue;
             }
 
@@ -356,87 +307,65 @@ namespace flint
             }
 
             // Create texture view
-            WGPUTextureViewDescriptor viewDesc = {};
-            viewDesc.nextInChain = nullptr;
-            viewDesc.format = m_surfaceFormat;
-            viewDesc.dimension = WGPUTextureViewDimension_2D;
-            viewDesc.baseMipLevel = 0;
-            viewDesc.mipLevelCount = 1;
-            viewDesc.baseArrayLayer = 0;
-            viewDesc.arrayLayerCount = 1;
-            viewDesc.aspect = WGPUTextureAspect_All;
+            WGPUTextureViewDescriptor textureViewDesc = {};
+            textureViewDesc.nextInChain = nullptr;
+            textureViewDesc.label = makeStringView("Surface texture view");
+            textureViewDesc.format = WGPUTextureFormat_Undefined; // Use surface format
+            textureViewDesc.dimension = WGPUTextureViewDimension_2D;
+            textureViewDesc.baseMipLevel = 0;
+            textureViewDesc.mipLevelCount = 1;
+            textureViewDesc.baseArrayLayer = 0;
+            textureViewDesc.arrayLayerCount = 1;
+            textureViewDesc.aspect = WGPUTextureAspect_All;
 
-            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, &viewDesc);
+            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, &textureViewDesc);
             if (!textureView)
             {
                 std::cerr << "Failed to create texture view!" << std::endl;
-                wgpuTextureRelease(surfaceTexture.texture);
                 continue;
             }
 
             // Create command encoder
             WGPUCommandEncoderDescriptor encoderDesc = {};
             encoderDesc.nextInChain = nullptr;
-            encoderDesc.label = {nullptr, 0};
+            encoderDesc.label = makeStringView("Command Encoder");
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
-            // Create render pass
+            // CRITICAL FIX: Use correct color attachment structure
             WGPURenderPassColorAttachment colorAttachment = {};
+            colorAttachment.nextInChain = nullptr;
             colorAttachment.view = textureView;
+            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED; // CRITICAL: Add this
             colorAttachment.resolveTarget = nullptr;
             colorAttachment.loadOp = WGPULoadOp_Clear;
             colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.0, 1.0, 0.0, 1.0}; // Bright green
+            colorAttachment.clearValue = {0.8f, 0.2f, 0.8f, 1.0f}; // Bright purple like working example
 
             WGPURenderPassDescriptor renderPassDesc = {};
             renderPassDesc.nextInChain = nullptr;
-            renderPassDesc.label = {nullptr, 0};
+            renderPassDesc.label = makeStringView("Render Pass");
             renderPassDesc.colorAttachmentCount = 1;
             renderPassDesc.colorAttachments = &colorAttachment;
             renderPassDesc.depthStencilAttachment = nullptr;
+            renderPassDesc.timestampWrites = nullptr; // CRITICAL: Add this
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
             if (!renderPass)
             {
                 std::cerr << "Failed to create render pass!" << std::endl;
-                wgpuCommandEncoderRelease(encoder);
-                wgpuTextureViewRelease(textureView);
-                wgpuTextureRelease(surfaceTexture.texture);
                 continue;
             }
-            // Add this right after getting the surface texture:
-            std::cout << "Frame " << frameCount << " - Surface texture: "
-                      << (surfaceTexture.texture ? "valid" : "null") << std::endl;
 
-            // Add this right after creating the texture view:
-            std::cout << "Frame " << frameCount << " - Texture view: "
-                      << (textureView ? "valid" : "null") << std::endl;
-
-            // Add this right after creating the render pass:
-            std::cout << "Frame " << frameCount << " - Render pass: "
-                      << (renderPass ? "valid" : "null") << std::endl;
-
-            // Add this right after wgpuQueueSubmit:
-            std::cout << "Frame " << frameCount << " - Queue submit completed" << std::endl;
-
-            // Add this right after wgpuSurfacePresent:
-            std::cout << "Frame " << frameCount << " - Surface present completed" << std::endl;
-
-            // End render pass
             wgpuRenderPassEncoderEnd(renderPass);
 
-            // Finish command buffer
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.nextInChain = nullptr;
-            cmdBufferDesc.label = {nullptr, 0};
+            cmdBufferDesc.label = makeStringView("Command Buffer");
 
             WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
-
-            // Submit commands
             wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
 
-            // Present
             wgpuSurfacePresent(m_surface);
 
             if (frameCount == 1)
@@ -444,12 +373,20 @@ namespace flint
                 std::cout << "First frame rendered and presented" << std::endl;
             }
 
-            // Release resources
+            if (frameCount > 0 && frameCount % 60 == 0)
+            {
+                std::cout << "Frame " << frameCount << std::endl;
+            }
+
+            // Cleanup
             wgpuCommandBufferRelease(cmdBuffer);
             wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
             wgpuTextureViewRelease(textureView);
-            wgpuTextureRelease(surfaceTexture.texture);
+            // Don't release surfaceTexture.texture - it's managed by the surface
+
+            // Process WebGPU events
+            wgpuInstanceProcessEvents(m_instance);
 
             // Small delay to prevent 100% CPU usage
             SDL_Delay(16); // ~60 FPS
@@ -462,33 +399,61 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        if (m_surface)
+        // Force all pending GPU work to complete
+        if (m_device && m_queue)
         {
-            wgpuSurfaceRelease(m_surface);
+            // Wait for device to be idle
+            for (int i = 0; i < 30; ++i)
+            { // Wait up to ~300ms
+                wgpuInstanceProcessEvents(m_instance);
+                SDL_Delay(10);
+            }
         }
+
+        // Release in very specific order with safety checks
         if (m_queue)
         {
             wgpuQueueRelease(m_queue);
+            m_queue = nullptr;
         }
+
+        if (m_surface)
+        {
+            wgpuSurfaceRelease(m_surface);
+            m_surface = nullptr;
+        }
+
         if (m_device)
         {
             wgpuDeviceRelease(m_device);
+            m_device = nullptr;
         }
+
         if (m_adapter)
         {
             wgpuAdapterRelease(m_adapter);
+            m_adapter = nullptr;
         }
+
+        // Process any final events
         if (m_instance)
         {
+            for (int i = 0; i < 10; ++i)
+            {
+                wgpuInstanceProcessEvents(m_instance);
+                SDL_Delay(5);
+            }
             wgpuInstanceRelease(m_instance);
+            m_instance = nullptr;
         }
+
         if (m_window)
         {
             SDL_DestroyWindow(m_window);
+            m_window = nullptr;
         }
 
         SDL_Quit();
-
         m_running = false;
     }
 
