@@ -21,7 +21,23 @@ namespace flint
         m_windowWidth = width;
         m_windowHeight = height;
 
-        // TODO: Initialize SDL
+        // Initialize SDL
+        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        {
+            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        // Create window
+        m_window = SDL_CreateWindow("WebGPU App", m_windowWidth, m_windowHeight, 0);
+        if (!m_window)
+        {
+            std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        std::cout << "SDL initialized successfully" << std::endl;
+
         // TODO: Initialize WebGPU
         // TODO: Create surface
         // TODO: Configure surface
