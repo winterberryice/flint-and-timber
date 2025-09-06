@@ -213,16 +213,38 @@ namespace flint
         }
         std::cout << "WebGPU surface created successfully" << std::endl;
 
-        // Configure the surface
+        // Get surface capabilities first
+        WGPUSurfaceCapabilities caps = {};
+        caps.nextInChain = nullptr;
+
+        WGPUStatus status = wgpuSurfaceGetCapabilities(m_surface, m_adapter, &caps);
+        if (status != WGPUStatus_Success)
+        {
+            std::cerr << "Failed to get surface capabilities" << std::endl;
+            return false;
+        }
+
+        std::cout << "Supported surface formats: ";
+        for (size_t i = 0; i < caps.formatCount; i++)
+        {
+            std::cout << caps.formats[i] << " ";
+        }
+        std::cout << std::endl;
+
+        // Use the first supported format
+        WGPUTextureFormat preferredFormat = caps.formats[0];
+        std::cout << "Using format: " << preferredFormat << std::endl;
+
+        // NOW configure the surface using the capabilities we just got
         WGPUSurfaceConfiguration surfaceConfig = {};
         surfaceConfig.nextInChain = nullptr;
         surfaceConfig.device = m_device;
-        surfaceConfig.format = WGPUTextureFormat_BGRA8Unorm; // Common format
+        surfaceConfig.format = preferredFormat; // Use the format from capabilities
         surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
         surfaceConfig.width = m_windowWidth;
         surfaceConfig.height = m_windowHeight;
-        surfaceConfig.presentMode = WGPUPresentMode_Fifo;
-        surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
+        surfaceConfig.presentMode = caps.presentModes[0]; // Use first supported present mode
+        surfaceConfig.alphaMode = caps.alphaModes[0];     // Use first supported alpha mode
         surfaceConfig.viewFormatCount = 0;
         surfaceConfig.viewFormats = nullptr;
 
@@ -237,14 +259,32 @@ namespace flint
     {
         std::cout << "Running app..." << std::endl;
 
+        // Make sure window is shown
+        SDL_ShowWindow(m_window);
+        std::cout << "Window should now be visible" << std::endl;
+
         SDL_Event e;
+        int frameCount = 0;
+
         while (m_running)
         {
+            frameCount++;
+            if (frameCount % 60 == 0)
+            {
+                std::cout << "Frame " << frameCount << std::endl;
+            }
+
             // Handle events
             while (SDL_PollEvent(&e))
             {
                 if (e.type == SDL_EVENT_QUIT)
                 {
+                    std::cout << "Quit event received" << std::endl;
+                    m_running = false;
+                }
+                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
+                {
+                    std::cout << "Escape key pressed" << std::endl;
                     m_running = false;
                 }
             }
@@ -253,51 +293,69 @@ namespace flint
             WGPUSurfaceTexture surfaceTexture;
             wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-            if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
+            if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
             {
-                WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
-
-                WGPUCommandEncoderDescriptor encoderDesc = {};
-                encoderDesc.nextInChain = nullptr;
-                encoderDesc.label = {nullptr, 0};
-
-                WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
-
-                WGPURenderPassColorAttachment colorAttachment = {};
-                colorAttachment.view = textureView;
-                colorAttachment.resolveTarget = nullptr;
-                colorAttachment.loadOp = WGPULoadOp_Clear;
-                colorAttachment.storeOp = WGPUStoreOp_Store;
-                colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
-
-                WGPURenderPassDescriptor renderPassDesc = {};
-                renderPassDesc.nextInChain = nullptr;
-                renderPassDesc.label = {nullptr, 0};
-                renderPassDesc.colorAttachmentCount = 1;
-                renderPassDesc.colorAttachments = &colorAttachment;
-                renderPassDesc.depthStencilAttachment = nullptr;
-
-                WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-                wgpuRenderPassEncoderEnd(renderPass);
-
-                WGPUCommandBufferDescriptor cmdBufferDesc = {};
-                cmdBufferDesc.nextInChain = nullptr;
-                cmdBufferDesc.label = {nullptr, 0};
-
-                WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
-                wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
-
-                wgpuSurfacePresent(m_surface);
-
-                // Cleanup
-                wgpuCommandBufferRelease(cmdBuffer);
-                wgpuRenderPassEncoderRelease(renderPass);
-                wgpuCommandEncoderRelease(encoder);
-                wgpuTextureViewRelease(textureView);
+                std::cerr << "Failed to get surface texture, status: " << surfaceTexture.status << std::endl;
+                wgpuTextureRelease(surfaceTexture.texture);
+                continue;
             }
 
+            if (frameCount == 1)
+            {
+                std::cout << "Successfully got surface texture on first frame" << std::endl;
+            }
+
+            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+
+            WGPUCommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.nextInChain = nullptr;
+            encoderDesc.label = {nullptr, 0};
+
+            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+
+            WGPURenderPassColorAttachment colorAttachment = {};
+            colorAttachment.view = textureView;
+            colorAttachment.resolveTarget = nullptr;
+            colorAttachment.loadOp = WGPULoadOp_Clear;
+            colorAttachment.storeOp = WGPUStoreOp_Store;
+            colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
+
+            WGPURenderPassDescriptor renderPassDesc = {};
+            renderPassDesc.nextInChain = nullptr;
+            renderPassDesc.label = {nullptr, 0};
+            renderPassDesc.colorAttachmentCount = 1;
+            renderPassDesc.colorAttachments = &colorAttachment;
+            renderPassDesc.depthStencilAttachment = nullptr;
+
+            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+            wgpuRenderPassEncoderEnd(renderPass);
+
+            WGPUCommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.nextInChain = nullptr;
+            cmdBufferDesc.label = {nullptr, 0};
+
+            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+            wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
+
+            wgpuSurfacePresent(m_surface);
+
+            if (frameCount == 1)
+            {
+                std::cout << "First frame rendered and presented" << std::endl;
+            }
+
+            // Cleanup
+            wgpuCommandBufferRelease(cmdBuffer);
+            wgpuRenderPassEncoderRelease(renderPass);
+            wgpuCommandEncoderRelease(encoder);
+            wgpuTextureViewRelease(textureView);
             wgpuTextureRelease(surfaceTexture.texture);
+
+            // Small delay to prevent 100% CPU usage
+            SDL_Delay(16); // ~60 FPS
         }
+
+        std::cout << "Render loop ended after " << frameCount << " frames" << std::endl;
     }
 
     void App::Terminate()
