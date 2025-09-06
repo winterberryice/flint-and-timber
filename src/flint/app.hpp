@@ -29,6 +29,7 @@ namespace flint
         WGPUDevice m_device = nullptr;
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
+        WGPUTextureFormat m_surfaceFormat;
 
         // App state
         bool m_running = false;

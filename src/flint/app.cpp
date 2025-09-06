@@ -63,6 +63,31 @@ namespace
     }
 }
 
+const char *getFormatName(WGPUTextureFormat format)
+{
+    switch (format)
+    {
+    case 18:
+        return "RGBA8Unorm";
+    case 19:
+        return "RGBA8UnormSrgb";
+    case 23:
+        return "BGRA8Unorm";
+    case 24:
+        return "BGRA8UnormSrgb";
+    case 26:
+        return "RGB10A2Unorm";
+    case 34:
+        return "RGBA16Float";
+    default:
+    {
+        static char buffer[32];
+        snprintf(buffer, sizeof(buffer), "Format_%d", (int)format);
+        return buffer;
+    }
+    }
+}
+
 namespace flint
 {
 
@@ -90,8 +115,10 @@ namespace flint
             return false;
         }
 
-        // Create window
-        m_window = SDL_CreateWindow("WebGPU App", m_windowWidth, m_windowHeight, 0);
+        // Create window - SDL3 syntax (windows are shown by default)
+        m_window = SDL_CreateWindow("Flint and Timber",
+                                    m_windowWidth, m_windowHeight,
+                                    SDL_WINDOW_RESIZABLE);
         if (!m_window)
         {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
@@ -110,10 +137,19 @@ namespace flint
 
         std::cout << "WebGPU instance created" << std::endl;
 
-        // Request adapter
+        // Create surface BEFORE requesting adapter - this is important!
+        m_surface = SDL_GetWGPUSurface(m_instance, m_window);
+        if (!m_surface)
+        {
+            std::cerr << "Failed to create WebGPU surface" << std::endl;
+            return false;
+        }
+        std::cout << "WebGPU surface created successfully" << std::endl;
+
+        // Request adapter WITH the surface
         WGPURequestAdapterOptions adapterOptions = {};
-        adapterOptions.compatibleSurface = nullptr;
-        adapterOptions.powerPreference = WGPUPowerPreference_Undefined;
+        adapterOptions.compatibleSurface = m_surface; // IMPORTANT: Pass the surface here!
+        adapterOptions.powerPreference = WGPUPowerPreference_HighPerformance;
         adapterOptions.backendType = WGPUBackendType_Undefined;
         adapterOptions.forceFallbackAdapter = false;
 
@@ -121,7 +157,7 @@ namespace flint
 
         WGPURequestAdapterCallbackInfo callbackInfo = {};
         callbackInfo.nextInChain = nullptr;
-        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this!
+        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
         callbackInfo.callback = OnAdapterReceived;
         callbackInfo.userdata1 = &adapterData;
         callbackInfo.userdata2 = nullptr;
@@ -134,9 +170,7 @@ namespace flint
         int attempts = 0;
         while (!adapterData.done && attempts < 1000)
         {
-            // Try to process pending events
             wgpuInstanceProcessEvents(m_instance);
-
             attempts++;
             if (attempts % 100 == 0)
             {
@@ -204,16 +238,7 @@ namespace flint
         m_queue = wgpuDeviceGetQueue(m_device);
         std::cout << "WebGPU queue obtained" << std::endl;
 
-        // Create surface
-        m_surface = SDL_GetWGPUSurface(m_instance, m_window);
-        if (!m_surface)
-        {
-            std::cerr << "Failed to create WebGPU surface" << std::endl;
-            return false;
-        }
-        std::cout << "WebGPU surface created successfully" << std::endl;
-
-        // Get surface capabilities first
+        // Get surface capabilities
         WGPUSurfaceCapabilities caps = {};
         caps.nextInChain = nullptr;
 
@@ -231,20 +256,39 @@ namespace flint
         }
         std::cout << std::endl;
 
-        // Use the first supported format
-        WGPUTextureFormat preferredFormat = caps.formats[0];
-        std::cout << "Using format: " << preferredFormat << std::endl;
+        // Choose format
+        WGPUTextureFormat preferredFormat = WGPUTextureFormat_Undefined;
+        for (size_t i = 0; i < caps.formatCount; i++)
+        {
+            if (caps.formats[i] == 23) // BGRA8Unorm
+            {
+                preferredFormat = caps.formats[i];
+                break;
+            }
+            else if (caps.formats[i] == 18) // RGBA8Unorm
+            {
+                preferredFormat = caps.formats[i];
+            }
+        }
 
-        // NOW configure the surface using the capabilities we just got
+        if (preferredFormat == WGPUTextureFormat_Undefined)
+        {
+            preferredFormat = caps.formats[0];
+        }
+
+        std::cout << "Using format: " << preferredFormat << " (" << getFormatName(preferredFormat) << ")" << std::endl;
+        m_surfaceFormat = preferredFormat;
+
+        // Configure surface
         WGPUSurfaceConfiguration surfaceConfig = {};
         surfaceConfig.nextInChain = nullptr;
         surfaceConfig.device = m_device;
-        surfaceConfig.format = preferredFormat; // Use the format from capabilities
+        surfaceConfig.format = preferredFormat;
         surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
         surfaceConfig.width = m_windowWidth;
         surfaceConfig.height = m_windowHeight;
-        surfaceConfig.presentMode = caps.presentModes[0]; // Use first supported present mode
-        surfaceConfig.alphaMode = caps.alphaModes[0];     // Use first supported alpha mode
+        surfaceConfig.presentMode = caps.presentModes[0];
+        surfaceConfig.alphaMode = caps.alphaModes[0];
         surfaceConfig.viewFormatCount = 0;
         surfaceConfig.viewFormats = nullptr;
 
@@ -258,9 +302,6 @@ namespace flint
     void App::Run()
     {
         std::cout << "Running app..." << std::endl;
-
-        // Make sure window is shown
-        SDL_ShowWindow(m_window);
         std::cout << "Window should now be visible" << std::endl;
 
         SDL_Event e;
@@ -289,14 +330,23 @@ namespace flint
                 }
             }
 
-            // Simple render - clear to a color
+            // Get surface texture
             WGPUSurfaceTexture surfaceTexture;
             wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
             if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
             {
-                std::cerr << "Failed to get surface texture, status: " << surfaceTexture.status << std::endl;
-                wgpuTextureRelease(surfaceTexture.texture);
+                std::cerr << "Surface texture status: " << surfaceTexture.status << std::endl;
+                if (surfaceTexture.texture)
+                {
+                    wgpuTextureRelease(surfaceTexture.texture);
+                }
+                continue;
+            }
+
+            if (!surfaceTexture.texture)
+            {
+                std::cerr << "Surface texture is null!" << std::endl;
                 continue;
             }
 
@@ -305,20 +355,39 @@ namespace flint
                 std::cout << "Successfully got surface texture on first frame" << std::endl;
             }
 
-            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+            // Create texture view
+            WGPUTextureViewDescriptor viewDesc = {};
+            viewDesc.nextInChain = nullptr;
+            viewDesc.format = m_surfaceFormat;
+            viewDesc.dimension = WGPUTextureViewDimension_2D;
+            viewDesc.baseMipLevel = 0;
+            viewDesc.mipLevelCount = 1;
+            viewDesc.baseArrayLayer = 0;
+            viewDesc.arrayLayerCount = 1;
+            viewDesc.aspect = WGPUTextureAspect_All;
 
+            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, &viewDesc);
+            if (!textureView)
+            {
+                std::cerr << "Failed to create texture view!" << std::endl;
+                wgpuTextureRelease(surfaceTexture.texture);
+                continue;
+            }
+
+            // Create command encoder
             WGPUCommandEncoderDescriptor encoderDesc = {};
             encoderDesc.nextInChain = nullptr;
             encoderDesc.label = {nullptr, 0};
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
+            // Create render pass
             WGPURenderPassColorAttachment colorAttachment = {};
             colorAttachment.view = textureView;
             colorAttachment.resolveTarget = nullptr;
             colorAttachment.loadOp = WGPULoadOp_Clear;
             colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
+            colorAttachment.clearValue = {0.0, 1.0, 0.0, 1.0}; // Bright green
 
             WGPURenderPassDescriptor renderPassDesc = {};
             renderPassDesc.nextInChain = nullptr;
@@ -328,15 +397,46 @@ namespace flint
             renderPassDesc.depthStencilAttachment = nullptr;
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+            if (!renderPass)
+            {
+                std::cerr << "Failed to create render pass!" << std::endl;
+                wgpuCommandEncoderRelease(encoder);
+                wgpuTextureViewRelease(textureView);
+                wgpuTextureRelease(surfaceTexture.texture);
+                continue;
+            }
+            // Add this right after getting the surface texture:
+            std::cout << "Frame " << frameCount << " - Surface texture: "
+                      << (surfaceTexture.texture ? "valid" : "null") << std::endl;
+
+            // Add this right after creating the texture view:
+            std::cout << "Frame " << frameCount << " - Texture view: "
+                      << (textureView ? "valid" : "null") << std::endl;
+
+            // Add this right after creating the render pass:
+            std::cout << "Frame " << frameCount << " - Render pass: "
+                      << (renderPass ? "valid" : "null") << std::endl;
+
+            // Add this right after wgpuQueueSubmit:
+            std::cout << "Frame " << frameCount << " - Queue submit completed" << std::endl;
+
+            // Add this right after wgpuSurfacePresent:
+            std::cout << "Frame " << frameCount << " - Surface present completed" << std::endl;
+
+            // End render pass
             wgpuRenderPassEncoderEnd(renderPass);
 
+            // Finish command buffer
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.nextInChain = nullptr;
             cmdBufferDesc.label = {nullptr, 0};
 
             WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+
+            // Submit commands
             wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
 
+            // Present
             wgpuSurfacePresent(m_surface);
 
             if (frameCount == 1)
@@ -344,7 +444,7 @@ namespace flint
                 std::cout << "First frame rendered and presented" << std::endl;
             }
 
-            // Cleanup
+            // Release resources
             wgpuCommandBufferRelease(cmdBuffer);
             wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
@@ -362,8 +462,32 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        // TODO: Cleanup WebGPU resources
-        // TODO: Cleanup SDL resources
+        if (m_surface)
+        {
+            wgpuSurfaceRelease(m_surface);
+        }
+        if (m_queue)
+        {
+            wgpuQueueRelease(m_queue);
+        }
+        if (m_device)
+        {
+            wgpuDeviceRelease(m_device);
+        }
+        if (m_adapter)
+        {
+            wgpuAdapterRelease(m_adapter);
+        }
+        if (m_instance)
+        {
+            wgpuInstanceRelease(m_instance);
+        }
+        if (m_window)
+        {
+            SDL_DestroyWindow(m_window);
+        }
+
+        SDL_Quit();
 
         m_running = false;
     }
