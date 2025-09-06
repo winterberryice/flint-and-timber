@@ -22,10 +22,13 @@ private:
     WGPUTextureView GetNextSurfaceTextureView();
 
 private:
+    bool m_running = true;
     SDL_Event event;
     // We put here all the variables that are shared between init and main loop
-    SDL_Window *window;
-    WGPUDevice device;
-    WGPUQueue queue;
-    WGPUSurface surface;
+    SDL_Window* window = nullptr;
+    WGPUInstance mInstance = nullptr;
+    WGPUAdapter mAdapter = nullptr;
+    WGPUDevice device = nullptr;
+    WGPUQueue queue = nullptr;
+    WGPUSurface surface = nullptr;
 };

@@ -44,8 +44,15 @@ add_subdirectory(webgpu)
 # Add SDL3WebGPU helper
 add_subdirectory(sdl3webgpu)
 
+# Collect all source files from src directory
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
+file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
+
 # Create executable
-add_executable(${TARGET_NAME} main.cpp webgpu-utils.cpp webgpu-utils.h Application.h Application.cpp)
+add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})
+
+# Include src directory for headers
+target_include_directories(${TARGET_NAME} PRIVATE src)
 
 # Link libraries
 target_link_libraries(${TARGET_NAME} PRIVATE 

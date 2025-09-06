@@ -168,8 +168,8 @@ bool Application::Initialize()
     WGPUInstanceDescriptor instanceDesc = {};
     instanceDesc.nextInChain = nullptr;
 
-    WGPUInstance instance = wgpuCreateInstance(&instanceDesc);
-    if (!instance)
+    mInstance = wgpuCreateInstance(&instanceDesc);
+    if (!mInstance)
     {
         std::cerr << "Failed to create WebGPU instance!" << std::endl;
         return false;
@@ -177,7 +177,7 @@ bool Application::Initialize()
 
     std::cout << "✓ WebGPU instance created successfully" << std::endl;
 
-    surface = SDL_GetWGPUSurface(instance, window);
+    surface = SDL_GetWGPUSurface(mInstance, window);
 
     if (!surface)
     {
@@ -197,9 +197,9 @@ bool Application::Initialize()
     // adapterOpts.backendType = WGPUBackendType_Undefined;
     // adapterOpts.forceFallbackAdapter = false;
 
-    WGPUAdapter adapter = requestAdapterSync(instance, &adapterOpts);
+    mAdapter = requestAdapterSync(mInstance, &adapterOpts);
 
-    if (!adapter)
+    if (!mAdapter)
     {
         std::cerr << "Failed to request WebGPU adapter!" << std::endl;
         return false;
@@ -224,9 +224,7 @@ bool Application::Initialize()
     //         std::cout << " (" << message << ")";
     //     std::cout << std::endl;
     // };
-    device = requestDeviceSync(instance, adapter, &deviceDesc);
-
-    wgpuInstanceRelease(instance);
+    device = requestDeviceSync(mInstance, mAdapter, &deviceDesc);
 
     if (!device)
     {
@@ -248,7 +246,7 @@ bool Application::Initialize()
 
     // Configure surface
     WGPUSurfaceCapabilities surfaceCaps = {};
-    wgpuSurfaceGetCapabilities(surface, adapter, &surfaceCaps);
+    wgpuSurfaceGetCapabilities(surface, mAdapter, &surfaceCaps);
 
     if (surfaceCaps.formatCount == 0)
     {
@@ -280,9 +278,6 @@ bool Application::Initialize()
     wgpuSurfaceConfigure(surface, &config);
     std::cout << "✓ Surface configured successfully" << std::endl;
 
-    // Release the adapter only after it has been fully utilized
-    wgpuAdapterRelease(adapter);
-
     std::cout << "=== WebGPU initialization complete! ===" << std::endl;
     std::cout << "Press ESC or close window to exit." << std::endl;
     return true;
@@ -290,24 +285,42 @@ bool Application::Initialize()
 
 void Application::Terminate()
 {
-    // Unconfigure the surface
+    // Release in reverse order of creation
     wgpuSurfaceUnconfigure(surface);
-    wgpuQueueRelease(queue);
-    wgpuSurfaceRelease(surface);
-    wgpuDeviceRelease(device);
+    if (queue) wgpuQueueRelease(queue);
+    if (device) wgpuDeviceRelease(device);
+    if (surface) wgpuSurfaceRelease(surface);
+    if (mAdapter) wgpuAdapterRelease(mAdapter);
+    if (mInstance) wgpuInstanceRelease(mInstance);
+
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
 void Application::MainLoop()
 {
-    SDL_PollEvent(&event);
+    // Event loop
+    while (SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+        case SDL_EVENT_QUIT:
+            m_running = false;
+            break;
+        case SDL_EVENT_KEY_DOWN:
+            if (event.key.key == SDLK_ESCAPE)
+            {
+                m_running = false;
+            }
+            break;
+        }
+    }
 
     // Get the next target texture view
     WGPUTextureView targetView = GetNextSurfaceTextureView();
     if (!targetView)
     {
-        std::cout << "ERROR: Failed to create texture view!" << std::endl;
+        // This can happen when resizing the window.
         return;
     }
 
@@ -359,36 +372,19 @@ void Application::MainLoop()
     WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
     wgpuCommandEncoderRelease(encoder);
 
-    std::cout << "Submitting command..." << std::endl;
     wgpuQueueSubmit(queue, 1, &command);
     wgpuCommandBufferRelease(command);
-    std::cout << "Command submitted." << std::endl;
 
-    // At the end of the frame
+    // Present the frame
+    wgpuSurfacePresent(surface);
+
+    // At the end of the frame, release the texture view
     wgpuTextureViewRelease(targetView);
-
-    // wgpuSurfacePresent(surface);
 }
 
 bool Application::IsRunning()
 {
-    bool running = true;
-    switch (event.type)
-    {
-    case SDL_EVENT_QUIT:
-        std::cout << "Quit requested" << std::endl;
-        running = false;
-        break;
-    case SDL_EVENT_KEY_DOWN:
-        if (event.key.key == SDLK_ESCAPE)
-        {
-            std::cout << "Escape pressed" << std::endl;
-            running = false;
-        }
-        break;
-    }
-
-    return running;
+    return m_running;
 }
 
 WGPUTextureView Application::GetNextSurfaceTextureView()
