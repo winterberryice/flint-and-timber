@@ -30,6 +30,8 @@ namespace flint
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
         WGPUBuffer m_vertexBuffer = nullptr;
+        WGPUShaderModule m_vertexShader = nullptr;
+        WGPUShaderModule m_fragmentShader = nullptr;
 
         // App state
         bool m_running = false;

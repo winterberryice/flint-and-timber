@@ -266,6 +266,57 @@ namespace flint
 
         std::cout << "Vertex buffer created and data uploaded" << std::endl;
 
+        std::cout << "Creating shaders..." << std::endl;
+
+        // Vertex shader source code (WGSL)
+        const char *vertexShaderSource = R"(
+@vertex
+fn vs_main(@location(0) position: vec3f) -> @builtin(position) vec4f {
+    return vec4f(position, 1.0);
+}
+)";
+
+        // Fragment shader source code (WGSL)
+        const char *fragmentShaderSource = R"(
+@fragment
+fn fs_main() -> @location(0) vec4f {
+    return vec4f(1.0, 0.0, 0.0, 1.0); // Red color
+}
+)";
+
+        // Create vertex shader module
+        WGPUShaderModuleWGSLDescriptor vertexShaderWGSLDesc = {};
+        vertexShaderWGSLDesc.chain.next = nullptr;
+        vertexShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+        vertexShaderWGSLDesc.code = makeStringView(vertexShaderSource);
+
+        WGPUShaderModuleDescriptor vertexShaderDesc = {};
+        vertexShaderDesc.nextInChain = &vertexShaderWGSLDesc.chain;
+        vertexShaderDesc.label = makeStringView("Vertex Shader");
+
+        m_vertexShader = wgpuDeviceCreateShaderModule(m_device, &vertexShaderDesc);
+
+        // Create fragment shader module
+        WGPUShaderModuleWGSLDescriptor fragmentShaderWGSLDesc = {};
+        fragmentShaderWGSLDesc.chain.next = nullptr;
+        fragmentShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+        fragmentShaderWGSLDesc.code = makeStringView(fragmentShaderSource);
+
+        WGPUShaderModuleDescriptor fragmentShaderDesc = {};
+        fragmentShaderDesc.nextInChain = &fragmentShaderWGSLDesc.chain;
+        fragmentShaderDesc.label = makeStringView("Fragment Shader");
+
+        m_fragmentShader = wgpuDeviceCreateShaderModule(m_device, &fragmentShaderDesc);
+
+        if (!m_vertexShader || !m_fragmentShader)
+        {
+            std::cerr << "Failed to create shaders!" << std::endl;
+            return false; // Assuming your init function returns bool
+        }
+
+        std::cout << "Shaders created successfully" << std::endl;
+
+        // ====
         m_running = true;
         return true;
     }
@@ -348,6 +399,16 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        if (m_vertexShader)
+        {
+            wgpuShaderModuleRelease(m_vertexShader);
+            m_vertexShader = nullptr;
+        }
+        if (m_fragmentShader)
+        {
+            wgpuShaderModuleRelease(m_fragmentShader);
+            m_fragmentShader = nullptr;
+        }
         if (m_vertexBuffer)
         {
             wgpuBufferRelease(m_vertexBuffer);
