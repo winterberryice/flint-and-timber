@@ -32,6 +32,7 @@ namespace flint
         WGPUBuffer m_vertexBuffer = nullptr;
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
+        WGPURenderPipeline m_renderPipeline = nullptr;
 
         // App state
         bool m_running = false;

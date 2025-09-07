@@ -316,6 +316,70 @@ fn fs_main() -> @location(0) vec4f {
 
         std::cout << "Shaders created successfully" << std::endl;
 
+        std::cout << "Creating render pipeline..." << std::endl;
+
+        // Define vertex buffer layout
+        WGPUVertexAttribute vertexAttribute = {};
+        vertexAttribute.format = WGPUVertexFormat_Float32x3; // vec3f (x, y, z)
+        vertexAttribute.offset = 0;
+        vertexAttribute.shaderLocation = 0;
+
+        WGPUVertexBufferLayout vertexBufferLayout = {};
+        vertexBufferLayout.arrayStride = 3 * sizeof(float); // 3 floats per vertex
+        vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+        vertexBufferLayout.attributeCount = 1;
+        vertexBufferLayout.attributes = &vertexAttribute;
+
+        // Create render pipeline descriptor
+        WGPURenderPipelineDescriptor pipelineDescriptor = {};
+        pipelineDescriptor.label = makeStringView("Triangle Render Pipeline");
+
+        // Vertex state
+        pipelineDescriptor.vertex.module = m_vertexShader;
+        pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
+        pipelineDescriptor.vertex.bufferCount = 1;
+        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
+
+        // Fragment state
+        WGPUFragmentState fragmentState = {};
+        fragmentState.module = m_fragmentShader;
+        fragmentState.entryPoint = makeStringView("fs_main");
+
+        // Color target (what we're rendering to)
+        WGPUColorTargetState colorTarget = {};
+        colorTarget.format = WGPUTextureFormat_BGRA8Unorm; // Use your surface format
+        colorTarget.writeMask = WGPUColorWriteMask_All;
+
+        fragmentState.targetCount = 1;
+        fragmentState.targets = &colorTarget;
+
+        pipelineDescriptor.fragment = &fragmentState;
+
+        // Primitive state (how to interpret vertices)
+        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+        pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_None;
+
+        // Multisample state
+        pipelineDescriptor.multisample.count = 1;
+        pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
+        pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
+
+        // Layout (auto-generated)
+        pipelineDescriptor.layout = nullptr; // Auto layout
+
+        // Create the pipeline
+        m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
+
+        if (!m_renderPipeline)
+        {
+            std::cerr << "Failed to create render pipeline!" << std::endl;
+            return false;
+        }
+
+        std::cout << "Render pipeline created successfully" << std::endl;
+
         // ====
         m_running = true;
         return true;
@@ -399,6 +463,11 @@ fn fs_main() -> @location(0) vec4f {
     {
         std::cout << "Terminating app..." << std::endl;
 
+        if (m_renderPipeline)
+        {
+            wgpuRenderPipelineRelease(m_renderPipeline);
+            m_renderPipeline = nullptr;
+        }
         if (m_vertexShader)
         {
             wgpuShaderModuleRelease(m_vertexShader);
