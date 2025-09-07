@@ -128,7 +128,11 @@ namespace flint
         std::cout << "SDL initialized successfully" << std::endl;
 
         // Initialize WebGPU instance
-        m_instance = wgpuCreateInstance(nullptr);
+        // Create WebGPU instance
+        WGPUInstanceDescriptor instanceDesc = {};
+        instanceDesc.nextInChain = nullptr;
+
+        m_instance = wgpuCreateInstance(&instanceDesc);
         if (!m_instance)
         {
             std::cerr << "Failed to create WebGPU instance" << std::endl;
@@ -148,6 +152,7 @@ namespace flint
 
         // Request adapter WITH the surface
         WGPURequestAdapterOptions adapterOptions = {};
+        adapterOptions.nextInChain = nullptr;
         adapterOptions.compatibleSurface = m_surface; // IMPORTANT: Pass the surface here!
         adapterOptions.powerPreference = WGPUPowerPreference_HighPerformance;
         adapterOptions.backendType = WGPUBackendType_Undefined;
@@ -383,7 +388,9 @@ namespace flint
 
             // Create render pass
             WGPURenderPassColorAttachment colorAttachment = {};
+            colorAttachment.nextInChain = nullptr;
             colorAttachment.view = textureView;
+            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED; // CRITICAL: Add this
             colorAttachment.resolveTarget = nullptr;
             colorAttachment.loadOp = WGPULoadOp_Clear;
             colorAttachment.storeOp = WGPUStoreOp_Store;
@@ -405,23 +412,23 @@ namespace flint
                 wgpuTextureRelease(surfaceTexture.texture);
                 continue;
             }
-            // Add this right after getting the surface texture:
-            std::cout << "Frame " << frameCount << " - Surface texture: "
-                      << (surfaceTexture.texture ? "valid" : "null") << std::endl;
+            // // Add this right after getting the surface texture:
+            // std::cout << "Frame " << frameCount << " - Surface texture: "
+            //           << (surfaceTexture.texture ? "valid" : "null") << std::endl;
 
-            // Add this right after creating the texture view:
-            std::cout << "Frame " << frameCount << " - Texture view: "
-                      << (textureView ? "valid" : "null") << std::endl;
+            // // Add this right after creating the texture view:
+            // std::cout << "Frame " << frameCount << " - Texture view: "
+            //           << (textureView ? "valid" : "null") << std::endl;
 
-            // Add this right after creating the render pass:
-            std::cout << "Frame " << frameCount << " - Render pass: "
-                      << (renderPass ? "valid" : "null") << std::endl;
+            // // Add this right after creating the render pass:
+            // std::cout << "Frame " << frameCount << " - Render pass: "
+            //           << (renderPass ? "valid" : "null") << std::endl;
 
-            // Add this right after wgpuQueueSubmit:
-            std::cout << "Frame " << frameCount << " - Queue submit completed" << std::endl;
+            // // Add this right after wgpuQueueSubmit:
+            // std::cout << "Frame " << frameCount << " - Queue submit completed" << std::endl;
 
-            // Add this right after wgpuSurfacePresent:
-            std::cout << "Frame " << frameCount << " - Surface present completed" << std::endl;
+            // // Add this right after wgpuSurfacePresent:
+            // std::cout << "Frame " << frameCount << " - Surface present completed" << std::endl;
 
             // End render pass
             wgpuRenderPassEncoderEnd(renderPass);
@@ -449,7 +456,9 @@ namespace flint
             wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
             wgpuTextureViewRelease(textureView);
-            wgpuTextureRelease(surfaceTexture.texture);
+            // wgpuTextureRelease(surfaceTexture.texture);
+
+            wgpuInstanceProcessEvents(m_instance);
 
             // Small delay to prevent 100% CPU usage
             SDL_Delay(16); // ~60 FPS
