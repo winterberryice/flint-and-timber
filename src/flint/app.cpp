@@ -220,11 +220,19 @@ namespace flint
         }
         std::cout << "WebGPU surface created successfully" << std::endl;
 
+        // Get supported surface formats
+        WGPUSurfaceCapabilities surfaceCapabilities;
+        wgpuSurfaceGetCapabilities(m_surface, m_adapter, &surfaceCapabilities);
+
+        // Use the first supported format (this is the preferred one)
+        m_surfaceFormat = surfaceCapabilities.formats[0];
+        std::cout << "Using surface format: " << m_surfaceFormat << std::endl;
+
         // Configure the surface
         WGPUSurfaceConfiguration surfaceConfig = {};
         surfaceConfig.nextInChain = nullptr;
         surfaceConfig.device = m_device;
-        surfaceConfig.format = WGPUTextureFormat_BGRA8Unorm; // Common format
+        surfaceConfig.format = m_surfaceFormat; // Common format
         surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
         surfaceConfig.width = m_windowWidth;
         surfaceConfig.height = m_windowHeight;
@@ -232,6 +240,8 @@ namespace flint
         surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
         surfaceConfig.viewFormatCount = 0;
         surfaceConfig.viewFormats = nullptr;
+        wgpuSurfaceCapabilitiesFreeMembers(surfaceCapabilities);
+        //
 
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
@@ -347,7 +357,7 @@ fn fs_main() -> @location(0) vec4f {
 
         // Color target (what we're rendering to)
         WGPUColorTargetState colorTarget = {};
-        colorTarget.format = WGPUTextureFormat_BGRA8Unorm; // Use your surface format
+        colorTarget.format = m_surfaceFormat; // Use your surface format
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
         fragmentState.targetCount = 1;

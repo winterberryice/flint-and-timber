@@ -32,6 +32,7 @@ namespace flint
         WGPUDevice m_device = nullptr;
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
+        WGPUTextureFormat m_surfaceFormat;
         WGPUBuffer m_vertexBuffer = nullptr;
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
