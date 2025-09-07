@@ -4,8 +4,6 @@
 #include <webgpu/webgpu.h>
 #include <sdl3webgpu.h>
 
-#include "../webgpu-utils.h"
-
 namespace flint
 {
 
