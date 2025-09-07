@@ -245,6 +245,12 @@ namespace flint
             {
                 if (e.type == SDL_EVENT_QUIT)
                 {
+                    std::cout << "Quit event received" << std::endl;
+                    m_running = false;
+                }
+                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
+                {
+                    std::cout << "Escape key pressed" << std::endl;
                     m_running = false;
                 }
             }
@@ -269,6 +275,7 @@ namespace flint
                 colorAttachment.loadOp = WGPULoadOp_Clear;
                 colorAttachment.storeOp = WGPUStoreOp_Store;
                 colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
+                colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
                 WGPURenderPassDescriptor renderPassDesc = {};
                 renderPassDesc.nextInChain = nullptr;
