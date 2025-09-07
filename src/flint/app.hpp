@@ -20,6 +20,9 @@ namespace flint
         void Terminate();
 
     private:
+        void render();
+
+    private:
         // SDL resources
         SDL_Window *m_window = nullptr;
 

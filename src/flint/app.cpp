@@ -407,56 +407,71 @@ fn fs_main() -> @location(0) vec4f {
                 }
             }
 
-            // Simple render - clear to a color
-            WGPUSurfaceTexture surfaceTexture;
-            wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
-
-            if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
-            {
-                WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
-
-                WGPUCommandEncoderDescriptor encoderDesc = {};
-                encoderDesc.nextInChain = nullptr;
-                encoderDesc.label = {nullptr, 0};
-
-                WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
-
-                WGPURenderPassColorAttachment colorAttachment = {};
-                colorAttachment.view = textureView;
-                colorAttachment.resolveTarget = nullptr;
-                colorAttachment.loadOp = WGPULoadOp_Clear;
-                colorAttachment.storeOp = WGPUStoreOp_Store;
-                colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
-                colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-
-                WGPURenderPassDescriptor renderPassDesc = {};
-                renderPassDesc.nextInChain = nullptr;
-                renderPassDesc.label = {nullptr, 0};
-                renderPassDesc.colorAttachmentCount = 1;
-                renderPassDesc.colorAttachments = &colorAttachment;
-                renderPassDesc.depthStencilAttachment = nullptr;
-
-                WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-                wgpuRenderPassEncoderEnd(renderPass);
-
-                WGPUCommandBufferDescriptor cmdBufferDesc = {};
-                cmdBufferDesc.nextInChain = nullptr;
-                cmdBufferDesc.label = {nullptr, 0};
-
-                WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
-                wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
-
-                wgpuSurfacePresent(m_surface);
-
-                // Cleanup
-                wgpuCommandBufferRelease(cmdBuffer);
-                wgpuRenderPassEncoderRelease(renderPass);
-                wgpuCommandEncoderRelease(encoder);
-                wgpuTextureViewRelease(textureView);
-            }
-
-            wgpuTextureRelease(surfaceTexture.texture);
+            // Render
+            render();
         }
+    }
+
+    void App::render()
+    {
+        // Simple render - clear to a color
+        WGPUSurfaceTexture surfaceTexture;
+        wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
+
+        if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
+        {
+            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+
+            WGPUCommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.nextInChain = nullptr;
+            encoderDesc.label = {nullptr, 0};
+
+            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+
+            WGPURenderPassColorAttachment colorAttachment = {};
+            colorAttachment.view = textureView;
+            colorAttachment.resolveTarget = nullptr;
+            colorAttachment.loadOp = WGPULoadOp_Clear;
+            colorAttachment.storeOp = WGPUStoreOp_Store;
+            colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
+            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+            WGPURenderPassDescriptor renderPassDesc = {};
+            renderPassDesc.nextInChain = nullptr;
+            renderPassDesc.label = {nullptr, 0};
+            renderPassDesc.colorAttachmentCount = 1;
+            renderPassDesc.colorAttachments = &colorAttachment;
+            renderPassDesc.depthStencilAttachment = nullptr;
+
+            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+
+            // ADD TRIANGLE DRAWING HERE (instead of immediately ending the render pass)
+            // Set the pipeline and vertex buffer
+            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, WGPU_WHOLE_SIZE);
+
+            // Draw the triangle (3 vertices, 1 instance)
+            wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+
+            wgpuRenderPassEncoderEnd(renderPass);
+
+            WGPUCommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.nextInChain = nullptr;
+            cmdBufferDesc.label = {nullptr, 0};
+
+            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+            wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
+
+            wgpuSurfacePresent(m_surface);
+
+            // Cleanup
+            wgpuCommandBufferRelease(cmdBuffer);
+            wgpuRenderPassEncoderRelease(renderPass);
+            wgpuCommandEncoderRelease(encoder);
+            wgpuTextureViewRelease(textureView);
+        }
+
+        wgpuTextureRelease(surfaceTexture.texture);
     }
 
     void App::Terminate()
