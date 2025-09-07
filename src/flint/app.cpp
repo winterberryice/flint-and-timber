@@ -217,7 +217,7 @@ namespace flint
         printVideoSystemInfo();
 
         // Create window
-        m_window = SDL_CreateWindow("WebGPU App", m_windowWidth, m_windowHeight, 0);
+        m_window = SDL_CreateWindow("Flint & Timber", m_windowWidth, m_windowHeight, 0);
         if (!m_window)
         {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
