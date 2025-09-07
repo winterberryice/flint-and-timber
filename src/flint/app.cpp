@@ -3,6 +3,13 @@
 
 namespace
 {
+    WGPUStringView makeStringView(const char *str)
+    {
+        return WGPUStringView{
+            .data = str,
+            .length = str ? strlen(str) : 0};
+    }
+
     // Helper for synchronous adapter request
     struct AdapterRequestData
     {
@@ -229,6 +236,36 @@ namespace flint
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
 
+        std::cout << "Creating triangle vertex data..." << std::endl;
+
+        // Triangle vertices in NDC coordinates (x, y, z)
+        float triangleVertices[] = {
+            0.0f, 0.5f, 0.0f,   // Top vertex
+            -0.5f, -0.5f, 0.0f, // Bottom left
+            0.5f, -0.5f, 0.0f   // Bottom right
+        };
+
+        // Create vertex buffer descriptor
+        WGPUBufferDescriptor vertexBufferDesc = {};
+        vertexBufferDesc.nextInChain = nullptr;
+        vertexBufferDesc.label = makeStringView("Triangle Vertex Buffer");
+        vertexBufferDesc.size = sizeof(triangleVertices);
+        vertexBufferDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+        vertexBufferDesc.mappedAtCreation = false;
+
+        // Create the vertex buffer
+        m_vertexBuffer = wgpuDeviceCreateBuffer(m_device, &vertexBufferDesc);
+        if (!m_vertexBuffer)
+        {
+            std::cerr << "Failed to create vertex buffer!" << std::endl;
+            return -1;
+        }
+
+        // Upload vertex data to GPU
+        wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, triangleVertices, sizeof(triangleVertices));
+
+        std::cout << "Vertex buffer created and data uploaded" << std::endl;
+
         m_running = true;
         return true;
     }
@@ -311,8 +348,36 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        // TODO: Cleanup WebGPU resources
-        // TODO: Cleanup SDL resources
+        if (m_vertexBuffer)
+        {
+            wgpuBufferRelease(m_vertexBuffer);
+        }
+        if (m_surface)
+        {
+            wgpuSurfaceRelease(m_surface);
+        }
+        if (m_queue)
+        {
+            wgpuQueueRelease(m_queue);
+        }
+        if (m_device)
+        {
+            wgpuDeviceRelease(m_device);
+        }
+        if (m_adapter)
+        {
+            wgpuAdapterRelease(m_adapter);
+        }
+        if (m_instance)
+        {
+            wgpuInstanceRelease(m_instance);
+        }
+        if (m_window)
+        {
+            SDL_DestroyWindow(m_window);
+        }
+
+        SDL_Quit();
 
         m_running = false;
     }
