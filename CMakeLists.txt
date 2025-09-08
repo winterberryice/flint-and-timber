@@ -18,7 +18,16 @@ FetchContent_Declare(
     GIT_TAG ${SDL3_GIT_TAG}
 )
 
-FetchContent_MakeAvailable(SDL3)
+# Fetch GLM
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm-git-tag.txt GLM_GIT_TAG)
+string(STRIP ${GLM_GIT_TAG} GLM_GIT_TAG)
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG ${GLM_GIT_TAG}
+)
+
+FetchContent_MakeAvailable(SDL3 glm)
 
 # ============ WebGPU Configuration ============
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
@@ -56,6 +65,7 @@ target_include_directories(${TARGET_NAME} PRIVATE src)
 
 # Link libraries
 target_link_libraries(${TARGET_NAME} PRIVATE 
+    glm::glm
     SDL3::SDL3
     webgpu
     sdl3webgpu
