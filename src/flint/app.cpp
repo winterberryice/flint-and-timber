@@ -388,19 +388,36 @@ namespace flint
 
         std::cout << "Creating shaders..." << std::endl;
 
-        // Vertex shader source code (WGSL)
         const char *vertexShaderSource = R"(
+struct Uniforms {
+    viewProjectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+struct VertexInput {
+    @location(0) position: vec3<f32>,
+    @location(1) color: vec3<f32>,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec3<f32>,
+};
+
 @vertex
-fn vs_main(@location(0) position: vec3f) -> @builtin(position) vec4f {
-    return vec4f(position, 1.0);
+fn vs_main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = uniforms.viewProjectionMatrix * vec4<f32>(input.position, 1.0);
+    output.color = input.color;
+    return output;
 }
 )";
 
-        // Fragment shader source code (WGSL)
         const char *fragmentShaderSource = R"(
 @fragment
-fn fs_main() -> @location(0) vec4f {
-    return vec4f(1.0, 0.0, 0.0, 1.0); // Red color
+fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
+    return vec4<f32>(color, 1.0);
 }
 )";
 
@@ -436,23 +453,84 @@ fn fs_main() -> @location(0) vec4f {
 
         std::cout << "Shaders created successfully" << std::endl;
 
+        std::cout << "Setting up 3D components..." << std::endl;
+
+        // Initialize camera
+        m_camera.setPosition(glm::vec3(2.0f, 2.0f, 3.0f));             // Position camera to see cube at angle
+        m_camera.setTarget(glm::vec3(0.0f, 0.0f, 0.0f));               // Look at origin
+        m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f); // FOV, aspect ratio, near, far
+
+        // Initialize cube mesh
+        if (!m_cubeMesh.initialize(m_device))
+        {
+            std::cerr << "Failed to initialize cube mesh!" << std::endl;
+            return false;
+        }
+
+        // Create uniform buffer for camera matrices
+        WGPUBufferDescriptor uniformBufferDesc = {};
+        uniformBufferDesc.size = sizeof(glm::mat4); // Size of view-projection matrix
+        uniformBufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+        uniformBufferDesc.mappedAtCreation = false;
+
+        m_uniformBuffer = wgpuDeviceCreateBuffer(m_device, &uniformBufferDesc);
+        if (!m_uniformBuffer)
+        {
+            std::cerr << "Failed to create uniform buffer!" << std::endl;
+            return false;
+        }
+
+        std::cout << "3D components ready!" << std::endl;
+
         std::cout << "Creating render pipeline..." << std::endl;
 
-        // Define vertex buffer layout
-        WGPUVertexAttribute vertexAttribute = {};
-        vertexAttribute.format = WGPUVertexFormat_Float32x3; // vec3f (x, y, z)
-        vertexAttribute.offset = 0;
-        vertexAttribute.shaderLocation = 0;
+        // Create bind group layout for uniforms first
+        WGPUBindGroupLayoutEntry bindingLayout = {};
+        bindingLayout.binding = 0;
+        bindingLayout.visibility = WGPUShaderStage_Vertex;
+        bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
+        bindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
+
+        WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
+        bindGroupLayoutDesc.entryCount = 1;
+        bindGroupLayoutDesc.entries = &bindingLayout;
+
+        m_bindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &bindGroupLayoutDesc);
+        if (!m_bindGroupLayout)
+        {
+            std::cerr << "Failed to create bind group layout!" << std::endl;
+            return false;
+        }
+
+        // Create pipeline layout using our bind group layout
+        WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+        pipelineLayoutDesc.bindGroupLayoutCount = 1;
+        pipelineLayoutDesc.bindGroupLayouts = &m_bindGroupLayout;
+
+        WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &pipelineLayoutDesc);
+
+        // NEW: Define vertex buffer layout for position + color
+        WGPUVertexAttribute vertexAttributes[2] = {};
+
+        // Position attribute (location 0)
+        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
+        vertexAttributes[0].offset = 0;
+        vertexAttributes[0].shaderLocation = 0;
+
+        // Color attribute (location 1)
+        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
+        vertexAttributes[1].offset = 3 * sizeof(float);          // After position
+        vertexAttributes[1].shaderLocation = 1;
 
         WGPUVertexBufferLayout vertexBufferLayout = {};
-        vertexBufferLayout.arrayStride = 3 * sizeof(float); // 3 floats per vertex
+        vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
         vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-        vertexBufferLayout.attributeCount = 1;
-        vertexBufferLayout.attributes = &vertexAttribute;
+        vertexBufferLayout.attributeCount = 2; // position + color
+        vertexBufferLayout.attributes = vertexAttributes;
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        pipelineDescriptor.label = makeStringView("Triangle Render Pipeline");
+        pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
 
         // Vertex state
         pipelineDescriptor.vertex.module = m_vertexShader;
@@ -467,36 +545,52 @@ fn fs_main() -> @location(0) vec4f {
 
         // Color target (what we're rendering to)
         WGPUColorTargetState colorTarget = {};
-        colorTarget.format = m_surfaceFormat; // Use your surface format
+        colorTarget.format = m_surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;
-
         pipelineDescriptor.fragment = &fragmentState;
 
-        // Primitive state (how to interpret vertices)
+        // Primitive state - IMPORTANT: Enable depth testing for 3D
         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_None;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back; // Enable back-face culling
 
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
 
-        // Layout (auto-generated)
-        pipelineDescriptor.layout = nullptr; // Auto layout
+        // Use our custom layout (not auto)
+        pipelineDescriptor.layout = pipelineLayout;
 
         // Create the pipeline
         m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
+
+        // Clean up temporary layout
+        wgpuPipelineLayoutRelease(pipelineLayout);
 
         if (!m_renderPipeline)
         {
             std::cerr << "Failed to create render pipeline!" << std::endl;
             return false;
         }
+
+        // Create bind group for uniforms
+        WGPUBindGroupEntry binding = {};
+        binding.binding = 0;
+        binding.buffer = m_uniformBuffer;
+        binding.offset = 0;
+        binding.size = sizeof(glm::mat4);
+
+        WGPUBindGroupDescriptor bindGroupDesc = {};
+        bindGroupDesc.layout = m_bindGroupLayout;
+        bindGroupDesc.entryCount = 1;
+        bindGroupDesc.entries = &binding;
+
+        m_bindGroup = wgpuDeviceCreateBindGroup(m_device, &bindGroupDesc);
 
         std::cout << "Render pipeline created successfully" << std::endl;
 
@@ -534,7 +628,11 @@ fn fs_main() -> @location(0) vec4f {
 
     void App::render()
     {
-        // Simple render - clear to a color
+        // Update camera matrix and upload to GPU
+        glm::mat4 viewProjectionMatrix = m_camera.getViewProjectionMatrix();
+        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &viewProjectionMatrix, sizeof(glm::mat4));
+
+        // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
@@ -553,7 +651,7 @@ fn fs_main() -> @location(0) vec4f {
             colorAttachment.resolveTarget = nullptr;
             colorAttachment.loadOp = WGPULoadOp_Clear;
             colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.2f, 0.3f, 0.8f, 1.0f}; // Nice blue color
+            colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
             colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
             WGPURenderPassDescriptor renderPassDesc = {};
@@ -565,13 +663,14 @@ fn fs_main() -> @location(0) vec4f {
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
-            // ADD TRIANGLE DRAWING HERE (instead of immediately ending the render pass)
-            // Set the pipeline and vertex buffer
+            // NEW: 3D Cube rendering instead of triangle
             wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
-            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, WGPU_WHOLE_SIZE);
 
-            // Draw the triangle (3 vertices, 1 instance)
-            wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+            // Bind the uniform buffer (camera matrix)
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
+
+            // Draw the cube using our mesh class
+            m_cubeMesh.render(renderPass);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
@@ -598,6 +697,12 @@ fn fs_main() -> @location(0) vec4f {
     {
         std::cout << "Terminating app..." << std::endl;
 
+        if (m_uniformBuffer)
+            wgpuBufferRelease(m_uniformBuffer);
+        if (m_bindGroup)
+            wgpuBindGroupRelease(m_bindGroup);
+        if (m_bindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
         if (m_renderPipeline)
         {
             wgpuRenderPipelineRelease(m_renderPipeline);

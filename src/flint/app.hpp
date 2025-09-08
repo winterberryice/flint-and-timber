@@ -4,6 +4,9 @@
 #include <webgpu/webgpu.h>
 #include <sdl3webgpu.h>
 
+#include "math/camera.hpp"
+#include "graphics/mesh.hpp"
+
 namespace flint
 {
 
@@ -32,6 +35,13 @@ namespace flint
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
+
+        math::Camera m_camera;
+        graphics::CubeMesh m_cubeMesh;
+
+        WGPUBuffer m_uniformBuffer = nullptr;
+        WGPUBindGroup m_bindGroup = nullptr;
+        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;
