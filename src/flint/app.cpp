@@ -189,17 +189,6 @@ namespace
 
 namespace flint
 {
-
-    App::App()
-    {
-        // Constructor
-    }
-
-    App::~App()
-    {
-        // Destructor - cleanup will be in Terminate()
-    }
-
     bool App::Initialize(int width, int height)
     {
         std::cout << "Initializing app..." << std::endl;
