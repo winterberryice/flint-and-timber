@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # Fetch SDL3
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/sdl3-git-tag.txt SDL3_GIT_TAG)
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3-git-tag.txt SDL3_GIT_TAG)
 string(STRIP ${SDL3_GIT_TAG} SDL3_GIT_TAG)
 FetchContent_Declare(
     SDL3
@@ -48,10 +48,10 @@ set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
 set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
 
 # Add WebGPU-distribution (Dawn) - now it will build from source!
-add_subdirectory(webgpu)
+add_subdirectory(third_party/webgpu)
 
 # Add SDL3WebGPU helper
-add_subdirectory(sdl3webgpu)
+add_subdirectory(third_party/sdl3webgpu)
 
 # Collect all source files from src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
@@ -83,8 +83,8 @@ endif()
 
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/webgpu/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/sdl3webgpu/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
 )
 
 
