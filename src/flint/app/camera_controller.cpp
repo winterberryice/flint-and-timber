@@ -31,11 +31,11 @@ namespace flint
                 case SDLK_D:
                     m_d_pressed = pressed;
                     break;
+                case SDLK_F:
+                    m_f_pressed = pressed;
+                    break;
                 case SDLK_SPACE:
                     m_space_pressed = pressed;
-                    break;
-                case SDLK_LSHIFT:
-                    m_shift_pressed = pressed;
                     break;
                 }
             }
@@ -65,7 +65,7 @@ namespace flint
                 camera.move_right(velocity);
             if (m_space_pressed)
                 camera.move_up(velocity);
-            if (m_shift_pressed)
+            if (m_f_pressed)
                 camera.move_up(-velocity);
 
             camera.update_vectors(m_yaw, m_pitch);

@@ -26,8 +26,8 @@ namespace flint
             bool m_a_pressed = false;
             bool m_s_pressed = false;
             bool m_d_pressed = false;
+            bool m_f_pressed = false;
             bool m_space_pressed = false;
-            bool m_shift_pressed = false;
         };
     }
 }
