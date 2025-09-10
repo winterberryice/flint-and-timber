@@ -630,12 +630,12 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
                 {
                     s_mouse_grabbed = !s_mouse_grabbed;
-                    SDL_SetRelativeMouseMode((SDL_bool)s_mouse_grabbed);
+                    SDL_SetRelativeMouseMode(s_mouse_grabbed ? SDL_TRUE : SDL_FALSE);
                 }
                 else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !s_mouse_grabbed)
                 {
                     s_mouse_grabbed = true;
-                    SDL_SetRelativeMouseMode((SDL_bool)s_mouse_grabbed);
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
                 }
 
                 if (s_mouse_grabbed)
