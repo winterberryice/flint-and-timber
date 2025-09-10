@@ -1,6 +1,5 @@
 #include "flint/app.hpp"
 #include <iostream>
-#include <SDL3/SDL_mouse.h>
 
 namespace
 {
