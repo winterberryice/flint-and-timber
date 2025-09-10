@@ -456,14 +456,14 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         std::cout << "Setting up 3D components..." << std::endl;
 
         // Initialize camera
-        m_camera.setPosition(glm::vec3(2.0f, 2.0f, 3.0f));             // Position camera to see cube at angle
-        m_camera.setTarget(glm::vec3(0.0f, 0.0f, 0.0f));               // Look at origin
-        m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f); // FOV, aspect ratio, near, far
+        m_camera.setPosition(glm::vec3(8.0f, 40.0f, 24.0f));
+        m_camera.setTarget(glm::vec3(8.0f, 16.0f, 8.0f));
+        m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
 
-        // Initialize cube mesh
-        if (!m_cubeMesh.initialize(m_device))
+        // Initialize chunk
+        if (!m_chunk.initialize(m_device))
         {
-            std::cerr << "Failed to initialize cube mesh!" << std::endl;
+            std::cerr << "Failed to initialize chunk!" << std::endl;
             return false;
         }
 
@@ -669,8 +669,8 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
             // Bind the uniform buffer (camera matrix)
             wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
 
-            // Draw the cube using our mesh class
-            m_cubeMesh.render(renderPass);
+            // Draw the chunk using our chunk class
+            m_chunk.render(renderPass);
 
             wgpuRenderPassEncoderEnd(renderPass);
 

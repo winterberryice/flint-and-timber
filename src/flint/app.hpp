@@ -6,6 +6,7 @@
 
 #include "math/camera.hpp"
 #include "graphics/mesh.hpp"
+#include "chunk.hpp"
 
 namespace flint
 {
@@ -37,7 +38,7 @@ namespace flint
         WGPURenderPipeline m_renderPipeline = nullptr;
 
         math::Camera m_camera;
-        graphics::CubeMesh m_cubeMesh;
+        Chunk m_chunk;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
