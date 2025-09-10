@@ -194,8 +194,8 @@ namespace flint
 {
     App::App()
         : m_player(
-              glm::vec3(8.0f, 40.0f, 24.0f), // Initial position
-              -90.0f,                        // Initial yaw
+              glm::vec3(8.0f, 20.0f, 8.0f), // Initial position
+              -90.0f,                       // Initial yaw
               0.0f,                          // Initial pitch
               0.1f                           // Mouse sensitivity
           )

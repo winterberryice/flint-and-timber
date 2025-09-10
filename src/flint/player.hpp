@@ -1,7 +1,11 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/norm.hpp>
 #include <SDL3/SDL_events.h>
+
+#include "physics.hpp"
 
 namespace flint
 {
