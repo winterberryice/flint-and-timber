@@ -30,6 +30,8 @@ namespace flint
 
         void render(WGPURenderPassEncoder renderPass) const;
 
+        bool is_solid(int x, int y, int z) const;
+
     private:
         void generateChunkData();
         void generateMesh();

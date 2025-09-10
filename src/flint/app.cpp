@@ -1,5 +1,8 @@
 #include "flint/app.hpp"
+#include "flint/player.hpp"
+#include "flint/physics.hpp"
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace
 {
@@ -189,6 +192,16 @@ namespace
 
 namespace flint
 {
+    App::App()
+        : m_player(
+              glm::vec3(8.0f, 40.0f, 24.0f), // Initial position
+              -90.0f,                        // Initial yaw
+              0.0f,                          // Initial pitch
+              0.1f                           // Mouse sensitivity
+          )
+    {
+    }
+
     // Add these variables for delta time calculation
     static Uint64 s_now = 0;
     static Uint64 s_last = 0;
@@ -463,10 +476,6 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
         std::cout << "Setting up 3D components..." << std::endl;
 
-        // Initialize camera
-        m_camera.setPosition(glm::vec3(8.0f, 40.0f, 24.0f));
-        m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
-
         // Initialize chunk
         if (!m_chunk.initialize(m_device))
         {
@@ -637,13 +646,19 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
                     SDL_SetWindowRelativeMouseMode(m_window, s_mouse_grabbed);
                 }
 
+                // Player input handling
                 if (s_mouse_grabbed)
                 {
-                    m_cameraController.handle_event(e);
+                    if (e.type == SDL_EVENT_MOUSE_MOTION)
+                    {
+                        m_player.process_mouse_movement(e.motion.xrel, e.motion.yrel);
+                    }
+                    m_player.handle_input(e);
                 }
             }
 
-            m_cameraController.update(m_camera, s_delta_time);
+            // Update player physics and state
+            m_player.update(s_delta_time, m_chunk);
 
             // Render
             render();
@@ -652,8 +667,21 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
     void App::render()
     {
-        // Update camera matrix and upload to GPU
-        glm::mat4 viewProjectionMatrix = m_camera.getViewProjectionMatrix();
+        // Update camera matrix from player state and upload to GPU
+        glm::vec3 eye = m_player.get_position() + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+        float yaw_radians = glm::radians(m_player.get_yaw());
+        float pitch_radians = glm::radians(m_player.get_pitch());
+
+        glm::vec3 front;
+        front.x = cos(yaw_radians) * cos(pitch_radians);
+        front.y = sin(pitch_radians);
+        front.z = sin(yaw_radians) * cos(pitch_radians);
+        front = glm::normalize(front);
+
+        glm::mat4 view = glm::lookAt(eye, eye + front, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)m_windowWidth / (float)m_windowHeight, 0.1f, 100.0f);
+
+        glm::mat4 viewProjectionMatrix = proj * view;
         wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &viewProjectionMatrix, sizeof(glm::mat4));
 
         // Get surface texture

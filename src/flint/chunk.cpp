@@ -82,6 +82,15 @@ namespace flint
         wgpuRenderPassEncoderDrawIndexed(renderPass, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
     }
 
+    bool Chunk::is_solid(int x, int y, int z) const
+    {
+        if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_DEPTH)
+        {
+            return false; // Outside of this chunk, considered not solid by this chunk.
+        }
+        return m_blocks[x][y][z] != BlockType::Air;
+    }
+
     void Chunk::generateChunkData()
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x)
@@ -90,13 +99,10 @@ namespace flint
             {
                 for (int y = 0; y < CHUNK_HEIGHT; ++y)
                 {
-                    if (y == CHUNK_HEIGHT - 1)
+                    // Create a floor
+                    if (y < CHUNK_HEIGHT / 2)
                     {
-                        m_blocks[x][y][z] = BlockType::Grass;
-                    }
-                    else if (y < CHUNK_HEIGHT - 1 && y > CHUNK_HEIGHT - 5)
-                    {
-                        m_blocks[x][y][z] = BlockType::Dirt;
+                         m_blocks[x][y][z] = BlockType::Dirt;
                     }
                     else
                     {
@@ -105,6 +111,22 @@ namespace flint
                 }
             }
         }
+
+        // Add some features
+        // A pillar
+        m_blocks[5][CHUNK_HEIGHT / 2][5] = BlockType::Grass;
+        m_blocks[5][CHUNK_HEIGHT / 2 + 1][5] = BlockType::Grass;
+
+        // A higher platform
+        m_blocks[10][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
+        m_blocks[11][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
+        m_blocks[10][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
+        m_blocks[11][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
+        m_blocks[10][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
+        m_blocks[11][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
+        m_blocks[10][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
+        m_blocks[11][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
+        m_blocks[10][CHUNK_HEIGHT / 2 + 2][11] = BlockType::Grass;
     }
 
     void Chunk::generateMesh()
