@@ -4,10 +4,9 @@
 #include <webgpu/webgpu.h>
 #include <sdl3webgpu.h>
 
-#include "math/camera.hpp"
-#include "app/camera_controller.hpp"
 #include "graphics/mesh.hpp"
 #include "chunk.hpp"
+#include "player.hpp"
 
 namespace flint
 {
@@ -15,6 +14,7 @@ namespace flint
     class App
     {
     public:
+        App();
         bool Initialize(int width = 800, int height = 600);
         void Run();
         void Terminate();
@@ -38,9 +38,8 @@ namespace flint
         WGPUShaderModule m_fragmentShader = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
 
-        math::Camera m_camera;
-        app::CameraController m_cameraController;
         Chunk m_chunk;
+        player::Player m_player;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
