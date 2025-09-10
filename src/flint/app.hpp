@@ -5,6 +5,7 @@
 #include <sdl3webgpu.h>
 
 #include "math/camera.hpp"
+#include "app/camera_controller.hpp"
 #include "graphics/mesh.hpp"
 #include "chunk.hpp"
 
@@ -38,6 +39,7 @@ namespace flint
         WGPURenderPipeline m_renderPipeline = nullptr;
 
         math::Camera m_camera;
+        app::CameraController m_cameraController;
         Chunk m_chunk;
 
         WGPUBuffer m_uniformBuffer = nullptr;

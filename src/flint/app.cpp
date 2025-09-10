@@ -189,6 +189,14 @@ namespace
 
 namespace flint
 {
+    // Add these variables for delta time calculation
+    static Uint64 s_now = 0;
+    static Uint64 s_last = 0;
+    static float s_delta_time = 0.0f;
+
+    // Add this for mouse grab state
+    static bool s_mouse_grabbed = false;
+
     bool App::Initialize(int width, int height)
     {
         std::cout << "Initializing app..." << std::endl;
@@ -603,23 +611,40 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
     {
         std::cout << "Running app..." << std::endl;
 
+        s_last = SDL_GetPerformanceCounter();
+
         SDL_Event e;
         while (m_running)
         {
+            s_now = SDL_GetPerformanceCounter();
+            s_delta_time = (s_now - s_last) / (float)SDL_GetPerformanceFrequency();
+            s_last = s_now;
+
             // Handle events
             while (SDL_PollEvent(&e))
             {
                 if (e.type == SDL_EVENT_QUIT)
                 {
-                    std::cout << "Quit event received" << std::endl;
                     m_running = false;
                 }
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
                 {
-                    std::cout << "Escape key pressed" << std::endl;
-                    m_running = false;
+                    s_mouse_grabbed = !s_mouse_grabbed;
+                    SDL_SetRelativeMouseMode(s_mouse_grabbed);
+                }
+                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !s_mouse_grabbed)
+                {
+                    s_mouse_grabbed = true;
+                    SDL_SetRelativeMouseMode(s_mouse_grabbed);
+                }
+
+                if (s_mouse_grabbed)
+                {
+                    m_cameraController.handle_event(e);
                 }
             }
+
+            m_cameraController.update(m_camera, s_delta_time);
 
             // Render
             render();
