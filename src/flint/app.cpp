@@ -1,5 +1,6 @@
 #include "flint/app.hpp"
 #include <iostream>
+#include <SDL3/SDL_mouse.h>
 
 namespace
 {
@@ -465,7 +466,6 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
         // Initialize camera
         m_camera.setPosition(glm::vec3(8.0f, 40.0f, 24.0f));
-        m_camera.setTarget(glm::vec3(8.0f, 16.0f, 8.0f));
         m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f);
 
         // Initialize chunk
@@ -630,12 +630,12 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
                 {
                     s_mouse_grabbed = !s_mouse_grabbed;
-                    SDL_SetRelativeMouseMode(s_mouse_grabbed);
+                    SDL_SetRelativeMouseMode((SDL_bool)s_mouse_grabbed);
                 }
                 else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !s_mouse_grabbed)
                 {
                     s_mouse_grabbed = true;
-                    SDL_SetRelativeMouseMode(s_mouse_grabbed);
+                    SDL_SetRelativeMouseMode((SDL_bool)s_mouse_grabbed);
                 }
 
                 if (s_mouse_grabbed)

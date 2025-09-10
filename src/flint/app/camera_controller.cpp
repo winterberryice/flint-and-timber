@@ -19,16 +19,16 @@ namespace flint
                 bool pressed = (event.type == SDL_EVENT_KEY_DOWN);
                 switch (event.key.key)
                 {
-                case SDLK_w:
+                case SDLK_W:
                     m_w_pressed = pressed;
                     break;
-                case SDLK_a:
+                case SDLK_A:
                     m_a_pressed = pressed;
                     break;
-                case SDLK_s:
+                case SDLK_S:
                     m_s_pressed = pressed;
                     break;
-                case SDLK_d:
+                case SDLK_D:
                     m_d_pressed = pressed;
                     break;
                 case SDLK_SPACE:
