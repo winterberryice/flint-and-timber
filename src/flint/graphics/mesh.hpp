@@ -12,7 +12,8 @@ namespace flint
         struct Vertex
         {
             glm::vec3 position;
-            glm::vec3 color; // We'll give each face a different color
+            glm::vec3 color; // We'll use this for tinting, like for grass top
+            glm::vec2 uv;    // Texture coordinates
         };
 
         class CubeMesh

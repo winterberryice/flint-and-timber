@@ -53,12 +53,46 @@ add_subdirectory(third_party/webgpu)
 # Add SDL3WebGPU helper
 add_subdirectory(third_party/sdl3webgpu)
 
+# ============ Atlas Generation ============
+add_subdirectory(tools/atlas_generator)
+
+set(ATLAS_INPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/__rust__/engine/assets/textures/block)
+set(ATLAS_OUTPUT_PNG ${CMAKE_CURRENT_BINARY_DIR}/atlas.png)
+set(ATLAS_OUTPUT_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/embedded_atlas.hpp)
+
+# Ensure the directory for the generated header exists
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+# List of textures that the atlas depends on
+set(ATLAS_TEXTURES
+    ${ATLAS_INPUT_DIR}/grass_block_top.png
+    ${ATLAS_INPUT_DIR}/grass_block_side.png
+    ${ATLAS_INPUT_DIR}/dirt.png
+    ${ATLAS_INPUT_DIR}/bedrock.png
+    ${ATLAS_INPUT_DIR}/oak_log.png
+    ${ATLAS_INPUT_DIR}/oak_log_top.png
+    ${ATLAS_INPUT_DIR}/oak_leaves.png
+)
+
+add_custom_command(
+    OUTPUT ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
+    COMMAND atlas_generator ${ATLAS_INPUT_DIR} ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
+    DEPENDS atlas_generator ${ATLAS_TEXTURES}
+    COMMENT "Generating texture atlas and C++ header..."
+)
+
+add_custom_target(generate_assets ALL DEPENDS ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER})
+
+
 # Collect all source files from src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
 file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
 
 # Create executable
 add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})
+
+# Ensure assets are generated before the main target is built
+add_dependencies(${TARGET_NAME} generate_assets)
 
 # Include src directory for headers
 target_include_directories(${TARGET_NAME} PRIVATE src)
@@ -83,8 +117,11 @@ endif()
 
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
+    src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 
