@@ -138,8 +138,7 @@ int main(int argc, char *argv[])
     }
 
     // Write PNG to file
-    // TODO fix
-    std::ofstream png_file(png_file, std::ios::binary);
+    std::ofstream png_file(output_png_path, std::ios::binary);
 
     if (!png_file.is_open())
     {
