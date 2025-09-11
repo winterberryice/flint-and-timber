@@ -66,15 +66,23 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 # Generate a list of texture dependencies from the JSON file
 file(READ ${ATLAS_JSON_PATH} ATLAS_JSON_CONTENT)
-string(JSON ATLAS_TEXTURE_FILES GET ${ATLAS_JSON_CONTENT})
+
+# The JSON is an array of arrays of strings. We need to get the inner array.
+# First, get the first element of the outer array (which is the inner array as a JSON string).
+string(JSON INNER_ARRAY_JSON GET "${ATLAS_JSON_CONTENT}" 0)
+
+# Now, get the length of the inner array.
+string(JSON INNER_ARRAY_LENGTH LENGTH "${INNER_ARRAY_JSON}")
 
 set(ATLAS_TEXTURE_PATHS)
-foreach(ROW ${ATLAS_TEXTURE_FILES})
-    string(JSON TEXTURES GET ${ROW})
-    foreach(TEXTURE ${TEXTURES})
-        list(APPEND ATLAS_TEXTURE_PATHS "${ATLAS_ASSET_DIR}/${TEXTURE}")
+# Iterate through the inner array by index to get each texture filename.
+if(INNER_ARRAY_LENGTH GREATER 0)
+    math(EXPR LAST_INDEX "${INNER_ARRAY_LENGTH} - 1")
+    foreach(INDEX RANGE ${LAST_INDEX})
+        string(JSON TEXTURE_FILENAME GET "${INNER_ARRAY_JSON}" ${INDEX})
+        list(APPEND ATLAS_TEXTURE_PATHS "${ATLAS_ASSET_DIR}/${TEXTURE_FILENAME}")
     endforeach()
-endforeach()
+endif()
 
 add_custom_command(
     OUTPUT ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
