@@ -56,29 +56,31 @@ add_subdirectory(third_party/sdl3webgpu)
 # ============ Atlas Generation ============
 add_subdirectory(tools/atlas_generator)
 
-set(ATLAS_INPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/__rust__/engine/assets/textures/block)
+set(ATLAS_ASSET_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/block)
+set(ATLAS_JSON_PATH ${ATLAS_ASSET_DIR}/atlas.json)
 set(ATLAS_OUTPUT_PNG ${CMAKE_CURRENT_BINARY_DIR}/atlas.png)
 set(ATLAS_OUTPUT_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/embedded_atlas.hpp)
 
 # Ensure the directory for the generated header exists
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-# List of textures that the atlas depends on
-set(ATLAS_TEXTURES
-    ${ATLAS_INPUT_DIR}/grass_block_top.png
-    ${ATLAS_INPUT_DIR}/grass_block_side.png
-    ${ATLAS_INPUT_DIR}/dirt.png
-    ${ATLAS_INPUT_DIR}/bedrock.png
-    ${ATLAS_INPUT_DIR}/oak_log.png
-    ${ATLAS_INPUT_DIR}/oak_log_top.png
-    ${ATLAS_INPUT_DIR}/oak_leaves.png
-)
+# Generate a list of texture dependencies from the JSON file
+file(READ ${ATLAS_JSON_PATH} ATLAS_JSON_CONTENT)
+string(JSON ATLAS_TEXTURE_FILES GET ${ATLAS_JSON_CONTENT})
+
+set(ATLAS_TEXTURE_PATHS)
+foreach(ROW ${ATLAS_TEXTURE_FILES})
+    string(JSON TEXTURES GET ${ROW})
+    foreach(TEXTURE ${TEXTURES})
+        list(APPEND ATLAS_TEXTURE_PATHS "${ATLAS_ASSET_DIR}/${TEXTURE}")
+    endforeach()
+endforeach()
 
 add_custom_command(
     OUTPUT ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
-    COMMAND atlas_generator ${ATLAS_INPUT_DIR} ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
-    DEPENDS atlas_generator ${ATLAS_TEXTURES}
-    COMMENT "Generating texture atlas and C++ header..."
+    COMMAND atlas_generator ${ATLAS_ASSET_DIR} ${ATLAS_JSON_PATH} ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
+    DEPENDS atlas_generator ${ATLAS_JSON_PATH} ${ATLAS_TEXTURE_PATHS}
+    COMMENT "Generating texture atlas and C++ header from ${ATLAS_JSON_PATH}..."
 )
 
 add_custom_target(generate_assets ALL DEPENDS ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER})
