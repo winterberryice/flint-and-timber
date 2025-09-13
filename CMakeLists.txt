@@ -81,6 +81,16 @@ if(UNIX AND NOT APPLE)
     )
 endif()
 
+# Set RPATH for macOS to find shared libraries in the executable's directory
+if(APPLE)
+    set_target_properties(${TARGET_NAME} PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+    )
+    set_target_properties(${TARGET_NAME} PROPERTIES
+        INSTALL_RPATH "@executable_path"
+    )
+endif()
+
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include

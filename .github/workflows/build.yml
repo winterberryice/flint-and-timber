@@ -73,3 +73,49 @@ jobs:
       with:
         name: flint-and-timber-Windows
         path: artifact/
+
+  build-macos-universal:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache Build
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/release-arm64
+          build/release-x86_64
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'webgpu/dawn/dawn-git-tag.txt', 'sdl3-git-tag.txt') }}
+
+    - name: Build for Apple Silicon (ARM64)
+      run: |
+        cmake -S . -B build/release-arm64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+        cmake --build build/release-arm64 --config Release
+
+    - name: Build for Intel (x86_64)
+      run: |
+        cmake -S . -B build/release-x86_64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
+        cmake --build build/release-x86_64 --config Release
+
+    - name: Create Universal Binaries
+      run: |
+        mkdir -p artifact
+        # Create universal executable
+        lipo -create -output artifact/flint-and-timber \
+          build/release-arm64/flint-and-timber \
+          build/release-x86_64/flint-and-timber
+        # Create universal dawn library
+        lipo -create -output artifact/libwebgpu_dawn.dylib \
+          build/release-arm64/libwebgpu_dawn.dylib \
+          build/release-x86_64/libwebgpu_dawn.dylib
+        # Create universal SDL3 library
+        lipo -create -output artifact/libSDL3.0.dylib \
+          build/release-arm64/_deps/sdl3-build/libSDL3.0.dylib \
+          build/release-x86_64/_deps/sdl3-build/libSDL3.0.dylib
+
+    - name: Upload Executable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flint-and-timber-macOS-Universal
+        path: artifact/
