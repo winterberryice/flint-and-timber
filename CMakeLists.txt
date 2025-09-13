@@ -53,12 +53,56 @@ add_subdirectory(third_party/webgpu)
 # Add SDL3WebGPU helper
 add_subdirectory(third_party/sdl3webgpu)
 
+# ============ Atlas Generation ============
+add_subdirectory(tools/atlas_generator)
+
+set(ATLAS_ASSET_DIR ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/block)
+set(ATLAS_JSON_PATH ${ATLAS_ASSET_DIR}/atlas.json)
+set(ATLAS_OUTPUT_PNG ${CMAKE_CURRENT_BINARY_DIR}/atlas.png)
+set(ATLAS_OUTPUT_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/embedded_atlas.hpp)
+
+# Ensure the directory for the generated header exists
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+# Generate a list of texture dependencies from the JSON file
+file(READ ${ATLAS_JSON_PATH} ATLAS_JSON_CONTENT)
+
+# The JSON is an array of arrays of strings. We need to get the inner array.
+# First, get the first element of the outer array (which is the inner array as a JSON string).
+string(JSON INNER_ARRAY_JSON GET "${ATLAS_JSON_CONTENT}" 0)
+
+# Now, get the length of the inner array.
+string(JSON INNER_ARRAY_LENGTH LENGTH "${INNER_ARRAY_JSON}")
+
+set(ATLAS_TEXTURE_PATHS)
+# Iterate through the inner array by index to get each texture filename.
+if(INNER_ARRAY_LENGTH GREATER 0)
+    math(EXPR LAST_INDEX "${INNER_ARRAY_LENGTH} - 1")
+    foreach(INDEX RANGE ${LAST_INDEX})
+        string(JSON TEXTURE_FILENAME GET "${INNER_ARRAY_JSON}" ${INDEX})
+        list(APPEND ATLAS_TEXTURE_PATHS "${ATLAS_ASSET_DIR}/${TEXTURE_FILENAME}")
+    endforeach()
+endif()
+
+add_custom_command(
+    OUTPUT ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
+    COMMAND atlas_generator ${ATLAS_ASSET_DIR} ${ATLAS_JSON_PATH} ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER}
+    DEPENDS atlas_generator ${ATLAS_JSON_PATH} ${ATLAS_TEXTURE_PATHS}
+    COMMENT "Generating texture atlas and C++ header from ${ATLAS_JSON_PATH}..."
+)
+
+add_custom_target(generate_assets ALL DEPENDS ${ATLAS_OUTPUT_PNG} ${ATLAS_OUTPUT_HEADER})
+
+
 # Collect all source files from src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
 file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
 
 # Create executable
 add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})
+
+# Ensure assets are generated before the main target is built
+add_dependencies(${TARGET_NAME} generate_assets)
 
 # Include src directory for headers
 target_include_directories(${TARGET_NAME} PRIVATE src)
@@ -93,8 +137,11 @@ endif()
 
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
+    src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 

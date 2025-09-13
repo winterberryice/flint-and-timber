@@ -1,8 +1,10 @@
 #include "flint/app.hpp"
 #include "flint/player.hpp"
 #include "flint/physics.hpp"
+#include "embedded_atlas.hpp"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 
 namespace
 {
@@ -377,53 +379,36 @@ namespace flint
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
 
-        std::cout << "Creating triangle vertex data..." << std::endl;
-
-        // Triangle vertices in NDC coordinates (x, y, z)
-        float triangleVertices[] = {
-            0.0f, 0.5f, 0.0f,   // Top vertex
-            -0.5f, -0.5f, 0.0f, // Bottom left
-            0.5f, -0.5f, 0.0f   // Bottom right
-        };
-
-        // Create vertex buffer descriptor
-        WGPUBufferDescriptor vertexBufferDesc = {};
-        vertexBufferDesc.nextInChain = nullptr;
-        vertexBufferDesc.label = makeStringView("Triangle Vertex Buffer");
-        vertexBufferDesc.size = sizeof(triangleVertices);
-        vertexBufferDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-        vertexBufferDesc.mappedAtCreation = false;
-
-        // Create the vertex buffer
-        m_vertexBuffer = wgpuDeviceCreateBuffer(m_device, &vertexBufferDesc);
-        if (!m_vertexBuffer)
+        // Load block atlas texture
+        if (!m_blockAtlas.initializeFromMemory(m_device, m_queue, flint::generated::atlas_png, flint::generated::atlas_png_len, "Block Atlas"))
         {
-            std::cerr << "Failed to create vertex buffer!" << std::endl;
-            return -1;
+            std::cerr << "Failed to load block atlas texture!" << std::endl;
+            return false;
         }
+        std::cout << "Block atlas texture loaded" << std::endl;
 
-        // Upload vertex data to GPU
-        wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, triangleVertices, sizeof(triangleVertices));
-
-        std::cout << "Vertex buffer created and data uploaded" << std::endl;
 
         std::cout << "Creating shaders..." << std::endl;
 
         const char *vertexShaderSource = R"(
+//- Uniforms (Camera)
 struct Uniforms {
     viewProjectionMatrix: mat4x4<f32>,
 };
-
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
+//- Vertex Input
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
+    @location(2) uv: vec2<f32>,
 };
 
+//- Vertex Output (to Fragment Shader)
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec3<f32>,
+    @location(1) uv: vec2<f32>,
 };
 
 @vertex
@@ -431,14 +416,37 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     output.position = uniforms.viewProjectionMatrix * vec4<f32>(input.position, 1.0);
     output.color = input.color;
+    output.uv = input.uv;
     return output;
 }
 )";
 
         const char *fragmentShaderSource = R"(
+//- Texture and Sampler Bindings
+@group(1) @binding(0) var t_diffuse: texture_2d<f32>;
+@group(1) @binding(1) var s_diffuse: sampler;
+
+//- Fragment Input (from Vertex Shader)
+struct FragmentInput {
+    @location(0) color: vec3<f32>,
+    @location(1) uv: vec2<f32>,
+};
+
 @fragment
-fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
-    return vec4<f32>(color, 1.0);
+fn fs_main(in: FragmentInput) -> @location(0) vec4<f32> {
+    let texture_color = textureSample(t_diffuse, s_diffuse, in.uv);
+
+    // Check for our sentinel grass-top color
+    // Using a threshold for float comparison
+    if (in.color.g > 0.8 && in.color.r < 0.2 && in.color.b < 0.2) {
+        // Tint the grayscale texture green
+        let grass_tint = vec3<f32>(0.3, 0.7, 0.2);
+        // Assuming top texture is grayscale, so r=g=b. We use .r as the intensity.
+        return vec4<f32>(texture_color.r * grass_tint, 1.0);
+    } else {
+        // For all other blocks, use the texture color directly, multiplied by the vertex color (for lighting, etc.)
+        return vec4<f32>(texture_color.rgb * in.color, 1.0);
+    }
 }
 )";
 
@@ -452,7 +460,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         vertexShaderDesc.nextInChain = &vertexShaderWGSLDesc.chain;
         vertexShaderDesc.label = makeStringView("Vertex Shader");
 
-        m_vertexShader = wgpuDeviceCreateShaderModule(m_device, &vertexShaderDesc);
+        WGPUShaderModule m_vertexShader = wgpuDeviceCreateShaderModule(m_device, &vertexShaderDesc);
 
         // Create fragment shader module
         WGPUShaderModuleWGSLDescriptor fragmentShaderWGSLDesc = {};
@@ -464,7 +472,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         fragmentShaderDesc.nextInChain = &fragmentShaderWGSLDesc.chain;
         fragmentShaderDesc.label = makeStringView("Fragment Shader");
 
-        m_fragmentShader = wgpuDeviceCreateShaderModule(m_device, &fragmentShaderDesc);
+        WGPUShaderModule m_fragmentShader = wgpuDeviceCreateShaderModule(m_device, &fragmentShaderDesc);
 
         if (!m_vertexShader || !m_fragmentShader)
         {
@@ -500,53 +508,80 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
         std::cout << "Creating render pipeline..." << std::endl;
 
-        // Create bind group layout for uniforms first
-        WGPUBindGroupLayoutEntry bindingLayout = {};
-        bindingLayout.binding = 0;
-        bindingLayout.visibility = WGPUShaderStage_Vertex;
-        bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
-        bindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
+        // Create bind group layout for uniforms (Group 0)
+        WGPUBindGroupLayoutEntry uniformBindingLayout = {};
+        uniformBindingLayout.binding = 0;
+        uniformBindingLayout.visibility = WGPUShaderStage_Vertex;
+        uniformBindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
+        uniformBindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
 
-        WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-        bindGroupLayoutDesc.entryCount = 1;
-        bindGroupLayoutDesc.entries = &bindingLayout;
+        WGPUBindGroupLayoutDescriptor uniformBindGroupLayoutDesc = {};
+        uniformBindGroupLayoutDesc.entryCount = 1;
+        uniformBindGroupLayoutDesc.entries = &uniformBindingLayout;
 
-        m_bindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &bindGroupLayoutDesc);
-        if (!m_bindGroupLayout)
+        m_uniformBindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &uniformBindGroupLayoutDesc);
+        if (!m_uniformBindGroupLayout)
         {
-            std::cerr << "Failed to create bind group layout!" << std::endl;
+            std::cerr << "Failed to create uniform bind group layout!" << std::endl;
             return false;
         }
 
-        // Create pipeline layout using our bind group layout
+        // Create bind group layout for textures (Group 1)
+        WGPUBindGroupLayoutEntry textureBindingLayout = {};
+        textureBindingLayout.binding = 0;
+        textureBindingLayout.visibility = WGPUShaderStage_Fragment;
+        textureBindingLayout.texture.sampleType = WGPUTextureSampleType_Float;
+        textureBindingLayout.texture.viewDimension = WGPUTextureViewDimension_2D;
+
+        WGPUBindGroupLayoutEntry samplerBindingLayout = {};
+        samplerBindingLayout.binding = 1;
+        samplerBindingLayout.visibility = WGPUShaderStage_Fragment;
+        samplerBindingLayout.sampler.type = WGPUSamplerBindingType_Filtering;
+
+        std::vector<WGPUBindGroupLayoutEntry> textureBindGroupLayoutEntries = {textureBindingLayout, samplerBindingLayout};
+
+        WGPUBindGroupLayoutDescriptor textureBindGroupLayoutDesc = {};
+        textureBindGroupLayoutDesc.entryCount = textureBindGroupLayoutEntries.size();
+        textureBindGroupLayoutDesc.entries = textureBindGroupLayoutEntries.data();
+
+        m_textureBindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &textureBindGroupLayoutDesc);
+        if (!m_textureBindGroupLayout)
+        {
+            std::cerr << "Failed to create texture bind group layout!" << std::endl;
+            return false;
+        }
+
+        // Create pipeline layout using both bind group layouts
+        std::vector<WGPUBindGroupLayout> bindGroupLayouts = {m_uniformBindGroupLayout, m_textureBindGroupLayout};
         WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
-        pipelineLayoutDesc.bindGroupLayoutCount = 1;
-        pipelineLayoutDesc.bindGroupLayouts = &m_bindGroupLayout;
+        pipelineLayoutDesc.bindGroupLayoutCount = bindGroupLayouts.size();
+        pipelineLayoutDesc.bindGroupLayouts = bindGroupLayouts.data();
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &pipelineLayoutDesc);
 
-        // NEW: Define vertex buffer layout for position + color
-        WGPUVertexAttribute vertexAttributes[2] = {};
-
-        // Position attribute (location 0)
-        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
+        // Define vertex buffer layout for position + color + uv
+        WGPUVertexAttribute vertexAttributes[3] = {};
+        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // pos
         vertexAttributes[0].offset = 0;
         vertexAttributes[0].shaderLocation = 0;
 
-        // Color attribute (location 1)
-        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
-        vertexAttributes[1].offset = 3 * sizeof(float);          // After position
+        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // color
+        vertexAttributes[1].offset = sizeof(float) * 3;
         vertexAttributes[1].shaderLocation = 1;
 
+        vertexAttributes[2].format = WGPUVertexFormat_Float32x2; // uv
+        vertexAttributes[2].offset = sizeof(float) * 6;
+        vertexAttributes[2].shaderLocation = 2;
+
         WGPUVertexBufferLayout vertexBufferLayout = {};
-        vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
+        vertexBufferLayout.arrayStride = sizeof(graphics::Vertex);
         vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-        vertexBufferLayout.attributeCount = 2; // position + color
+        vertexBufferLayout.attributeCount = 3;
         vertexBufferLayout.attributes = vertexAttributes;
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
+        pipelineDescriptor.label = makeStringView("Textured Voxel Render Pipeline");
 
         // Vertex state
         pipelineDescriptor.vertex.module = m_vertexShader;
@@ -568,25 +603,27 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         fragmentState.targets = &colorTarget;
         pipelineDescriptor.fragment = &fragmentState;
 
-        // Primitive state - IMPORTANT: Enable depth testing for 3D
+        // Primitive state
         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back; // Enable back-face culling
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
 
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
 
-        // Use our custom layout (not auto)
+        // Use our custom layout
         pipelineDescriptor.layout = pipelineLayout;
 
         // Create the pipeline
         m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
 
-        // Clean up temporary layout
+        // Clean up temporary resources
         wgpuPipelineLayoutRelease(pipelineLayout);
+        wgpuShaderModuleRelease(m_vertexShader);
+        wgpuShaderModuleRelease(m_fragmentShader);
 
         if (!m_renderPipeline)
         {
@@ -594,19 +631,38 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
             return false;
         }
 
-        // Create bind group for uniforms
-        WGPUBindGroupEntry binding = {};
-        binding.binding = 0;
-        binding.buffer = m_uniformBuffer;
-        binding.offset = 0;
-        binding.size = sizeof(glm::mat4);
+        // Create bind group for uniforms (Group 0)
+        WGPUBindGroupEntry uniformBinding = {};
+        uniformBinding.binding = 0;
+        uniformBinding.buffer = m_uniformBuffer;
+        uniformBinding.offset = 0;
+        uniformBinding.size = sizeof(glm::mat4);
 
-        WGPUBindGroupDescriptor bindGroupDesc = {};
-        bindGroupDesc.layout = m_bindGroupLayout;
-        bindGroupDesc.entryCount = 1;
-        bindGroupDesc.entries = &binding;
+        WGPUBindGroupDescriptor uniformBindGroupDesc = {};
+        uniformBindGroupDesc.layout = m_uniformBindGroupLayout;
+        uniformBindGroupDesc.entryCount = 1;
+        uniformBindGroupDesc.entries = &uniformBinding;
 
-        m_bindGroup = wgpuDeviceCreateBindGroup(m_device, &bindGroupDesc);
+        m_uniformBindGroup = wgpuDeviceCreateBindGroup(m_device, &uniformBindGroupDesc);
+
+        // Create bind group for textures (Group 1)
+        WGPUBindGroupEntry textureBinding = {};
+        textureBinding.binding = 0;
+        textureBinding.textureView = m_blockAtlas.getView();
+
+        WGPUBindGroupEntry samplerBinding = {};
+        samplerBinding.binding = 1;
+        samplerBinding.sampler = m_blockAtlas.getSampler();
+
+        std::vector<WGPUBindGroupEntry> textureBindGroupEntries = {textureBinding, samplerBinding};
+
+        WGPUBindGroupDescriptor textureBindGroupDesc = {};
+        textureBindGroupDesc.layout = m_textureBindGroupLayout;
+        textureBindGroupDesc.entryCount = textureBindGroupEntries.size();
+        textureBindGroupDesc.entries = textureBindGroupEntries.data();
+
+        m_textureBindGroup = wgpuDeviceCreateBindGroup(m_device, &textureBindGroupDesc);
+
 
         std::cout << "Render pipeline created successfully" << std::endl;
 
@@ -715,11 +771,12 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
-            // NEW: 3D Cube rendering instead of triangle
             wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
 
-            // Bind the uniform buffer (camera matrix)
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
+            // Bind the uniform buffer (camera matrix) at group 0
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_uniformBindGroup, 0, nullptr);
+            // Bind the texture and sampler at group 1
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 1, m_textureBindGroup, 0, nullptr);
 
             // Draw the chunk using our chunk class
             m_chunk.render(renderPass);
@@ -749,30 +806,24 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_blockAtlas.cleanup();
+
         if (m_uniformBuffer)
             wgpuBufferRelease(m_uniformBuffer);
-        if (m_bindGroup)
-            wgpuBindGroupRelease(m_bindGroup);
-        if (m_bindGroupLayout)
-            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
+        if (m_uniformBindGroup)
+            wgpuBindGroupRelease(m_uniformBindGroup);
+        if (m_uniformBindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_uniformBindGroupLayout);
+
+        if (m_textureBindGroup)
+            wgpuBindGroupRelease(m_textureBindGroup);
+        if (m_textureBindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_textureBindGroupLayout);
+
         if (m_renderPipeline)
         {
             wgpuRenderPipelineRelease(m_renderPipeline);
             m_renderPipeline = nullptr;
-        }
-        if (m_vertexShader)
-        {
-            wgpuShaderModuleRelease(m_vertexShader);
-            m_vertexShader = nullptr;
-        }
-        if (m_fragmentShader)
-        {
-            wgpuShaderModuleRelease(m_fragmentShader);
-            m_fragmentShader = nullptr;
-        }
-        if (m_vertexBuffer)
-        {
-            wgpuBufferRelease(m_vertexBuffer);
         }
         if (m_surface)
         {

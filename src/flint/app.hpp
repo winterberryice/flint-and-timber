@@ -5,6 +5,7 @@
 #include <sdl3webgpu.h>
 
 #include "graphics/mesh.hpp"
+#include "graphics/texture.hpp"
 #include "chunk.hpp"
 #include "player.hpp"
 
@@ -33,17 +34,20 @@ namespace flint
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
         WGPUTextureFormat m_surfaceFormat;
-        WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUShaderModule m_vertexShader = nullptr;
-        WGPUShaderModule m_fragmentShader = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
 
+        graphics::Texture m_blockAtlas;
         Chunk m_chunk;
         player::Player m_player;
 
+        // Uniforms (Group 0)
         WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+        WGPUBindGroup m_uniformBindGroup = nullptr;
+        WGPUBindGroupLayout m_uniformBindGroupLayout = nullptr;
+
+        // Textures (Group 1)
+        WGPUBindGroup m_textureBindGroup = nullptr;
+        WGPUBindGroupLayout m_textureBindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;
