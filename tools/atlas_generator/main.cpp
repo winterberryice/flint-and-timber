@@ -1,3 +1,8 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -5,11 +10,6 @@
 #include <fstream>
 #include <iomanip>
 #include "nlohmann/json.hpp"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
