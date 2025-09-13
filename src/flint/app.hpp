@@ -1,7 +1,8 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <webgpu/webgpu.hpp>
+#include <webgpu/webgpu.h>
+#include <sdl3webgpu.h>
 #include <optional>
 #include <memory>
 #include "player.hpp"
@@ -19,26 +20,58 @@
 #include <vector>
 #include <utility>
 
-struct ChunkRenderBuffers;
-struct ChunkRenderData;
+namespace flint
+{
+    class App
+    {
+    public:
+        App();
+        bool Initialize(int width = 1280, int height = 720);
+        void Run();
+        void Terminate();
 
-class State {
-    // This would contain all the game state and rendering resources.
-    // For this rewrite, we are not implementing the details of the rendering engine.
-};
+    private:
+        void render();
+        void handle_event(const SDL_Event &event);
+        void set_mouse_grab(bool grab);
 
-class App {
-public:
-    App();
-    ~App();
-    void run();
+    private:
+        // SDL resources
+        SDL_Window *m_window = nullptr;
 
-private:
-    SDL_Window* window;
-    std::unique_ptr<State> state;
-    bool running = true;
-    bool mouse_grabbed = false;
+        // WebGPU resources
+        WGPUInstance m_instance = nullptr;
+        WGPUAdapter m_adapter = nullptr;
+        WGPUDevice m_device = nullptr;
+        WGPUQueue m_queue = nullptr;
+        WGPUSurface m_surface = nullptr;
+        WGPUTextureFormat m_surfaceFormat;
+        WGPUBuffer m_camera_buffer = nullptr;
 
-    void handle_event(const SDL_Event& event);
-    void set_mouse_grab(bool grab);
-};
+        // App state
+        bool m_running = false;
+        int m_windowWidth = 1280;
+        int m_windowHeight = 720;
+        bool m_mouse_grabbed = false;
+
+        // Game state
+        World m_world;
+        Player m_player;
+        CameraUniform m_camera_uniform;
+        Input m_input;
+
+        // UI components
+        ui::Crosshair m_crosshair;
+        ui::Inventory m_inventory;
+        ui::Hotbar m_hotbar;
+        ui::ItemRenderer m_item_renderer;
+        ui::UiText m_ui_text;
+
+        // Renderers
+        WireframeRenderer m_wireframe_renderer;
+
+        // Raycasting
+        Raycast m_raycast;
+    };
+
+} // namespace flint
