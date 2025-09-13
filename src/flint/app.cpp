@@ -1,4 +1,5 @@
 #include "app.hpp"
+#include <sdl3webgpu.h>
 #include "world.hpp"
 #include "player.hpp"
 #include "input.hpp"

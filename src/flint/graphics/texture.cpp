@@ -4,7 +4,7 @@
 
 // Define STB_IMAGE_IMPLEMENTATION in one C++ file before including it.
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h" // Assumes stb_image.h is in the include path
+#include "../../third_party/stb/stb_image.h"
 
 namespace flint
 {
