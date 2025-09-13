@@ -1,51 +1,29 @@
 #pragma once
 
-#include <webgpu/webgpu.h>
-#include <glm/glm.hpp>
+#include "block.hpp"
 #include <vector>
+#include <optional>
+#include <utility>
 
-#include "graphics/mesh.hpp"
+const int CHUNK_WIDTH = 16;
+const int CHUNK_HEIGHT = 32;
+const int CHUNK_DEPTH = 16;
 
-namespace flint
-{
-    const int CHUNK_WIDTH = 16;
-    const int CHUNK_HEIGHT = 32;
-    const int CHUNK_DEPTH = 16;
+class Chunk {
+public:
+    std::pair<int, int> coord;
 
-    enum class BlockType
-    {
-        Air,
-        Dirt,
-        Grass,
-    };
+    Chunk(int x, int z);
 
-    class Chunk
-    {
-    public:
-        Chunk();
-        ~Chunk();
+    void generate_terrain();
+    void calculate_sky_light();
 
-        bool initialize(WGPUDevice device);
-        void cleanup();
+    std::optional<Block> get_block(int x, int y, int z) const;
+    void set_block(int x, int y, int z, BlockType type);
+    void set_block_with_tree_id(int x, int y, int z, BlockType type, uint32_t tree_id);
+    void set_block_light(int x, int y, int z, uint8_t level);
 
-        void render(WGPURenderPassEncoder renderPass) const;
-
-        bool is_solid(int x, int y, int z) const;
-
-    private:
-        void generateChunkData();
-        void generateMesh();
-
-        BlockType m_blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
-
-        // CPU data
-        std::vector<graphics::Vertex> m_vertices;
-        std::vector<uint16_t> m_indices;
-
-        // GPU buffers
-        WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUBuffer m_indexBuffer = nullptr;
-        WGPUDevice m_device = nullptr;
-    };
-
-} // namespace flint
+private:
+    std::vector<std::vector<std::vector<Block>>> blocks;
+    void place_tree(int x, int y_base, int z, uint32_t tree_id);
+};

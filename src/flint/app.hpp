@@ -1,54 +1,44 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <webgpu/webgpu.h>
-#include <sdl3webgpu.h>
-
-#include "graphics/mesh.hpp"
-#include "chunk.hpp"
+#include <webgpu/webgpu.hpp>
+#include <optional>
+#include <memory>
 #include "player.hpp"
+#include "world.hpp"
+#include "camera.hpp"
+#include "input.hpp"
+#include "ui/crosshair.hpp"
+#include "ui/inventory.hpp"
+#include "ui/hotbar.hpp"
+#include "ui/item_renderer.hpp"
+#include "ui/ui_text.hpp"
+#include "wireframe_renderer.hpp"
+#include "raycast.hpp"
+#include <map>
+#include <vector>
+#include <utility>
 
-namespace flint
-{
+struct ChunkRenderBuffers;
+struct ChunkRenderData;
 
-    class App
-    {
-    public:
-        App();
-        bool Initialize(int width = 800, int height = 600);
-        void Run();
-        void Terminate();
+class State {
+    // This would contain all the game state and rendering resources.
+    // For this rewrite, we are not implementing the details of the rendering engine.
+};
 
-    private:
-        void render();
+class App {
+public:
+    App();
+    ~App();
+    void run();
 
-    private:
-        // SDL resources
-        SDL_Window *m_window = nullptr;
+private:
+    SDL_Window* window;
+    std::unique_ptr<State> state;
+    bool running = true;
+    bool mouse_grabbed = false;
 
-        // WebGPU resources
-        WGPUInstance m_instance = nullptr;
-        WGPUAdapter m_adapter = nullptr;
-        WGPUDevice m_device = nullptr;
-        WGPUQueue m_queue = nullptr;
-        WGPUSurface m_surface = nullptr;
-        WGPUTextureFormat m_surfaceFormat;
-        WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUShaderModule m_vertexShader = nullptr;
-        WGPUShaderModule m_fragmentShader = nullptr;
-        WGPURenderPipeline m_renderPipeline = nullptr;
-
-        Chunk m_chunk;
-        player::Player m_player;
-
-        WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
-
-        // App state
-        bool m_running = false;
-        int m_windowWidth = 800;
-        int m_windowHeight = 600;
-    };
-
-} // namespace flint
+    void handle_event(const SDL_Event& event);
+    void set_mouse_grab(bool grab);
+};

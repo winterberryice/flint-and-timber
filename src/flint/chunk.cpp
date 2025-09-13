@@ -1,250 +1,177 @@
 #include "chunk.hpp"
+#include <random>
+#include <deque>
+#include <cmath>
+#include <tuple>
+#include <algorithm>
 
-#include <iostream>
+Chunk::Chunk(int x, int z) : coord(x, z) {
+    blocks.resize(CHUNK_WIDTH, std::vector<std::vector<Block>>(CHUNK_HEIGHT, std::vector<Block>(CHUNK_DEPTH, Block(BlockType::Air))));
+}
 
-namespace flint
-{
-    Chunk::Chunk()
-    {
-    }
+void Chunk::generate_terrain() {
+    int surface_level = CHUNK_HEIGHT / 2;
 
-    Chunk::~Chunk()
-    {
-        cleanup();
-    }
-
-    bool Chunk::initialize(WGPUDevice device)
-    {
-        m_device = device;
-
-        generateChunkData();
-        generateMesh();
-
-        // Create vertex buffer
-        WGPUBufferDescriptor vertexBufferDesc = {};
-        vertexBufferDesc.size = m_vertices.size() * sizeof(graphics::Vertex);
-        vertexBufferDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-        vertexBufferDesc.mappedAtCreation = false;
-
-        m_vertexBuffer = wgpuDeviceCreateBuffer(device, &vertexBufferDesc);
-        if (!m_vertexBuffer)
-        {
-            std::cerr << "Failed to create vertex buffer" << std::endl;
-            return false;
-        }
-
-        // Upload vertex data
-        wgpuQueueWriteBuffer(wgpuDeviceGetQueue(device), m_vertexBuffer, 0,
-                             m_vertices.data(), vertexBufferDesc.size);
-
-        // Create index buffer
-        WGPUBufferDescriptor indexBufferDesc = {};
-        indexBufferDesc.size = m_indices.size() * sizeof(uint16_t);
-        indexBufferDesc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
-        indexBufferDesc.mappedAtCreation = false;
-
-        m_indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDesc);
-        if (!m_indexBuffer)
-        {
-            std::cerr << "Failed to create index buffer" << std::endl;
-            return false;
-        }
-
-        // Upload index data
-        wgpuQueueWriteBuffer(wgpuDeviceGetQueue(device), m_indexBuffer, 0,
-                             m_indices.data(), indexBufferDesc.size);
-
-        return true;
-    }
-
-    void Chunk::cleanup()
-    {
-        if (m_vertexBuffer)
-        {
-            wgpuBufferRelease(m_vertexBuffer);
-            m_vertexBuffer = nullptr;
-        }
-        if (m_indexBuffer)
-        {
-            wgpuBufferRelease(m_indexBuffer);
-            m_indexBuffer = nullptr;
-        }
-    }
-
-    void Chunk::render(WGPURenderPassEncoder renderPass) const
-    {
-        if (!m_vertexBuffer || !m_indexBuffer)
-            return;
-
-        // Bind buffers and draw
-        wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, WGPU_WHOLE_SIZE);
-        wgpuRenderPassEncoderSetIndexBuffer(renderPass, m_indexBuffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
-        wgpuRenderPassEncoderDrawIndexed(renderPass, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
-    }
-
-    bool Chunk::is_solid(int x, int y, int z) const
-    {
-        if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_DEPTH)
-        {
-            return false; // Outside of this chunk, considered not solid by this chunk.
-        }
-        return m_blocks[x][y][z] != BlockType::Air;
-    }
-
-    void Chunk::generateChunkData()
-    {
-        for (int x = 0; x < CHUNK_WIDTH; ++x)
-        {
-            for (int z = 0; z < CHUNK_DEPTH; ++z)
-            {
-                for (int y = 0; y < CHUNK_HEIGHT; ++y)
-                {
-                    // Create a floor
-                    if (y < CHUNK_HEIGHT / 2)
-                    {
-                         m_blocks[x][y][z] = BlockType::Dirt;
-                    }
-                    else
-                    {
-                        m_blocks[x][y][z] = BlockType::Air;
-                    }
-                }
-            }
-        }
-
-        // Add some features
-        // A pillar
-        m_blocks[5][CHUNK_HEIGHT / 2][5] = BlockType::Grass;
-        m_blocks[5][CHUNK_HEIGHT / 2 + 1][5] = BlockType::Grass;
-
-        // A higher platform
-        m_blocks[10][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 2][11] = BlockType::Grass;
-    }
-
-    void Chunk::generateMesh()
-    {
-        m_vertices.clear();
-        m_indices.clear();
-
-        glm::vec3 dirtColor = {0.5f, 0.25f, 0.0f};
-        glm::vec3 grassColor = {0.0f, 1.0f, 0.0f};
-
-        for (int x = 0; x < CHUNK_WIDTH; ++x)
-        {
-            for (int y = 0; y < CHUNK_HEIGHT; ++y)
-            {
-                for (int z = 0; z < CHUNK_DEPTH; ++z)
-                {
-                    if (m_blocks[x][y][z] == BlockType::Air)
-                    {
-                        continue;
-                    }
-
-                    glm::vec3 color = (m_blocks[x][y][z] == BlockType::Grass) ? grassColor : dirtColor;
-                    glm::vec3 position = {(float)x, (float)y, (float)z};
-
-                    // Check each face
-                    // Front face
-                    if (z == CHUNK_DEPTH - 1 || m_blocks[x][y][z + 1] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
-                        m_indices.push_back(baseIndex);
-                    }
-                    // Back face
-                    if (z == 0 || m_blocks[x][y][z - 1] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
-                    }
-                    // Top face
-                    if (y == CHUNK_HEIGHT - 1 || m_blocks[x][y + 1][z] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
-                        m_indices.push_back(baseIndex);
-                    }
-                    // Bottom face
-                    if (y == 0 || m_blocks[x][y - 1][z] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
-                    }
-                    // Right face
-                    if (x == CHUNK_WIDTH - 1 || m_blocks[x + 1][y][z] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
-                        m_indices.push_back(baseIndex);
-                    }
-                    // Left face
-                    if (x == 0 || m_blocks[x - 1][y][z] == BlockType::Air)
-                    {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
-                    }
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int z = 0; z < CHUNK_DEPTH; ++z) {
+            blocks[x][0][z] = Block(BlockType::Bedrock);
+            for (int y = 1; y < CHUNK_HEIGHT; ++y) {
+                if (y < surface_level) {
+                    blocks[x][y][z] = Block(BlockType::Dirt);
+                } else if (y == surface_level) {
+                    blocks[x][y][z] = Block(BlockType::Grass);
                 }
             }
         }
     }
 
-} // namespace flint
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    uint32_t next_tree_id = 1;
+
+    for (int x = 2; x < CHUNK_WIDTH - 2; ++x) {
+        for (int z = 2; z < CHUNK_DEPTH - 2; ++z) {
+            if (blocks[x][surface_level][z].block_type == BlockType::Grass) {
+                if (dis(gen) < 0.02) {
+                    place_tree(x, surface_level + 1, z, next_tree_id);
+                    next_tree_id = (next_tree_id + 1);
+                    if (next_tree_id == 0) next_tree_id = 1;
+                }
+            }
+        }
+    }
+}
+
+void Chunk::place_tree(int x, int y_base, int z, uint32_t tree_id) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> trunk_dist(3, 5);
+    int trunk_height = trunk_dist(gen);
+    int canopy_radius = 2;
+    int canopy_base_y_offset = std::max(0, trunk_height - 2);
+    int canopy_max_height_above_base = 3;
+
+    int tree_top_y = y_base + trunk_height;
+    if (tree_top_y + canopy_max_height_above_base >= CHUNK_HEIGHT) {
+        return;
+    }
+
+    for (int i = 0; i < trunk_height; ++i) {
+        if (y_base + i < CHUNK_HEIGHT) {
+            set_block_with_tree_id(x, y_base + i, z, BlockType::OakLog, tree_id);
+        }
+    }
+
+    int canopy_center_y_world = y_base + trunk_height - 1;
+    int y_start_canopy = std::max(0, y_base + canopy_base_y_offset);
+    int y_end_canopy = std::min(CHUNK_HEIGHT - 1, y_base + trunk_height + 1);
+
+    for (int ly_world = y_start_canopy; ly_world <= y_end_canopy; ++ly_world) {
+        int y_dist_from_canopy_center = std::abs(ly_world - canopy_center_y_world);
+        int current_layer_radius = (y_dist_from_canopy_center <= 1) ? canopy_radius : std::max(1, canopy_radius - 1);
+
+        for (int lx_offset = -current_layer_radius; lx_offset <= current_layer_radius; ++lx_offset) {
+            for (int lz_offset = -current_layer_radius; lz_offset <= current_layer_radius; ++lz_offset) {
+                int current_x_world = x + lx_offset;
+                int current_z_world = z + lz_offset;
+
+                if (current_x_world < 0 || current_x_world >= CHUNK_WIDTH ||
+                    current_z_world < 0 || current_z_world >= CHUNK_DEPTH) {
+                    continue;
+                }
+
+                if (lx_offset == 0 && lz_offset == 0 && ly_world < canopy_center_y_world) {
+                    continue;
+                }
+
+                int dist_sq_horiz = lx_offset * lx_offset + lz_offset * lz_offset;
+                if (dist_sq_horiz > current_layer_radius * current_layer_radius) {
+                    continue;
+                }
+
+                std::uniform_real_distribution<> dis(0.0, 1.0);
+                if (dis(gen) < 0.6) { // Simplified probability
+                    if (blocks[current_x_world][ly_world][current_z_world].block_type == BlockType::Air) {
+                        set_block_with_tree_id(current_x_world, ly_world, current_z_world, BlockType::OakLeaves, tree_id);
+                    }
+                }
+            }
+        }
+    }
+}
+
+std::optional<Block> Chunk::get_block(int x, int y, int z) const {
+    if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH) {
+        return blocks[x][y][z];
+    }
+    return std::nullopt;
+}
+
+void Chunk::set_block(int x, int y, int z, BlockType type) {
+    if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH) {
+        blocks[x][y][z] = Block(type);
+    }
+}
+
+void Chunk::set_block_with_tree_id(int x, int y, int z, BlockType type, uint32_t tree_id) {
+    if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH) {
+        blocks[x][y][z] = Block(type, tree_id);
+    }
+}
+
+void Chunk::calculate_sky_light() {
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+            for (int z = 0; z < CHUNK_DEPTH; ++z) {
+                blocks[x][y][z].sky_light = 0;
+            }
+        }
+    }
+
+    std::deque<std::tuple<int, int, int>> light_queue;
+
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int z = 0; z < CHUNK_DEPTH; ++z) {
+            for (int y = CHUNK_HEIGHT - 1; y >= 0; --y) {
+                if (blocks[x][y][z].is_transparent()) {
+                    blocks[x][y][z].sky_light = 15;
+                    light_queue.push_back({x, y, z});
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    while (!light_queue.empty()) {
+        auto [x, y, z] = light_queue.front();
+        light_queue.pop_front();
+
+        uint8_t current_light_level = blocks[x][y][z].sky_light;
+        uint8_t neighbor_light_level = (current_light_level > 0) ? current_light_level - 1 : 0;
+
+        if (neighbor_light_level == 0) continue;
+
+        const std::array<std::tuple<int, int, int>, 6> neighbors = {{
+            {x - 1, y, z}, {x + 1, y, z},
+            {x, y - 1, z}, {x, y + 1, z},
+            {x, y, z - 1}, {x, y, z + 1}
+        }};
+
+        for (const auto& [nx, ny, nz] : neighbors) {
+            if (nx >= 0 && nx < CHUNK_WIDTH && ny >= 0 && ny < CHUNK_HEIGHT && nz >= 0 && nz < CHUNK_DEPTH) {
+                if (blocks[nx][ny][nz].is_transparent() && blocks[nx][ny][nz].sky_light < neighbor_light_level) {
+                    blocks[nx][ny][nz].sky_light = neighbor_light_level;
+                    light_queue.push_back({nx, ny, nz});
+                }
+            }
+        }
+    }
+}
+
+void Chunk::set_block_light(int x, int y, int z, uint8_t level) {
+    if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH) {
+        blocks[x][y][z].sky_light = level;
+    }
+}

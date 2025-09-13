@@ -1,211 +1,172 @@
 #include "player.hpp"
-#include "physics.hpp"
-#include "chunk.hpp"
-#include <vector>
+#include "world.hpp" // Include the full definition of World
 #include <cmath>
-#include <algorithm>
+#include <vector>
+#include "block.hpp"
+#include <algorithm> // for std::max/min
 
-namespace flint
-{
-    namespace player
-    {
-        // Helper function to get AABBs of solid blocks near the player
-        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::Chunk &chunk)
-        {
-            std::vector<physics::AABB> nearby_blocks;
+#include "chunk.hpp"
 
-            // Determine the range of world block coordinates that the player's AABB might overlap.
-            int min_bx = static_cast<int>(std::floor(player_world_box.min.x - 1.0f));
-            int max_bx = static_cast<int>(std::ceil(player_world_box.max.x + 1.0f));
-            int min_by = static_cast<int>(std::floor(player_world_box.min.y - 1.0f));
-            int max_by = static_cast<int>(std::ceil(player_world_box.max.y + 1.0f));
-            int min_bz = static_cast<int>(std::floor(player_world_box.min.z - 1.0f));
-            int max_bz = static_cast<int>(std::ceil(player_world_box.max.z + 1.0f));
 
-            for (int bx = min_bx; bx < max_bx; ++bx)
-            {
-                for (int by = min_by; by < max_by; ++by)
-                {
-                    for (int bz = min_bz; bz < max_bz; ++bz)
-                    {
-                        // This is a simplified check. We'll need a proper getBlock method in Chunk.
-                        // For now, assume we can check if a block is solid.
-                        if (chunk.is_solid(bx, by, bz))
-                        {
-                            glm::vec3 block_min_corner(bx, by, bz);
-                            glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
-                            nearby_blocks.emplace_back(block_min_corner, block_max_corner);
-                        }
+namespace {
+    std::vector<AABB> get_nearby_block_aabbs(const AABB& player_world_box, const World& world) {
+        std::vector<AABB> nearby_blocks;
+
+        int min_world_block_x = static_cast<int>(std::floor(player_world_box.min.x - 1.0f));
+        int max_world_block_x = static_cast<int>(std::ceil(player_world_box.max.x + 1.0f));
+        int min_world_block_y = static_cast<int>(std::floor(player_world_box.min.y - 1.0f));
+        int max_world_block_y = static_cast<int>(std::ceil(player_world_box.max.y + 1.0f));
+        int min_world_block_z = static_cast<int>(std::floor(player_world_box.min.z - 1.0f));
+        int max_world_block_z = static_cast<int>(std::ceil(player_world_box.max.z + 1.0f));
+
+        for (int world_bx = min_world_block_x; world_bx < max_world_block_x; ++world_bx) {
+            for (int world_by = min_world_block_y; world_by < max_world_block_y; ++world_by) {
+                for (int world_bz = min_world_block_z; world_bz < max_world_block_z; ++world_bz) {
+                    if (world_by < 0 || world_by >= CHUNK_HEIGHT) {
+                        continue;
+                    }
+
+                    auto block_opt = world.get_block_at_world(
+                        static_cast<float>(world_bx),
+                        static_cast<float>(world_by),
+                        static_cast<float>(world_bz)
+                    );
+
+                    if (block_opt && block_opt->is_solid()) {
+                        glm::vec3 block_min_corner(world_bx, world_by, world_bz);
+                        glm::vec3 block_max_corner(world_bx + 1.0f, world_by + 1.0f, world_bz + 1.0f);
+                        nearby_blocks.emplace_back(block_min_corner, block_max_corner);
                     }
                 }
             }
-            return nearby_blocks;
         }
+        return nearby_blocks;
+    }
+}
 
-        Player::Player(glm::vec3 initial_position, float initial_yaw, float initial_pitch, float sensitivity)
-            : position(initial_position),
-              velocity(0.0f),
-              local_bounding_box(
-                  glm::vec3(-physics::PLAYER_HALF_WIDTH, 0.0f, -physics::PLAYER_HALF_WIDTH),
-                  glm::vec3(physics::PLAYER_HALF_WIDTH, physics::PLAYER_HEIGHT, physics::PLAYER_HALF_WIDTH)),
-              on_ground(false),
-              yaw(initial_yaw),
-              pitch(initial_pitch),
-              mouse_sensitivity(sensitivity)
-        {
-        }
+Player::Player(glm::vec3 initial_position, float initial_yaw, float initial_pitch, float sensitivity)
+    : position(initial_position),
+      velocity(0.0f),
+      local_bounding_box(
+          AABB(
+              glm::vec3(-Physics::PLAYER_HALF_WIDTH, 0.0f, -Physics::PLAYER_HALF_WIDTH),
+              glm::vec3(Physics::PLAYER_HALF_WIDTH, Physics::PLAYER_HEIGHT, Physics::PLAYER_HALF_WIDTH)
+          )
+      ),
+      on_ground(false),
+      yaw(initial_yaw),
+      pitch(initial_pitch),
+      mouse_sensitivity(sensitivity) {}
 
-        void Player::handle_input(const SDL_Event &event)
-        {
-            if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
-            {
-                bool pressed = (event.type == SDL_EVENT_KEY_DOWN);
-                switch (event.key.key)
-                {
-                case SDLK_W:
-                    movement_intention.forward = pressed;
-                    break;
-                case SDLK_S:
-                    movement_intention.backward = pressed;
-                    break;
-                case SDLK_A:
-                    movement_intention.left = pressed;
-                    break;
-                case SDLK_D:
-                    movement_intention.right = pressed;
-                    break;
-                case SDLK_SPACE:
-                    movement_intention.jump = pressed;
-                    break;
-                }
-            }
-        }
+void Player::process_mouse_movement(double delta_x, double delta_y) {
+    yaw += static_cast<float>(delta_x) * mouse_sensitivity;
+    pitch -= static_cast<float>(delta_y) * mouse_sensitivity;
 
-        void Player::process_mouse_movement(float delta_x, float delta_y)
-        {
-            yaw += delta_x * mouse_sensitivity;
-            pitch -= delta_y * mouse_sensitivity; // Inverted
+    const float max_pitch = glm::radians(89.0f);
+    const float min_pitch = -max_pitch;
+    pitch = std::max(min_pitch, std::min(pitch, max_pitch));
+}
 
-            // Clamp pitch
-            pitch = std::clamp(pitch, -89.0f, 89.0f);
-        }
+void Player::update_physics_and_collision(float dt, const World& world) {
+    // 1. Apply Inputs & Intentions
+    glm::vec3 intended_horizontal_velocity(0.0f);
+    glm::vec3 horizontal_forward(std::cos(yaw), 0.0f, std::sin(yaw));
+    glm::vec3 horizontal_right(horizontal_forward.z, 0.0f, -horizontal_forward.x);
 
-        void Player::update(float dt, const flint::Chunk &chunk)
-        {
-            // 1. Apply Inputs & Intentions
-            glm::vec3 intended_horizontal_velocity(0.0f);
-            float yaw_radians = glm::radians(yaw);
-            glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
-            glm::vec3 horizontal_right = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
+    if (movement_intention.forward) {
+        intended_horizontal_velocity += horizontal_forward;
+    }
+    if (movement_intention.backward) {
+        intended_horizontal_velocity -= horizontal_forward;
+    }
+    if (movement_intention.left) {
+        intended_horizontal_velocity -= horizontal_right;
+    }
+    if (movement_intention.right) {
+        intended_horizontal_velocity += horizontal_right;
+    }
 
-            if (movement_intention.forward)  intended_horizontal_velocity += horizontal_forward;
-            if (movement_intention.backward) intended_horizontal_velocity -= horizontal_forward;
-            if (movement_intention.left)     intended_horizontal_velocity -= horizontal_right;
-            if (movement_intention.right)    intended_horizontal_velocity += horizontal_right;
-
-            if (glm::length2(intended_horizontal_velocity) > 0.0f)
-            {
-                intended_horizontal_velocity = glm::normalize(intended_horizontal_velocity) * physics::WALK_SPEED;
-                velocity.x = intended_horizontal_velocity.x;
-                velocity.z = intended_horizontal_velocity.z;
-            }
-            else
-            {
-                // Apply friction
-                float speed = glm::sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-                if (speed > 0.01f) {
-                    float drop = speed * physics::FRICTION_COEFFICIENT * dt * 60.0f; // Frame-rate independent
-                    float scale = std::max(speed - drop, 0.0f) / speed;
-                    velocity.x *= scale;
-                    velocity.z *= scale;
-                } else {
-                    velocity.x = 0.0f;
-                    velocity.z = 0.0f;
-                }
-            }
-
-            // 2. Apply Gravity
-            velocity.y -= physics::GRAVITY * dt;
-
-            // 3. Handle Jumping
-            if (movement_intention.jump && on_ground)
-            {
-                velocity.y = physics::JUMP_FORCE;
-                on_ground = false;
-            }
-            movement_intention.jump = false; // Consume jump intention
-
-            // 4. Collision Detection and Resolution (Axis-by-Axis)
-            glm::vec3 desired_move = velocity * dt;
-            on_ground = false; // Reset before Y-axis collision check
-
-            // --- Y-AXIS COLLISION ---
-            position.y += desired_move.y;
-            physics::AABB player_world_box = get_world_bounding_box();
-            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
-
-            for (const auto &block_box : nearby_y_blocks)
-            {
-                if (player_world_box.intersects(block_box))
-                {
-                    if (desired_move.y > 0.0f) { // Moving up
-                        position.y = block_box.min.y - local_bounding_box.max.y - 0.0001f;
-                    } else { // Moving down
-                        position.y = block_box.max.y - local_bounding_box.min.y + 0.0001f;
-                        on_ground = true;
-                    }
-                    velocity.y = 0.0f;
-                    desired_move.y = 0.0f;
-                    break;
-                }
-            }
-
-            // --- X-AXIS COLLISION ---
-            position.x += desired_move.x;
-            player_world_box = get_world_bounding_box();
-            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
-
-            for (const auto &block_box : nearby_x_blocks)
-            {
-                if (player_world_box.intersects(block_box))
-                {
-                    if (desired_move.x > 0.0f) { // Moving right
-                        position.x = block_box.min.x - local_bounding_box.max.x - 0.0001f;
-                    } else { // Moving left
-                        position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
-                    }
-                    velocity.x = 0.0f;
-                    break;
-                }
-            }
-
-            // --- Z-AXIS COLLISION ---
-            position.z += desired_move.z;
-            player_world_box = get_world_bounding_box();
-            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
-
-            for (const auto &block_box : nearby_z_blocks)
-            {
-                if (player_world_box.intersects(block_box))
-                {
-                    if (desired_move.z > 0.0f) { // Moving "forward" in world +Z
-                        position.z = block_box.min.z - local_bounding_box.max.z - 0.0001f;
-                    } else { // Moving "backward" in world +Z
-                        position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
-                    }
-                    velocity.z = 0.0f;
-                    break;
-                }
-            }
-        }
-
-        glm::vec3 Player::get_position() const { return position; }
-        float Player::get_yaw() const { return yaw; }
-        float Player::get_pitch() const { return pitch; }
-
-        physics::AABB Player::get_world_bounding_box() const
-        {
-            return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
+    if (glm::length2(intended_horizontal_velocity) > 0.0f) {
+        intended_horizontal_velocity = glm::normalize(intended_horizontal_velocity) * Physics::WALK_SPEED;
+        velocity.x = intended_horizontal_velocity.x;
+        velocity.z = intended_horizontal_velocity.z;
+    } else {
+        float speed = std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+        if (speed > 0.01f) {
+            float drop = speed * Physics::FRICTION_COEFFICIENT * dt;
+            float scale = std::max(0.0f, speed - drop) / speed;
+            velocity.x *= scale;
+            velocity.z *= scale;
+        } else {
+            velocity.x = 0.0f;
+            velocity.z = 0.0f;
         }
     }
+
+    // 2. Apply Gravity
+    velocity.y -= Physics::GRAVITY * dt;
+
+    // 3. Handle Jumping
+    if (movement_intention.jump && on_ground) {
+        velocity.y = Physics::JUMP_FORCE;
+        on_ground = false;
+    }
+    movement_intention.jump = false;
+
+    // 4. Collision Detection and Resolution
+    glm::vec3 desired_move = velocity * dt;
+    on_ground = false;
+
+    // Y-AXIS
+    position.y += desired_move.y;
+    AABB player_world_box = get_world_bounding_box();
+    auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, world);
+    for (const auto& block_box : nearby_y_blocks) {
+        if (player_world_box.intersects(block_box)) {
+            if (desired_move.y > 0.0f) {
+                position.y = block_box.min.y - local_bounding_box.max.y - 0.0001f;
+            } else {
+                position.y = block_box.max.y - local_bounding_box.min.y + 0.0001f;
+                on_ground = true;
+            }
+            velocity.y = 0.0f;
+            break;
+        }
+    }
+
+    // X-AXIS
+    position.x += desired_move.x;
+    player_world_box = get_world_bounding_box();
+    auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, world);
+    for (const auto& block_box : nearby_x_blocks) {
+        if (player_world_box.intersects(block_box)) {
+            if (desired_move.x > 0.0f) {
+                position.x = block_box.min.x - local_bounding_box.max.x - 0.0001f;
+            } else {
+                position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
+            }
+            velocity.x = 0.0f;
+            break;
+        }
+    }
+
+    // Z-AXIS
+    position.z += desired_move.z;
+    player_world_box = get_world_bounding_box();
+    auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, world);
+    for (const auto& block_box : nearby_z_blocks) {
+        if (player_world_box.intersects(block_box)) {
+            if (desired_move.z > 0.0f) {
+                position.z = block_box.min.z - local_bounding_box.max.z - 0.0001f;
+            } else {
+                position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
+            }
+            velocity.z = 0.0f;
+            break;
+        }
+    }
+}
+
+AABB Player::get_world_bounding_box() const {
+    return AABB(position + local_bounding_box.min, position + local_bounding_box.max);
 }
