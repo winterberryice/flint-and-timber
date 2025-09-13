@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "graphics/mesh.hpp"
+#include "block.hpp"
 
 namespace flint
 {
@@ -12,31 +13,39 @@ namespace flint
     const int CHUNK_HEIGHT = 32;
     const int CHUNK_DEPTH = 16;
 
-    enum class BlockType
-    {
-        Air,
-        Dirt,
-        Grass,
-    };
-
     class Chunk
     {
     public:
-        Chunk();
+        Chunk(int chunk_x = 0, int chunk_z = 0);
         ~Chunk();
+
+        // Delete copy constructor and assignment operator
+        Chunk(const Chunk&) = delete;
+        Chunk& operator=(const Chunk&) = delete;
+
+        // Add move constructor and assignment operator
+        Chunk(Chunk&& other) noexcept;
+        Chunk& operator=(Chunk&& other) noexcept;
 
         bool initialize(WGPUDevice device);
         void cleanup();
 
         void render(WGPURenderPassEncoder renderPass) const;
 
-        bool is_solid(int x, int y, int z) const;
+        const Block &get_block(int x, int y, int z) const;
+        void set_block(int x, int y, int z, Block block);
+        void regenerate_mesh();
+
+        glm::ivec2 get_world_position() const { return {m_chunk_x, m_chunk_z}; }
 
     private:
         void generateChunkData();
         void generateMesh();
 
-        BlockType m_blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
+        int m_chunk_x;
+        int m_chunk_z;
+
+        Block m_blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
 
         // CPU data
         std::vector<graphics::Vertex> m_vertices;
