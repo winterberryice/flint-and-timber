@@ -1,0 +1,6 @@
+This file is a placeholder for the texture atlas.
+To generate the actual `atlas.png` file, you need to run the `build.rs` script in the `__rust__/engine` directory.
+This can be done by running `cargo build` in that directory.
+The script will read the individual textures from `__rust__/engine/assets/textures/block` and combine them into `atlas.png` based on the layout defined in `atlas.json`.
+
+The C++ code will attempt to load `assets/textures/atlas.png`. Make sure this file exists before running the application.
