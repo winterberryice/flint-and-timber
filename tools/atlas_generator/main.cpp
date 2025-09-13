@@ -6,7 +6,9 @@
 #include <iomanip>
 #include "nlohmann/json.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 namespace fs = std::filesystem;
@@ -15,6 +17,18 @@ using json = nlohmann::json;
 const int TILE_WIDTH = 16;
 const int TILE_HEIGHT = 16;
 const int ATLAS_COLS = 16;
+
+struct PngWriteContext
+{
+    std::vector<unsigned char> buffer;
+};
+
+void png_write_callback(void *context, void *data, int size)
+{
+    PngWriteContext *ctx = static_cast<PngWriteContext *>(context);
+    const unsigned char *bytes = static_cast<const unsigned char *>(data);
+    ctx->buffer.insert(ctx->buffer.end(), bytes, bytes + size);
+}
 
 bool write_header_file(const fs::path &header_path, const std::vector<unsigned char> &png_data, const std::string &var_name)
 {
@@ -111,7 +125,7 @@ int main(int argc, char *argv[])
             int dest_x = c * TILE_WIDTH;
             int dest_y = r * TILE_HEIGHT;
 
-            for (int y = 0; y < TILE_HEIGHT; ++y)
+    for (int y = 0; y < TILE_HEIGHT; ++y)
             {
                 for (int x = 0; x < TILE_WIDTH; ++x)
                 {
@@ -128,10 +142,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    int png_data_len;
-    unsigned char *png_data = stbi_write_png_to_mem(atlas_data.data(), atlas_width * 4, atlas_width, atlas_height, 4, &png_data_len);
+    PngWriteContext png_ctx;
+    stbi_write_png_to_func(png_write_callback, &png_ctx, atlas_width, atlas_height, 4, atlas_data.data(), atlas_width * 4);
 
-    if (!png_data)
+    if (png_ctx.buffer.empty())
     {
         std::cerr << "Failed to encode atlas to PNG in memory" << std::endl;
         return 1;
@@ -143,24 +157,20 @@ int main(int argc, char *argv[])
     if (!png_file.is_open())
     {
         std::cerr << "Failed to open PNG file for writing: " << output_png_path << std::endl;
-        free(png_data);
         return 1;
     }
-    png_file.write(reinterpret_cast<const char *>(png_data), png_data_len);
+    png_file.write(reinterpret_cast<const char *>(png_ctx.buffer.data()), png_ctx.buffer.size());
     png_file.close();
 
     std::cout << "Successfully generated texture atlas: " << output_png_path << std::endl;
 
     // Write header file
-    std::vector<unsigned char> png_vec(png_data, png_data + png_data_len);
-    if (!write_header_file(output_header_path, png_vec, "atlas_png"))
+    if (!write_header_file(output_header_path, png_ctx.buffer, "atlas_png"))
     {
-        free(png_data);
         return 1;
     }
 
     std::cout << "Successfully generated C++ header: " << output_header_path << std::endl;
 
-    free(png_data);
     return 0;
 }
