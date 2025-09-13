@@ -1,26 +1,28 @@
 #include "player.hpp"
 #include "physics.hpp"
-#include "chunk.hpp"
+#include "world.hpp"
+#include "input.hpp"
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace flint
 {
     namespace player
     {
         // Helper function to get AABBs of solid blocks near the player
-        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::Chunk &chunk)
+        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::World &world)
         {
             std::vector<physics::AABB> nearby_blocks;
 
             // Determine the range of world block coordinates that the player's AABB might overlap.
-            int min_bx = static_cast<int>(std::floor(player_world_box.min.x - 1.0f));
-            int max_bx = static_cast<int>(std::ceil(player_world_box.max.x + 1.0f));
-            int min_by = static_cast<int>(std::floor(player_world_box.min.y - 1.0f));
-            int max_by = static_cast<int>(std::ceil(player_world_box.max.y + 1.0f));
-            int min_bz = static_cast<int>(std::floor(player_world_box.min.z - 1.0f));
-            int max_bz = static_cast<int>(std::ceil(player_world_box.max.z + 1.0f));
+            int min_bx = static_cast<int>(std::floor(player_world_box.min.x));
+            int max_bx = static_cast<int>(std::ceil(player_world_box.max.x));
+            int min_by = static_cast<int>(std::floor(player_world_box.min.y));
+            int max_by = static_cast<int>(std::ceil(player_world_box.max.y));
+            int min_bz = static_cast<int>(std::floor(player_world_box.min.z));
+            int max_bz = static_cast<int>(std::ceil(player_world_box.max.z));
 
             for (int bx = min_bx; bx < max_bx; ++bx)
             {
@@ -28,9 +30,8 @@ namespace flint
                 {
                     for (int bz = min_bz; bz < max_bz; ++bz)
                     {
-                        // This is a simplified check. We'll need a proper getBlock method in Chunk.
-                        // For now, assume we can check if a block is solid.
-                        if (chunk.is_solid(bx, by, bz))
+                        Block block = world.get_block_at_world(bx, by, bz);
+                        if (block.is_solid())
                         {
                             glm::vec3 block_min_corner(bx, by, bz);
                             glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
@@ -55,30 +56,13 @@ namespace flint
         {
         }
 
-        void Player::handle_input(const SDL_Event &event)
+        void Player::handle_keyboard_input(const InputState &input_state)
         {
-            if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
-            {
-                bool pressed = (event.type == SDL_EVENT_KEY_DOWN);
-                switch (event.key.key)
-                {
-                case SDLK_W:
-                    movement_intention.forward = pressed;
-                    break;
-                case SDLK_S:
-                    movement_intention.backward = pressed;
-                    break;
-                case SDLK_A:
-                    movement_intention.left = pressed;
-                    break;
-                case SDLK_D:
-                    movement_intention.right = pressed;
-                    break;
-                case SDLK_SPACE:
-                    movement_intention.jump = pressed;
-                    break;
-                }
-            }
+            movement_intention.forward = input_state.is_key_down(SDLK_w);
+            movement_intention.backward = input_state.is_key_down(SDLK_s);
+            movement_intention.left = input_state.is_key_down(SDLK_a);
+            movement_intention.right = input_state.is_key_down(SDLK_d);
+            movement_intention.jump = input_state.is_key_down(SDLK_SPACE);
         }
 
         void Player::process_mouse_movement(float delta_x, float delta_y)
@@ -90,7 +74,7 @@ namespace flint
             pitch = std::clamp(pitch, -89.0f, 89.0f);
         }
 
-        void Player::update(float dt, const flint::Chunk &chunk)
+        void Player::update(float dt, const flint::World &world)
         {
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
@@ -142,7 +126,7 @@ namespace flint
             // --- Y-AXIS COLLISION ---
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
-            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_y_blocks)
             {
@@ -163,7 +147,7 @@ namespace flint
             // --- X-AXIS COLLISION ---
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
-            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_x_blocks)
             {
@@ -182,7 +166,7 @@ namespace flint
             // --- Z-AXIS COLLISION ---
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
-            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_z_blocks)
             {
@@ -206,6 +190,32 @@ namespace flint
         physics::AABB Player::get_world_bounding_box() const
         {
             return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
+        }
+
+        glm::mat4 Player::get_view_projection_matrix(float aspect_ratio) const
+        {
+            glm::vec3 eye = position + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+            float yaw_radians = glm::radians(yaw);
+            float pitch_radians = glm::radians(pitch);
+
+            glm::vec3 front;
+            front.x = cos(yaw_radians) * cos(pitch_radians);
+            front.y = sin(pitch_radians);
+            front.z = sin(yaw_radians) * cos(pitch_radians);
+            front = glm::normalize(front);
+
+            glm::mat4 view = glm::lookAt(eye, eye + front, glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspect_ratio, 0.1f, 100.0f);
+
+            // GLM is designed for OpenGL, where the Y coordinate of the clip space is inverted.
+            // Dawn/WebGPU does not, so we need to add a correction matrix.
+            glm::mat4 clip_correction = glm::mat4(
+                1.0f, 0.0f, 0.0f, 0.0f,
+                0.0f, -1.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f);
+
+            return clip_correction * proj * view;
         }
     }
 }
