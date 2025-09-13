@@ -36,6 +36,7 @@ jobs:
         path: |
           build/release/flint-and-timber
           build/release/libwebgpu_dawn.so
+          build/release/_deps/sdl3-build/libSDL3.so
 
   build-windows:
     runs-on: windows-latest
