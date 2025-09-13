@@ -109,9 +109,9 @@ jobs:
           build/release-arm64/libwebgpu_dawn.dylib \
           build/release-x86_64/libwebgpu_dawn.dylib
         # Create universal SDL3 library
-        lipo -create -output artifact/libSDL3.dylib \
-          build/release-arm64/_deps/sdl3-build/libSDL3.dylib \
-          build/release-x86_64/_deps/sdl3-build/libSDL3.dylib
+        lipo -create -output artifact/libSDL3.0.dylib \
+          build/release-arm64/_deps/sdl3-build/libSDL3.0.dylib \
+          build/release-x86_64/_deps/sdl3-build/libSDL3.0.dylib
 
     - name: Upload Executable Artifact
       uses: actions/upload-artifact@v4
