@@ -40,6 +40,24 @@ namespace flint
         glm::vec2 uv;
         uint32_t tree_id;
         uint32_t sky_light;
+
+        static WGPUVertexBufferLayout get_layout()
+        {
+            static std::vector<WGPUVertexAttribute> attributes = {
+                {WGPUVertexFormat_Float32x3, offsetof(Vertex, position), 0},
+                {WGPUVertexFormat_Float32x3, offsetof(Vertex, color), 1},
+                {WGPUVertexFormat_Float32x2, offsetof(Vertex, uv), 2},
+                {WGPUVertexFormat_Uint32, offsetof(Vertex, tree_id), 3},
+                {WGPUVertexFormat_Uint32, offsetof(Vertex, sky_light), 4},
+            };
+
+            WGPUVertexBufferLayout layout = {};
+            layout.arrayStride = sizeof(Vertex);
+            layout.stepMode = WGPUVertexStepMode_Vertex;
+            layout.attributeCount = static_cast<uint32_t>(attributes.size());
+            layout.attributes = attributes.data();
+            return layout;
+        }
     };
 
     struct ChunkRenderBuffers

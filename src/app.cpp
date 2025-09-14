@@ -551,19 +551,112 @@ namespace flint
         WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
 
         // Create BGLs
-        // TODO: This is a simplified version. The actual implementation would load this from the respective modules.
-        camera_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, nullptr);
-        texture_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, nullptr);
+        // Camera BGL
+        WGPUBindGroupLayoutEntry camera_bgl_entry = {};
+        camera_bgl_entry.binding = 0;
+        camera_bgl_entry.visibility = WGPUShaderStage_Vertex;
+        camera_bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
+        camera_bgl_entry.buffer.hasDynamicOffset = false;
+        camera_bgl_entry.buffer.minBindingSize = sizeof(CameraUniform);
+
+        WGPUBindGroupLayoutDescriptor camera_bgl_desc = {};
+        camera_bgl_desc.label = "camera_bind_group_layout";
+        camera_bgl_desc.entryCount = 1;
+        camera_bgl_desc.entries = &camera_bgl_entry;
+        camera_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &camera_bgl_desc);
+
+        // Texture BGL
+        WGPUBindGroupLayoutEntry texture_bgl_entries[2] = {};
+        texture_bgl_entries[0].binding = 0;
+        texture_bgl_entries[0].visibility = WGPUShaderStage_Fragment;
+        texture_bgl_entries[0].texture.sampleType = WGPUTextureSampleType_Float;
+        texture_bgl_entries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
+
+        texture_bgl_entries[1].binding = 1;
+        texture_bgl_entries[1].visibility = WGPUShaderStage_Fragment;
+        texture_bgl_entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
+
+        WGPUBindGroupLayoutDescriptor texture_bgl_desc = {};
+        texture_bgl_desc.label = "texture_bind_group_layout";
+        texture_bgl_desc.entryCount = 2;
+        texture_bgl_desc.entries = texture_bgl_entries;
+        texture_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &texture_bgl_desc);
 
         std::vector<WGPUBindGroupLayout> bgls = {camera_bind_group_layout, texture_bind_group_layout};
         WGPUPipelineLayoutDescriptor layout_desc = {.bindGroupLayoutCount = (uint32_t)bgls.size(), .bindGroupLayouts = bgls.data()};
         WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &layout_desc);
 
-        // Create pipelines...
-        // TODO: The full pipeline creation is complex and omitted for brevity.
-        // It would be similar to the logic in the individual renderer classes.
-        render_pipeline = wgpuDeviceCreateRenderPipeline(device, nullptr);
-        transparent_render_pipeline = wgpuDeviceCreateRenderPipeline(device, nullptr);
+        // --- Create Render Pipelines ---
+
+        // Shared Vertex State
+        WGPUVertexState vertex_state = {};
+        vertex_state.module = shader_module;
+        vertex_state.entryPoint = "vs_main";
+        WGPUVertexBufferLayout vertex_buffer_layout = Vertex::get_layout();
+        vertex_state.bufferCount = 1;
+        vertex_state.buffers = &vertex_buffer_layout;
+
+        // Shared Depth/Stencil State
+        WGPUDepthStencilState depth_stencil_state = {};
+        depth_stencil_state.format = WGPUTextureFormat_Depth32Float;
+        depth_stencil_state.depthWriteEnabled = true;
+        depth_stencil_state.depthCompare = WGPUCompareFunction_Less;
+
+        // --- Opaque Render Pipeline ---
+        WGPURenderPipelineDescriptor opaque_pipeline_desc = {};
+        opaque_pipeline_desc.label = "Opaque Render Pipeline";
+        opaque_pipeline_desc.layout = pipeline_layout;
+        opaque_pipeline_desc.vertex = vertex_state;
+
+        WGPUBlendState opaque_blend_state = {};
+        opaque_blend_state.color = {WGPUBlendOperation_Add, WGPUBlendFactor_SrcAlpha, WGPUBlendFactor_OneMinusSrcAlpha};
+        opaque_blend_state.alpha = {WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_OneMinusSrcAlpha};
+
+        WGPUColorTargetState opaque_color_target = {};
+        opaque_color_target.format = config.format;
+        opaque_color_target.blend = &opaque_blend_state;
+        opaque_color_target.writeMask = WGPUColorWriteMask_All;
+
+        WGPUFragmentState opaque_fragment_state = {};
+        opaque_fragment_state.module = shader_module;
+        opaque_fragment_state.entryPoint = "fs_main";
+        opaque_fragment_state.targetCount = 1;
+        opaque_fragment_state.targets = &opaque_color_target;
+        opaque_pipeline_desc.fragment = &opaque_fragment_state;
+
+        opaque_pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        opaque_pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
+        opaque_pipeline_desc.primitive.cullMode = WGPUCullMode_Back;
+
+        opaque_pipeline_desc.depthStencil = &depth_stencil_state;
+
+        opaque_pipeline_desc.multisample.count = 1;
+        opaque_pipeline_desc.multisample.mask = 0xFFFFFFFF;
+
+        render_pipeline = wgpuDeviceCreateRenderPipeline(device, &opaque_pipeline_desc);
+
+        // --- Transparent Render Pipeline ---
+        WGPURenderPipelineDescriptor transparent_pipeline_desc = opaque_pipeline_desc; // Start with a copy
+        transparent_pipeline_desc.label = "Transparent Render Pipeline";
+
+        WGPUColorTargetState transparent_color_target = {};
+        transparent_color_target.format = config.format;
+        transparent_color_target.blend = nullptr; // No blending for transparent pass in this setup
+        transparent_color_target.writeMask = WGPUColorWriteMask_All;
+
+        WGPUFragmentState transparent_fragment_state = {};
+        transparent_fragment_state.module = shader_module;
+        transparent_fragment_state.entryPoint = "fs_main";
+        transparent_fragment_state.targetCount = 1;
+        transparent_fragment_state.targets = &transparent_color_target;
+        transparent_pipeline_desc.fragment = &transparent_fragment_state;
+
+        transparent_pipeline_desc.primitive.cullMode = WGPUCullMode_None; // No culling
+
+        transparent_render_pipeline = wgpuDeviceCreateRenderPipeline(device, &transparent_pipeline_desc);
+
+        // Release the layout, it's not needed anymore
+        wgpuPipelineLayoutRelease(pipeline_layout);
 
         // --- Initialize Game State ---
         glm::vec3 initial_pos(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 2.0f, CHUNK_DEPTH / 2.0f);
