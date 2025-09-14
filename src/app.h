@@ -21,6 +21,7 @@
 
 #include <webgpu/webgpu.h>
 #include <SDL3/SDL.h>
+#include <sdl3webgpu.h>
 #include <glm/glm.hpp>
 
 #include <vector>
@@ -28,10 +29,12 @@
 #include <optional>
 #include <memory>
 
-namespace flint {
+namespace flint
+{
 
     // This was defined in main.rs
-    struct Vertex {
+    struct Vertex
+    {
         glm::vec3 position;
         glm::vec3 color;
         glm::vec2 uv;
@@ -39,31 +42,34 @@ namespace flint {
         uint32_t sky_light;
     };
 
-    struct ChunkRenderBuffers {
+    struct ChunkRenderBuffers
+    {
         WGPUBuffer vertex_buffer = nullptr;
         WGPUBuffer index_buffer = nullptr;
         uint32_t num_indices = 0;
 
         ~ChunkRenderBuffers();
-        ChunkRenderBuffers(const ChunkRenderBuffers&) = delete;
-        ChunkRenderBuffers& operator=(const ChunkRenderBuffers&) = delete;
-        ChunkRenderBuffers(ChunkRenderBuffers&& other) noexcept;
-        ChunkRenderBuffers& operator=(ChunkRenderBuffers&& other) noexcept;
+        ChunkRenderBuffers(const ChunkRenderBuffers &) = delete;
+        ChunkRenderBuffers &operator=(const ChunkRenderBuffers &) = delete;
+        ChunkRenderBuffers(ChunkRenderBuffers &&other) noexcept;
+        ChunkRenderBuffers &operator=(ChunkRenderBuffers &&other) noexcept;
         ChunkRenderBuffers() = default;
     };
 
-    struct ChunkRenderData {
+    struct ChunkRenderData
+    {
         std::optional<ChunkRenderBuffers> opaque_buffers;
         std::optional<ChunkRenderBuffers> transparent_buffers;
     };
 
-    class App {
+    class App
+    {
     public:
-        App(SDL_Window* window);
+        App(SDL_Window *window);
         ~App();
 
         void resize(uint32_t width, uint32_t height);
-        void handle_input(const SDL_Event& event);
+        void handle_input(const SDL_Event &event);
         void update();
         void render();
         void process_mouse_motion(float delta_x, float delta_y);
@@ -74,7 +80,7 @@ namespace flint {
         void handle_inventory_interaction();
         void handle_block_interactions();
 
-        SDL_Window* window;
+        SDL_Window *window;
         uint32_t width;
         uint32_t height;
 
