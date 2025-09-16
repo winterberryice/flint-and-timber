@@ -55,7 +55,7 @@ namespace flint
             uint64_t vertex_buffer_size = num_vertices * sizeof(CrosshairVertex);
 
             WGPUBufferDescriptor vertex_buffer_desc = {};
-            vertex_buffer_desc.label = "Crosshair Vertex Buffer";
+            vertex_buffer_desc.label = flint_utils::makeStringView("Crosshair Vertex Buffer");
             vertex_buffer_desc.size = vertex_buffer_size;
             vertex_buffer_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
             vertex_buffer_desc.mappedAtCreation = true; // So we can write to it immediately
@@ -73,7 +73,7 @@ namespace flint
                 -1.0f, 1.0f);
 
             WGPUBufferDescriptor proj_buffer_desc = {};
-            proj_buffer_desc.label = "Crosshair Projection Buffer";
+            proj_buffer_desc.label = flint_utils::makeStringView("Crosshair Projection Buffer");
             proj_buffer_desc.size = sizeof(glm::mat4);
             proj_buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
             proj_buffer_desc.mappedAtCreation = false;
@@ -87,7 +87,7 @@ namespace flint
             bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
 
             WGPUBindGroupLayoutDescriptor bgl_desc = {};
-            bgl_desc.label = "Crosshair Projection BGL";
+            bgl_desc.label = flint_utils::makeStringView("Crosshair Projection BGL");
             bgl_desc.entryCount = 1;
             bgl_desc.entries = &bgl_entry;
             projection_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &bgl_desc);
@@ -98,7 +98,7 @@ namespace flint
             bg_entry.size = sizeof(glm::mat4);
 
             WGPUBindGroupDescriptor bg_desc = {};
-            bg_desc.label = "Crosshair Projection BG";
+            bg_desc.label = flint_utils::makeStringView("Crosshair Projection BG");
             bg_desc.layout = projection_bind_group_layout;
             bg_desc.entryCount = 1;
             bg_desc.entries = &bg_entry;
@@ -107,8 +107,8 @@ namespace flint
             // --- Shader and Pipeline ---
             std::string shader_code = read_shader_file_content("src_from_rust/crosshair_shader.wgsl");
             WGPUShaderModuleWGSLDescriptor shader_wgsl_desc = {};
-            shader_wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-            shader_wgsl_desc.source = shader_code.c_str();
+            shader_wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+            shader_wgsl_desc.code = flint_utils::makeStringView(shader_code.c_str());
             WGPUShaderModuleDescriptor shader_desc = {.nextInChain = &shader_wgsl_desc.chain, .label = "Crosshair Shader"};
             WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
 
@@ -127,11 +127,19 @@ namespace flint
             WGPUFragmentState fragment_state = {.module = shader_module, .entryPoint = "fs_main", .targetCount = 1, .targets = &color_target};
 
             WGPURenderPipelineDescriptor pipeline_desc = {
-                .label = "Crosshair Render Pipeline",
+                .nextInChain = nullptr,
+                .label = flint_utils::makeStringView("Crosshair Render Pipeline"),
                 .layout = pipeline_layout,
-                .vertex = {.module = shader_module, .entryPoint = "vs_main", .bufferCount = 1, .buffers = &buffer_layout},
+                .vertex = {
+                    .module = shader_module,
+                    .entryPoint = flint_utils::makeStringView("vs_main"),
+                    .bufferCount = 1,
+                    .buffers = &buffer_layout},
+                .primitive = {
+                    .nextInChain = nullptr, .topology = WGPUPrimitiveTopology_TriangleList,
+                    .frontFace = WGPUFrontFace_CCW //
+                },
                 .fragment = &fragment_state,
-                .primitive = {.topology = WGPUPrimitiveTopology_TriangleList, .frontFace = WGPUFrontFace_CCW},
             };
             render_pipeline = wgpuDeviceCreateRenderPipeline(device, &pipeline_desc);
 

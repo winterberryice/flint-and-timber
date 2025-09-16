@@ -4,6 +4,8 @@
 #include <webgpu/webgpu.h>
 #include <cstdint>
 
+#include "flint_utils.h"
+
 namespace flint
 {
     namespace ui
