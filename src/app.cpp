@@ -470,13 +470,13 @@ namespace flint
         }
 
         // --- Initialize Textures ---
-        block_atlas_texture = Texture::create_placeholder(device, queue, flint_utils::makeStringView("Placeholder Block Atlas"));
+        block_atlas_texture.emplace(Texture::create_placeholder(device, queue, flint_utils::makeStringView("Placeholder Block Atlas")));
 
         WGPUBindGroupEntry texture_bg_entries[2] = {};
         texture_bg_entries[0].binding = 0;
-        texture_bg_entries[0].resource = block_atlas_texture.view; // WGPUTextureView
+        texture_bg_entries[0].textureView = block_atlas_texture->view; // WGPUTextureView
         texture_bg_entries[1].binding = 1;
-        texture_bg_entries[1].resource = block_atlas_texture.sampler; // WGPUSampler
+        texture_bg_entries[1].sampler = block_atlas_texture->sampler; // WGPUSampler
 
         WGPUBindGroupDescriptor texture_bg_desc = {};
         texture_bg_desc.label = flint_utils::makeStringView("Block Atlas Bind Group");
@@ -552,8 +552,6 @@ namespace flint
         // This involves handling keyboard, mouse, and window events, and managing mouse grab state.
     }
 
-    const float PLAYER_EYE_HEIGHT = 1.6f;
-
     void App::update()
     {
         if (!state.has_value()) return;
@@ -591,8 +589,8 @@ namespace flint
 
         // Update camera
         glm::vec3 camera_eye = state->player.position + glm::vec3(0.0f, PLAYER_EYE_HEIGHT, 0.0f);
-        float yaw = state->player.get_yaw();
-        float pitch = state->player.get_pitch();
+        float yaw = state->player.yaw;
+        float pitch = state->player.pitch;
 
         glm::vec3 camera_front;
         camera_front.x = cos(yaw) * cos(pitch);
@@ -618,7 +616,7 @@ namespace flint
     {
         WGPUSurfaceTexture surface_texture;
         wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
             if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Timeout ||
                 surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
                 surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {

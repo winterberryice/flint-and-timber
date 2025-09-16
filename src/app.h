@@ -118,7 +118,7 @@ namespace flint
         WGPUBindGroupLayout camera_bind_group_layout = nullptr;
 
         // Textures
-        Texture block_atlas_texture;
+        std::optional<Texture> block_atlas_texture;
         WGPUBindGroup block_atlas_bind_group = nullptr;
         WGPUBindGroupLayout texture_bind_group_layout = nullptr;
 
