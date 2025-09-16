@@ -560,7 +560,7 @@ namespace flint
         camera_bgl_entry.buffer.minBindingSize = sizeof(CameraUniform);
 
         WGPUBindGroupLayoutDescriptor camera_bgl_desc = {};
-        camera_bgl_desc.label = "camera_bind_group_layout";
+        camera_bgl_desc.label = makeStringView("camera_bind_group_layout");
         camera_bgl_desc.entryCount = 1;
         camera_bgl_desc.entries = &camera_bgl_entry;
         camera_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &camera_bgl_desc);
@@ -577,7 +577,7 @@ namespace flint
         texture_bgl_entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
 
         WGPUBindGroupLayoutDescriptor texture_bgl_desc = {};
-        texture_bgl_desc.label = "texture_bind_group_layout";
+        texture_bgl_desc.label = makeStringView("texture_bind_group_layout");
         texture_bgl_desc.entryCount = 2;
         texture_bgl_desc.entries = texture_bgl_entries;
         texture_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &texture_bgl_desc);
@@ -591,7 +591,7 @@ namespace flint
         // Shared Vertex State
         WGPUVertexState vertex_state = {};
         vertex_state.module = shader_module;
-        vertex_state.entryPoint = "vs_main";
+        vertex_state.entryPoint = makeStringView("vs_main");
         WGPUVertexBufferLayout vertex_buffer_layout = Vertex::get_layout();
         vertex_state.bufferCount = 1;
         vertex_state.buffers = &vertex_buffer_layout;
@@ -599,12 +599,12 @@ namespace flint
         // Shared Depth/Stencil State
         WGPUDepthStencilState depth_stencil_state = {};
         depth_stencil_state.format = WGPUTextureFormat_Depth32Float;
-        depth_stencil_state.depthWriteEnabled = true;
+        depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_True;
         depth_stencil_state.depthCompare = WGPUCompareFunction_Less;
 
         // --- Opaque Render Pipeline ---
         WGPURenderPipelineDescriptor opaque_pipeline_desc = {};
-        opaque_pipeline_desc.label = "Opaque Render Pipeline";
+        opaque_pipeline_desc.label = makeStringView("Opaque Render Pipeline");
         opaque_pipeline_desc.layout = pipeline_layout;
         opaque_pipeline_desc.vertex = vertex_state;
 
@@ -619,7 +619,7 @@ namespace flint
 
         WGPUFragmentState opaque_fragment_state = {};
         opaque_fragment_state.module = shader_module;
-        opaque_fragment_state.entryPoint = "fs_main";
+        opaque_fragment_state.entryPoint = makeStringView("fs_main");
         opaque_fragment_state.targetCount = 1;
         opaque_fragment_state.targets = &opaque_color_target;
         opaque_pipeline_desc.fragment = &opaque_fragment_state;
@@ -637,7 +637,7 @@ namespace flint
 
         // --- Transparent Render Pipeline ---
         WGPURenderPipelineDescriptor transparent_pipeline_desc = opaque_pipeline_desc; // Start with a copy
-        transparent_pipeline_desc.label = "Transparent Render Pipeline";
+        transparent_pipeline_desc.label = makeStringView("Transparent Render Pipeline");
 
         WGPUColorTargetState transparent_color_target = {};
         transparent_color_target.format = config.format;
@@ -646,7 +646,7 @@ namespace flint
 
         WGPUFragmentState transparent_fragment_state = {};
         transparent_fragment_state.module = shader_module;
-        transparent_fragment_state.entryPoint = "fs_main";
+        transparent_fragment_state.entryPoint = makeStringView("fs_main");
         transparent_fragment_state.targetCount = 1;
         transparent_fragment_state.targets = &transparent_color_target;
         transparent_pipeline_desc.fragment = &transparent_fragment_state;
@@ -756,7 +756,7 @@ namespace flint
 
         WGPUSurfaceTexture surface_texture;
         wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success)
+        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
         {
             return;
         }
@@ -788,14 +788,7 @@ namespace flint
 
     void App::set_mouse_grab(bool grab)
     {
-        if (grab)
-        {
-            SDL_SetRelativeMouseMode(SDL_TRUE);
-        }
-        else
-        {
-            SDL_SetRelativeMouseMode(SDL_FALSE);
-        }
+        SDL_SetWindowRelativeMouseMode(window, grab);
         mouse_grabbed = grab;
     }
 
