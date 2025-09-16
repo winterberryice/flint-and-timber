@@ -54,6 +54,20 @@ namespace flint
         std::optional<ChunkRenderBuffers> transparent_buffers;
     };
 
+    struct AppState
+    {
+        Player player;
+
+        // TODO when ui is implemented
+        // // UI and Overlays
+        // DebugOverlay debug_overlay;
+        // ui::Crosshair crosshair;
+        // ui::Hotbar hotbar;
+        // WireframeRenderer wireframe_renderer;
+        // ui::ItemRenderer item_renderer;
+        // ui::UIText ui_text;
+    };
+
     class App
     {
     public:
@@ -91,7 +105,8 @@ namespace flint
         WGPUTextureView depth_texture_view = nullptr;
 
         // App state
-        Player player;
+        std::optional<AppState> state;
+
         World world;
         std::unordered_map<std::pair<int, int>, ChunkRenderData, PairHash> chunk_render_data;
         std::vector<std::pair<int, int>> active_chunk_coords;
@@ -105,15 +120,6 @@ namespace flint
         // Textures
         WGPUBindGroup block_atlas_bind_group = nullptr;
         WGPUBindGroupLayout texture_bind_group_layout = nullptr;
-
-        // UI and Overlays
-        DebugOverlay debug_overlay;
-        ui::Crosshair crosshair;
-        ui::Inventory inventory;
-        ui::Hotbar hotbar;
-        WireframeRenderer wireframe_renderer;
-        ui::ItemRenderer item_renderer;
-        ui::UIText ui_text;
 
         bool inventory_open = false;
         std::optional<ui::ItemStack> dragged_item;

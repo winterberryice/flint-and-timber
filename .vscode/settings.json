@@ -1,5 +1,14 @@
 {
   "files.associations": {
-    "ostream": "cpp"
+    "ostream": "cpp",
+    "optional": "cpp",
+    "any": "cpp",
+    "deque": "cpp",
+    "list": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "vector": "cpp",
+    "expected": "cpp",
+    "variant": "cpp"
   }
 }

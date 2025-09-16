@@ -660,13 +660,20 @@ namespace flint
 
         // --- Initialize Game State ---
         glm::vec3 initial_pos(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 2.0f, CHUNK_DEPTH / 2.0f);
-        player = Player(initial_pos, -3.14159f / 2.0f, 0.0f, 0.003f);
+
+        state.emplace(AppState{
+            .player = Player(initial_pos, -3.14159f / 2.0f, 0.0f, 0.003f),
+
+            //
+        });
 
         world = World();
 
         // --- Initialize Camera ---
         camera_uniform = CameraUniform();
-        WGPUBufferDescriptor cam_buff_desc = {.size = sizeof(CameraUniform), .usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst};
+        WGPUBufferDescriptor cam_buff_desc;
+        cam_buff_desc.size = sizeof(CameraUniform);
+        cam_buff_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
         camera_buffer = wgpuDeviceCreateBuffer(device, &cam_buff_desc);
         // ... create camera_bind_group
 
@@ -720,10 +727,11 @@ namespace flint
             depth_texture = wgpuDeviceCreateTexture(device, &depth_desc);
             depth_texture_view = wgpuTextureCreateView(depth_texture, nullptr);
 
-            // Resize UI elements
-            debug_overlay.resize(new_width, new_height, queue);
-            crosshair.resize(new_width, new_height, queue);
-            ui_text.resize(new_width, new_height, queue);
+            // TODO when ui is implemented
+            // // Resize UI elements
+            // debug_overlay.resize(new_width, new_height, queue);
+            // crosshair.resize(new_width, new_height, queue);
+            // ui_text.resize(new_width, new_height, queue);
         }
     }
 
@@ -780,9 +788,9 @@ namespace flint
 
     void App::process_mouse_motion(float delta_x, float delta_y)
     {
-        if (mouse_grabbed && !inventory_open)
+        if (mouse_grabbed && !inventory_open && state.has_value())
         {
-            player.process_mouse_movement(delta_x, delta_y);
+            state->player.process_mouse_movement(delta_x, delta_y);
         }
     }
 
