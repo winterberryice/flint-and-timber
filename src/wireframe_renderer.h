@@ -2,45 +2,51 @@
 
 #include "world.h"
 #include "raycast.h" // For BlockFace
-#include "glm/glm.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <webgpu/webgpu.h>
 #include <vector>
 #include <optional>
 
-namespace flint {
+namespace flint
+{
 
-    struct WireframeVertex {
+    struct WireframeVertex
+    {
         glm::vec3 position;
     };
 
-    struct ModelUniformData {
+    struct ModelUniformData
+    {
         glm::mat4 model_matrix;
     };
 
-    class WireframeRenderer {
+    class WireframeRenderer
+    {
     public:
         WireframeRenderer(
             WGPUDevice device,
             WGPUTextureFormat surface_format,
             WGPUTextureFormat depth_format,
-            WGPUBindGroupLayout camera_bind_group_layout
-        );
+            WGPUBindGroupLayout camera_bind_group_layout);
         ~WireframeRenderer();
 
         void update_selection(std::optional<glm::ivec3> position);
 
-        void draw(WGPURenderPassEncoder render_pass, WGPUQueue queue, const World& world);
+        void draw(WGPURenderPassEncoder render_pass, WGPUQueue queue, const World &world);
+
+        struct FaceRenderInfo
+        {
+            BlockFace face;
+            uint32_t index_offset;
+            uint32_t index_count;
+        };
 
     private:
         WGPURenderPipeline render_pipeline = nullptr;
         WGPUBuffer vertex_buffer = nullptr;
         WGPUBuffer index_buffer = nullptr;
 
-        struct FaceRenderInfo {
-            BlockFace face;
-            uint32_t index_offset;
-            uint32_t index_count;
-        };
         std::vector<FaceRenderInfo> face_render_info;
 
         WGPUBuffer model_uniform_buffer = nullptr;

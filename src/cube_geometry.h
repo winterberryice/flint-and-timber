@@ -5,19 +5,10 @@
 #include <array>
 #include <cstdint>
 
+#include "vertex.h"
+
 namespace flint
 {
-    // TODO reference app.h Vertex?
-    // TODO: This is a placeholder definition.
-    // The actual Vertex struct will be defined when translating the corresponding file.
-    struct Vertex
-    {
-        glm::vec3 position;
-        glm::vec3 color;
-        glm::vec2 uv;
-        uint32_t tree_id;
-        uint32_t sky_light;
-    };
 
     enum class CubeFace
     {

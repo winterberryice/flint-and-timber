@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "flint_utils.h"
+
 namespace flint
 {
     namespace ui
@@ -76,18 +78,31 @@ namespace flint
             num_vertices = static_cast<uint32_t>(vertices.size());
             uint64_t vertex_buffer_size = num_vertices * sizeof(InventoryVertex);
 
-            WGPUBufferDescriptor vertex_buffer_desc = {.label = "Inventory Vertex Buffer", .size = vertex_buffer_size, .usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst, .mappedAtCreation = true};
+            WGPUBufferDescriptor vertex_buffer_desc;
+            vertex_buffer_desc.label = flint_utils::makeStringView("Inventory Vertex Buffer");
+            vertex_buffer_desc.size = vertex_buffer_size;
+            vertex_buffer_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+            vertex_buffer_desc.mappedAtCreation = true;
+
             vertex_buffer = wgpuDeviceCreateBuffer(device, &vertex_buffer_desc);
             void *mapping = wgpuBufferGetMappedRange(vertex_buffer, 0, vertex_buffer_size);
             memcpy(mapping, vertices.data(), vertex_buffer_size);
             wgpuBufferUnmap(vertex_buffer);
 
             glm::mat4 projection_matrix = glm::ortho(0.0f, (float)width, (float)height, 0.0f, -1.0f, 1.0f);
-            WGPUBufferDescriptor proj_buffer_desc = {.label = "Inventory Projection Buffer", .size = sizeof(glm::mat4), .usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst};
+
+            WGPUBufferDescriptor proj_buffer_desc;
+            proj_buffer_desc.label = flint_utils::makeStringView("Inventory Projection Buffer");
+            proj_buffer_desc.size = sizeof(glm::mat4);
+            proj_buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+
             WGPUBuffer projection_buffer = wgpuDeviceCreateBuffer(device, &proj_buffer_desc);
             wgpuQueueWriteBuffer(wgpuDeviceGetQueue(device), projection_buffer, 0, &projection_matrix, sizeof(glm::mat4));
 
-            WGPUBindGroupLayoutEntry bgl_entry = {.binding = 0, .visibility = WGPUShaderStage_Vertex, .buffer.type = WGPUBufferBindingType_Uniform};
+            WGPUBindGroupLayoutEntry bgl_entry;
+            bgl_entry.binding = 0;
+            bgl_entry.visibility = WGPUShaderStage_Vertex;
+            bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
             WGPUBindGroupLayoutDescriptor bgl_desc = {.label = "Inventory BGL", .entryCount = 1, .entries = &bgl_entry};
             WGPUBindGroupLayout projection_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &bgl_desc);
 
@@ -96,11 +111,19 @@ namespace flint
             projection_bind_group = wgpuDeviceCreateBindGroup(device, &bg_desc);
 
             std::string shader_code = read_inventory_shader_file_content("src_from_rust/ui_shader.wgsl");
-            WGPUShaderModuleWGSLDescriptor shader_wgsl_desc = {.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor, .source = shader_code.c_str()};
-            WGPUShaderModuleDescriptor shader_desc = {.nextInChain = &shader_wgsl_desc.chain, .label = "UI Shader"};
+            WGPUShaderModuleWGSLDescriptor shader_wgsl_desc;
+            shader_wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+            shader_wgsl_desc.code = flint_utils::makeStringView(shader_code.c_str());
+
+            WGPUShaderModuleDescriptor shader_desc;
+            shader_desc.nextInChain = &shader_wgsl_desc.chain;
+            shader_desc.label = flint_utils::makeStringView("UI Shader");
             WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
 
-            WGPUPipelineLayoutDescriptor layout_desc = {.label = "Inventory Pipeline Layout", .bindGroupLayoutCount = 1, .bindGroupLayouts = &projection_bind_group_layout};
+            WGPUPipelineLayoutDescriptor layout_desc;
+            layout_desc.label = flint_utils::makeStringView("Inventory Pipeline Layout");
+            layout_desc.bindGroupLayoutCount = 1;
+            layout_desc.bindGroupLayouts = &projection_bind_group_layout;
             WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &layout_desc);
 
             WGPUVertexBufferLayout buffer_layout = {};
@@ -114,14 +137,18 @@ namespace flint
 
             WGPUBlendState blend_state = {.color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha}, .alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha}};
             WGPUColorTargetState color_target = {.format = surface_format, .blend = &blend_state, .writeMask = WGPUColorWriteMask_All};
-            WGPUFragmentState fragment_state = {.module = shader_module, .entryPoint = "fs_main", .targetCount = 1, .targets = &color_target};
+            WGPUFragmentState fragment_state;
+            fragment_state.module = shader_module;
+            fragment_state.entryPoint = flint_utils::makeStringView("fs_main");
+            fragment_state.targetCount = 1;
+            fragment_state.targets = &color_target;
 
             WGPURenderPipelineDescriptor pipeline_desc = {
-                .label = "Inventory Render Pipeline",
+                .label = flint_utils::makeStringView("Inventory Render Pipeline"),
                 .layout = pipeline_layout,
-                .vertex = {.module = shader_module, .entryPoint = "vs_main", .bufferCount = 1, .buffers = &buffer_layout},
-                .fragment = &fragment_state,
+                .vertex = {.module = shader_module, .entryPoint = flint_utils::makeStringView("vs_main"), .bufferCount = 1, .buffers = &buffer_layout},
                 .primitive = {.topology = WGPUPrimitiveTopology_TriangleList, .frontFace = WGPUFrontFace_CCW},
+                .fragment = &fragment_state,
             };
             render_pipeline = wgpuDeviceCreateRenderPipeline(device, &pipeline_desc);
 
