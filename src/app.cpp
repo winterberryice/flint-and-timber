@@ -5,6 +5,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 // ifstream include
 #include <fstream>
+#include "flint_utils.h"
 
 // TODO: This is a placeholder for a utility to get the Dawn device.
 // In a real application, this would be handled more robustly.
@@ -23,12 +24,6 @@ namespace
         return content;
     }
 
-    WGPUStringView makeStringView(const char *str)
-    {
-        return WGPUStringView{
-            .data = str,
-            .length = str ? strlen(str) : 0};
-    }
 
     // Helper for synchronous adapter request
     struct AdapterRequestData
@@ -276,294 +271,43 @@ namespace flint
         wgpuSurfaceConfigure(surface, &config);
         std::cout << "WebGPU surface configured" << std::endl;
 
-        //         std::cout << "Creating triangle vertex data..." << std::endl;
-
-        //         // Triangle vertices in NDC coordinates (x, y, z)
-        //         float triangleVertices[] = {
-        //             0.0f, 0.5f, 0.0f,   // Top vertex
-        //             -0.5f, -0.5f, 0.0f, // Bottom left
-        //             0.5f, -0.5f, 0.0f   // Bottom right
-        //         };
-
-        //         // Create vertex buffer descriptor
-        //         WGPUBufferDescriptor vertexBufferDesc = {};
-        //         vertexBufferDesc.nextInChain = nullptr;
-        //         vertexBufferDesc.label = makeStringView("Triangle Vertex Buffer");
-        //         vertexBufferDesc.size = sizeof(triangleVertices);
-        //         vertexBufferDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-        //         vertexBufferDesc.mappedAtCreation = false;
-
-        //         // Create the vertex buffer
-        //         m_vertexBuffer = wgpuDeviceCreateBuffer(m_device, &vertexBufferDesc);
-        //         if (!m_vertexBuffer)
-        //         {
-        //             std::cerr << "Failed to create vertex buffer!" << std::endl;
-        //             return -1;
-        //         }
-
-        //         // Upload vertex data to GPU
-        //         wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, triangleVertices, sizeof(triangleVertices));
-
-        //         std::cout << "Vertex buffer created and data uploaded" << std::endl;
-
-        //         std::cout << "Creating shaders..." << std::endl;
-
-        //         const char *vertexShaderSource = R"(
-        // struct Uniforms {
-        //     viewProjectionMatrix: mat4x4<f32>,
-        // };
-
-        // @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-
-        // struct VertexInput {
-        //     @location(0) position: vec3<f32>,
-        //     @location(1) color: vec3<f32>,
-        // };
-
-        // struct VertexOutput {
-        //     @builtin(position) position: vec4<f32>,
-        //     @location(0) color: vec3<f32>,
-        // };
-
-        // @vertex
-        // fn vs_main(input: VertexInput) -> VertexOutput {
-        //     var output: VertexOutput;
-        //     output.position = uniforms.viewProjectionMatrix * vec4<f32>(input.position, 1.0);
-        //     output.color = input.color;
-        //     return output;
-        // }
-        // )";
-
-        //         const char *fragmentShaderSource = R"(
-        // @fragment
-        // fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
-        //     return vec4<f32>(color, 1.0);
-        // }
-        // )";
-
-        //         // Create vertex shader module
-        //         WGPUShaderModuleWGSLDescriptor vertexShaderWGSLDesc = {};
-        //         vertexShaderWGSLDesc.chain.next = nullptr;
-        //         vertexShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        //         vertexShaderWGSLDesc.code = makeStringView(vertexShaderSource);
-
-        //         WGPUShaderModuleDescriptor vertexShaderDesc = {};
-        //         vertexShaderDesc.nextInChain = &vertexShaderWGSLDesc.chain;
-        //         vertexShaderDesc.label = makeStringView("Vertex Shader");
-
-        //         m_vertexShader = wgpuDeviceCreateShaderModule(m_device, &vertexShaderDesc);
-
-        //         // Create fragment shader module
-        //         WGPUShaderModuleWGSLDescriptor fragmentShaderWGSLDesc = {};
-        //         fragmentShaderWGSLDesc.chain.next = nullptr;
-        //         fragmentShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        //         fragmentShaderWGSLDesc.code = makeStringView(fragmentShaderSource);
-
-        //         WGPUShaderModuleDescriptor fragmentShaderDesc = {};
-        //         fragmentShaderDesc.nextInChain = &fragmentShaderWGSLDesc.chain;
-        //         fragmentShaderDesc.label = makeStringView("Fragment Shader");
-
-        //         m_fragmentShader = wgpuDeviceCreateShaderModule(m_device, &fragmentShaderDesc);
-
-        //         if (!m_vertexShader || !m_fragmentShader)
-        //         {
-        //             std::cerr << "Failed to create shaders!" << std::endl;
-        //             return false; // Assuming your init function returns bool
-        //         }
-
-        //         std::cout << "Shaders created successfully" << std::endl;
-
-        //         std::cout << "Setting up 3D components..." << std::endl;
-
-        //         // Initialize chunk
-        //         if (!m_chunk.initialize(m_device))
-        //         {
-        //             std::cerr << "Failed to initialize chunk!" << std::endl;
-        //             return false;
-        //         }
-
-        //         // Create uniform buffer for camera matrices
-        //         WGPUBufferDescriptor uniformBufferDesc = {};
-        //         uniformBufferDesc.size = sizeof(glm::mat4); // Size of view-projection matrix
-        //         uniformBufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-        //         uniformBufferDesc.mappedAtCreation = false;
-
-        //         m_uniformBuffer = wgpuDeviceCreateBuffer(m_device, &uniformBufferDesc);
-        //         if (!m_uniformBuffer)
-        //         {
-        //             std::cerr << "Failed to create uniform buffer!" << std::endl;
-        //             return false;
-        //         }
-
-        //         std::cout << "3D components ready!" << std::endl;
-
-        //         std::cout << "Creating render pipeline..." << std::endl;
-
-        //         // Create bind group layout for uniforms first
-        //         WGPUBindGroupLayoutEntry bindingLayout = {};
-        //         bindingLayout.binding = 0;
-        //         bindingLayout.visibility = WGPUShaderStage_Vertex;
-        //         bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
-        //         bindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
-
-        //         WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-        //         bindGroupLayoutDesc.entryCount = 1;
-        //         bindGroupLayoutDesc.entries = &bindingLayout;
-
-        //         m_bindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &bindGroupLayoutDesc);
-        //         if (!m_bindGroupLayout)
-        //         {
-        //             std::cerr << "Failed to create bind group layout!" << std::endl;
-        //             return false;
-        //         }
-
-        //         // Create pipeline layout using our bind group layout
-        //         WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
-        //         pipelineLayoutDesc.bindGroupLayoutCount = 1;
-        //         pipelineLayoutDesc.bindGroupLayouts = &m_bindGroupLayout;
-
-        //         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &pipelineLayoutDesc);
-
-        //         // NEW: Define vertex buffer layout for position + color
-        //         WGPUVertexAttribute vertexAttributes[2] = {};
-
-        //         // Position attribute (location 0)
-        //         vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
-        //         vertexAttributes[0].offset = 0;
-        //         vertexAttributes[0].shaderLocation = 0;
-
-        //         // Color attribute (location 1)
-        //         vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
-        //         vertexAttributes[1].offset = 3 * sizeof(float);          // After position
-        //         vertexAttributes[1].shaderLocation = 1;
-
-        //         WGPUVertexBufferLayout vertexBufferLayout = {};
-        //         vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
-        //         vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-        //         vertexBufferLayout.attributeCount = 2; // position + color
-        //         vertexBufferLayout.attributes = vertexAttributes;
-
-        //         // Create render pipeline descriptor
-        //         WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        //         pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
-
-        //         // Vertex state
-        //         pipelineDescriptor.vertex.module = m_vertexShader;
-        //         pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
-        //         pipelineDescriptor.vertex.bufferCount = 1;
-        //         pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
-
-        //         // Fragment state
-        //         WGPUFragmentState fragmentState = {};
-        //         fragmentState.module = m_fragmentShader;
-        //         fragmentState.entryPoint = makeStringView("fs_main");
-
-        //         // Color target (what we're rendering to)
-        //         WGPUColorTargetState colorTarget = {};
-        //         colorTarget.format = m_surfaceFormat;
-        //         colorTarget.writeMask = WGPUColorWriteMask_All;
-
-        //         fragmentState.targetCount = 1;
-        //         fragmentState.targets = &colorTarget;
-        //         pipelineDescriptor.fragment = &fragmentState;
-
-        //         // Primitive state - IMPORTANT: Enable depth testing for 3D
-        //         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        //         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
-        //         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        //         pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back; // Enable back-face culling
-
-        //         // Multisample state
-        //         pipelineDescriptor.multisample.count = 1;
-        //         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
-        //         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
-
-        //         // Use our custom layout (not auto)
-        //         pipelineDescriptor.layout = pipelineLayout;
-
-        //         // Create the pipeline
-        //         m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
-
-        //         // Clean up temporary layout
-        //         wgpuPipelineLayoutRelease(pipelineLayout);
-
-        //         if (!m_renderPipeline)
-        //         {
-        //             std::cerr << "Failed to create render pipeline!" << std::endl;
-        //             return false;
-        //         }
-
-        //         // Create bind group for uniforms
-        //         WGPUBindGroupEntry binding = {};
-        //         binding.binding = 0;
-        //         binding.buffer = m_uniformBuffer;
-        //         binding.offset = 0;
-        //         binding.size = sizeof(glm::mat4);
-
-        //         WGPUBindGroupDescriptor bindGroupDesc = {};
-        //         bindGroupDesc.layout = m_bindGroupLayout;
-        //         bindGroupDesc.entryCount = 1;
-        //         bindGroupDesc.entries = &binding;
-
-        //         m_bindGroup = wgpuDeviceCreateBindGroup(m_device, &bindGroupDesc);
-
-        //         std::cout << "Render pipeline created successfully" << std::endl;
-
-        //         // ====
-        //         m_running = true;
-
-        // end new ================================================
-
-        // surface = SDL_GetWGPUSurface(instance, window);
-
-        // WGPURequestAdapterOptions adapter_options = {};
-        // adapter_options.compatibleSurface = surface;
-        // adapter = wgpuInstanceRequestAdapter(instance, &adapter_options);
-
-        // WGPUDeviceDescriptor device_desc = {};
-        // device_desc.errorCallback = PrintDeviceError;
-        // device = wgpuAdapterRequestDevice(adapter, &device_desc);
-        // queue = wgpuDeviceGetQueue(device);
-
-        // WGPUSurfaceCapabilities caps;
-        // wgpuSurfaceGetCapabilities(surface, adapter, &caps);
-        // WGPUTextureFormat surface_format = caps.formats[0];
-
-        // config.usage = WGPUTextureUsage_RenderAttachment;
-        // config.format = surface_format;
-        // config.width = width;
-        // config.height = height;
-        // config.presentMode = WGPUPresentMode_Fifo;
-        // config.alphaMode = caps.alphaModes[0];
-        // wgpuSurfaceConfigure(surface, &config);
-
         // --- Main Render Pipeline ---
-        // TODO: The shader loading logic should be centralized.
-        // This is a placeholder for reading the shader file.
-        // TODO path with src or not?
-        std::string shader_code = readFile("src/shader.wgsl"); //  "/* shader code would be loaded here */";
+        std::string shader_code = readFile("src/shader.wgsl");
+        if (shader_code.empty())
+        {
+            throw std::runtime_error("Failed to read shader file: src/shader.wgsl or it was empty.");
+        }
 
         WGPUShaderModuleWGSLDescriptor shader_wgsl = {};
-        shader_wgsl.chain.next = nullptr;
         shader_wgsl.chain.sType = WGPUSType_ShaderSourceWGSL;
-        shader_wgsl.code = makeStringView(shader_code.c_str());
-        WGPUShaderModuleDescriptor shader_desc = {.nextInChain = &shader_wgsl.chain};
-        WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
+        shader_wgsl.code = shader_code.c_str();
 
-        // Create BGLs
+        WGPUShaderModuleDescriptor shader_desc = {};
+        shader_desc.nextInChain = &shader_wgsl.chain;
+        shader_desc.label = flint_utils::makeStringView("Main Shader Module");
+        WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
+        if (!shader_module)
+        {
+            throw std::runtime_error("Failed to create shader module.");
+        }
+
+        // --- Create Bind Group Layouts ---
         // Camera BGL
         WGPUBindGroupLayoutEntry camera_bgl_entry = {};
         camera_bgl_entry.binding = 0;
         camera_bgl_entry.visibility = WGPUShaderStage_Vertex;
         camera_bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
-        camera_bgl_entry.buffer.hasDynamicOffset = false;
         camera_bgl_entry.buffer.minBindingSize = sizeof(CameraUniform);
 
         WGPUBindGroupLayoutDescriptor camera_bgl_desc = {};
-        camera_bgl_desc.label = makeStringView("camera_bind_group_layout");
+        camera_bgl_desc.label = flint_utils::makeStringView("Camera Bind Group Layout");
         camera_bgl_desc.entryCount = 1;
         camera_bgl_desc.entries = &camera_bgl_entry;
         camera_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &camera_bgl_desc);
+        if (!camera_bind_group_layout)
+        {
+            throw std::runtime_error("Failed to create camera bind group layout.");
+        }
 
         // Texture BGL
         WGPUBindGroupLayoutEntry texture_bgl_entries[2] = {};
@@ -577,21 +321,33 @@ namespace flint
         texture_bgl_entries[1].sampler.type = WGPUSamplerBindingType_Filtering;
 
         WGPUBindGroupLayoutDescriptor texture_bgl_desc = {};
-        texture_bgl_desc.label = makeStringView("texture_bind_group_layout");
+        texture_bgl_desc.label = flint_utils::makeStringView("Texture Bind Group Layout");
         texture_bgl_desc.entryCount = 2;
         texture_bgl_desc.entries = texture_bgl_entries;
         texture_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &texture_bgl_desc);
+        if (!texture_bind_group_layout)
+        {
+            throw std::runtime_error("Failed to create texture bind group layout.");
+        }
 
+        // --- Create Pipeline Layout ---
         std::vector<WGPUBindGroupLayout> bgls = {camera_bind_group_layout, texture_bind_group_layout};
-        WGPUPipelineLayoutDescriptor layout_desc = {.bindGroupLayoutCount = (uint32_t)bgls.size(), .bindGroupLayouts = bgls.data()};
+        WGPUPipelineLayoutDescriptor layout_desc = {};
+        layout_desc.label = flint_utils::makeStringView("Render Pipeline Layout");
+        layout_desc.bindGroupLayoutCount = (uint32_t)bgls.size();
+        layout_desc.bindGroupLayouts = bgls.data();
         WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &layout_desc);
+        if (!pipeline_layout)
+        {
+            throw std::runtime_error("Failed to create pipeline layout.");
+        }
 
         // --- Create Render Pipelines ---
 
         // Shared Vertex State
         WGPUVertexState vertex_state = {};
         vertex_state.module = shader_module;
-        vertex_state.entryPoint = makeStringView("vs_main");
+        vertex_state.entryPoint = flint_utils::makeStringView("vs_main");
         WGPUVertexBufferLayout vertex_buffer_layout = Vertex::get_layout();
         vertex_state.bufferCount = 1;
         vertex_state.buffers = &vertex_buffer_layout;
@@ -599,12 +355,19 @@ namespace flint
         // Shared Depth/Stencil State
         WGPUDepthStencilState depth_stencil_state = {};
         depth_stencil_state.format = WGPUTextureFormat_Depth32Float;
-        depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_True;
+        depth_stencil_state.depthWriteEnabled = true;
         depth_stencil_state.depthCompare = WGPUCompareFunction_Less;
+
+        // Shared Fragment State for both pipelines
+        WGPUFragmentState fragment_state = {};
+        fragment_state.module = shader_module;
+        fragment_state.entryPoint = flint_utils::makeStringView("fs_main");
+        fragment_state.targetCount = 1;
+        // The rest will be configured per-pipeline
 
         // --- Opaque Render Pipeline ---
         WGPURenderPipelineDescriptor opaque_pipeline_desc = {};
-        opaque_pipeline_desc.label = makeStringView("Opaque Render Pipeline");
+        opaque_pipeline_desc.label = flint_utils::makeStringView("Opaque Render Pipeline");
         opaque_pipeline_desc.layout = pipeline_layout;
         opaque_pipeline_desc.vertex = vertex_state;
 
@@ -617,12 +380,8 @@ namespace flint
         opaque_color_target.blend = &opaque_blend_state;
         opaque_color_target.writeMask = WGPUColorWriteMask_All;
 
-        WGPUFragmentState opaque_fragment_state = {};
-        opaque_fragment_state.module = shader_module;
-        opaque_fragment_state.entryPoint = makeStringView("fs_main");
-        opaque_fragment_state.targetCount = 1;
-        opaque_fragment_state.targets = &opaque_color_target;
-        opaque_pipeline_desc.fragment = &opaque_fragment_state;
+        fragment_state.targets = &opaque_color_target;
+        opaque_pipeline_desc.fragment = &fragment_state;
 
         opaque_pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         opaque_pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
@@ -634,29 +393,44 @@ namespace flint
         opaque_pipeline_desc.multisample.mask = 0xFFFFFFFF;
 
         render_pipeline = wgpuDeviceCreateRenderPipeline(device, &opaque_pipeline_desc);
+        if (!render_pipeline)
+        {
+            throw std::runtime_error("Failed to create opaque render pipeline.");
+        }
 
         // --- Transparent Render Pipeline ---
-        WGPURenderPipelineDescriptor transparent_pipeline_desc = opaque_pipeline_desc; // Start with a copy
-        transparent_pipeline_desc.label = makeStringView("Transparent Render Pipeline");
+        WGPURenderPipelineDescriptor transparent_pipeline_desc = {};
+        transparent_pipeline_desc.label = flint_utils::makeStringView("Transparent Render Pipeline");
+        transparent_pipeline_desc.layout = pipeline_layout;
+        transparent_pipeline_desc.vertex = vertex_state; // Reuse vertex state
 
+        // Different blend and cull states for transparent objects
         WGPUColorTargetState transparent_color_target = {};
         transparent_color_target.format = config.format;
-        transparent_color_target.blend = nullptr; // No blending for transparent pass in this setup
+        transparent_color_target.blend = nullptr; // No blending for now, as in Rust code
         transparent_color_target.writeMask = WGPUColorWriteMask_All;
 
-        WGPUFragmentState transparent_fragment_state = {};
-        transparent_fragment_state.module = shader_module;
-        transparent_fragment_state.entryPoint = makeStringView("fs_main");
-        transparent_fragment_state.targetCount = 1;
-        transparent_fragment_state.targets = &transparent_color_target;
-        transparent_pipeline_desc.fragment = &transparent_fragment_state;
+        fragment_state.targets = &transparent_color_target; // Point fragment state to the new target
+        transparent_pipeline_desc.fragment = &fragment_state;
 
-        transparent_pipeline_desc.primitive.cullMode = WGPUCullMode_None; // No culling
+        transparent_pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        transparent_pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
+        transparent_pipeline_desc.primitive.cullMode = WGPUCullMode_None; // No culling for transparent objects
+
+        transparent_pipeline_desc.depthStencil = &depth_stencil_state; // Reuse depth state
+
+        transparent_pipeline_desc.multisample.count = 1;
+        transparent_pipeline_desc.multisample.mask = 0xFFFFFFFF;
 
         transparent_render_pipeline = wgpuDeviceCreateRenderPipeline(device, &transparent_pipeline_desc);
+        if (!transparent_render_pipeline)
+        {
+            throw std::runtime_error("Failed to create transparent render pipeline.");
+        }
 
         // Release the layout, it's not needed anymore
         wgpuPipelineLayoutRelease(pipeline_layout);
+        wgpuShaderModuleRelease(shader_module); // Release shader module once pipelines are created
 
         // --- Initialize Game State ---
         glm::vec3 initial_pos(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 2.0f, CHUNK_DEPTH / 2.0f);
@@ -671,10 +445,15 @@ namespace flint
 
         // --- Initialize Camera ---
         camera_uniform = CameraUniform();
-        WGPUBufferDescriptor cam_buff_desc;
+        WGPUBufferDescriptor cam_buff_desc = {}; // Zero-initialize!
+        cam_buff_desc.label = flint_utils::makeStringView("Camera Buffer");
         cam_buff_desc.size = sizeof(CameraUniform);
         cam_buff_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
         camera_buffer = wgpuDeviceCreateBuffer(device, &cam_buff_desc);
+        if (!camera_buffer)
+        {
+            throw std::runtime_error("Failed to create camera buffer.");
+        }
         // ... create camera_bind_group
 
         // --- Initialize Depth Texture ---
