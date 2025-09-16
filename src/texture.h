@@ -5,9 +5,11 @@
 #include <string>
 #include <cstdint>
 
-namespace flint {
+namespace flint
+{
 
-    class Texture {
+    class Texture
+    {
     public:
         WGPUTextureView view = nullptr;
         WGPUSampler sampler = nullptr;
@@ -18,28 +20,26 @@ namespace flint {
         static Texture load_from_rgba(
             WGPUDevice device,
             WGPUQueue queue,
-            const std::vector<uint8_t>& rgba_data,
+            const std::vector<uint8_t> &rgba_data,
             uint32_t width,
             uint32_t height,
-            const char* label
-        );
+            WGPUStringView label);
 
         static Texture create_placeholder(
             WGPUDevice device,
             WGPUQueue queue,
-            const char* label
-        );
+            WGPUStringView label);
 
         // Destructor to release the resources
         ~Texture();
 
         // Delete copy constructor and assignment to prevent shallow copies
-        Texture(const Texture&) = delete;
-        Texture& operator=(const Texture&) = delete;
+        Texture(const Texture &) = delete;
+        Texture &operator=(const Texture &) = delete;
 
         // Allow move construction and assignment
-        Texture(Texture&& other) noexcept;
-        Texture& operator=(Texture&& other) noexcept;
+        Texture(Texture &&other) noexcept;
+        Texture &operator=(Texture &&other) noexcept;
 
     private:
         // Private constructor to be used by static methods
