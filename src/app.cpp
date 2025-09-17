@@ -540,62 +540,7 @@ namespace flint
 
     void App::update()
     {
-        if (!state.has_value()) return;
-
-        // Determine active chunks and build meshes
-        glm::vec3 player_pos = state->player.position;
-        int current_chunk_x = static_cast<int>(floor(player_pos.x / CHUNK_WIDTH));
-        int current_chunk_z = static_cast<int>(floor(player_pos.z / CHUNK_DEPTH));
-
-        active_chunk_coords.clear();
-        int render_distance = 1; // Minimal render distance for now
-        for (int dx = -render_distance; dx <= render_distance; ++dx) {
-            for (int dz = -render_distance; dz <= render_distance; ++dz) {
-                int target_cx = current_chunk_x + dx;
-                int target_cz = current_chunk_z + dz;
-                active_chunk_coords.push_back({target_cx, target_cz});
-                world.get_or_create_chunk(target_cx, target_cz);
-            }
-        }
-
-        std::vector<std::pair<int, int>> coords_to_mesh;
-        for (const auto& coords : active_chunk_coords) {
-            if (chunk_render_data.find(coords) == chunk_render_data.end()) {
-                coords_to_mesh.push_back(coords);
-            }
-        }
-
-        // Sorting and deduping is less critical here than in Rust due to map properties, but good practice
-        std::sort(coords_to_mesh.begin(), coords_to_mesh.end());
-        coords_to_mesh.erase(std::unique(coords_to_mesh.begin(), coords_to_mesh.end()), coords_to_mesh.end());
-
-        for (const auto& coords : coords_to_mesh) {
-            build_or_rebuild_chunk_mesh(coords.first, coords.second);
-        }
-
-        // Update camera
-        glm::vec3 camera_eye = state->player.position + glm::vec3(0.0f, PLAYER_EYE_HEIGHT, 0.0f);
-        float yaw = state->player.yaw;
-        float pitch = state->player.pitch;
-
-        glm::vec3 camera_front;
-        camera_front.x = cos(yaw) * cos(pitch);
-        camera_front.y = sin(pitch);
-        camera_front.z = sin(yaw) * cos(pitch);
-        camera_front = glm::normalize(camera_front);
-
-        glm::mat4 view_matrix = glm::lookAt(camera_eye, camera_eye + camera_front, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
-        float fovy_radians = glm::radians(45.0f);
-        float znear = 0.1f;
-        float zfar = 1000.0f;
-        glm::mat4 projection_matrix = glm::perspective(fovy_radians, aspect_ratio, znear, zfar);
-
-        // GLM is column-major, and WebGPU expects column-major, so this is fine.
-        camera_uniform.view_proj = projection_matrix * view_matrix;
-
-        wgpuQueueWriteBuffer(queue, camera_buffer, 0, &camera_uniform, sizeof(CameraUniform));
+        // Temporarily empty for debugging the render pass.
     }
 
     void App::render()
@@ -629,41 +574,15 @@ namespace flint
             color_attachment.view = view;
             color_attachment.loadOp = WGPULoadOp_Clear;
             color_attachment.storeOp = WGPUStoreOp_Store;
-            color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
-
-            WGPURenderPassDepthStencilAttachment depth_attachment = {};
-            depth_attachment.view = depth_texture_view;
-            depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-            depth_attachment.depthStoreOp = WGPUStoreOp_Store;
-            depth_attachment.depthClearValue = 1.0f;
+            color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0}; // Blue sky color
 
             WGPURenderPassDescriptor pass_desc = {};
-            pass_desc.label = flint_utils::makeStringView("Main Render Pass");
+            pass_desc.label = flint_utils::makeStringView("Clear Screen Pass");
             pass_desc.colorAttachmentCount = 1;
             pass_desc.colorAttachments = &color_attachment;
-            pass_desc.depthStencilAttachment = &depth_attachment;
+            pass_desc.depthStencilAttachment = nullptr; // No depth buffer needed for just a clear
 
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
-
-            // Draw opaque geometry
-            wgpuRenderPassEncoderSetPipeline(render_pass, render_pipeline);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 0, camera_bind_group, 0, nullptr);
-            wgpuRenderPassEncoderSetBindGroup(render_pass, 1, block_atlas_bind_group, 0, nullptr);
-
-            for (const auto& coords : active_chunk_coords) {
-                auto it = chunk_render_data.find(coords);
-                if (it != chunk_render_data.end()) {
-                    const auto& chunk_data = it->second;
-                    if (chunk_data.opaque_buffers && chunk_data.opaque_buffers->num_indices > 0) {
-                        wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, chunk_data.opaque_buffers->vertex_buffer, 0, WGPU_WHOLE_SIZE);
-                        wgpuRenderPassEncoderSetIndexBuffer(render_pass, chunk_data.opaque_buffers->index_buffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
-                        wgpuRenderPassEncoderDrawIndexed(render_pass, chunk_data.opaque_buffers->num_indices, 1, 0, 0, 0);
-                    }
-                }
-            }
-
-            // TODO: Draw transparent geometry
-
             wgpuRenderPassEncoderEnd(render_pass);
             wgpuRenderPassEncoderRelease(render_pass);
         }
@@ -695,184 +614,8 @@ namespace flint
         mouse_grabbed = grab;
     }
 
-    const float ATLAS_COLS = 16.0;
-    const float ATLAS_ROWS = 1.0;
-
     void App::build_or_rebuild_chunk_mesh(int chunk_cx, int chunk_cz) {
-        std::vector<Vertex> opaque_vertices;
-        std::vector<uint16_t> opaque_indices;
-        uint16_t opaque_vertex_offset = 0;
-
-        std::vector<Vertex> transparent_vertices;
-        std::vector<uint16_t> transparent_indices;
-        uint16_t transparent_vertex_offset = 0;
-
-        struct TransparentBlockData {
-            Block block;
-            int lx, ly, lz;
-            glm::vec3 world_center;
-        };
-        std::vector<TransparentBlockData> transparent_block_render_list;
-
-        const Chunk* chunk = world.get_chunk(chunk_cx, chunk_cz);
-        if (!chunk) {
-            // This can happen if a chunk goes out of view before its mesh is built.
-            chunk_render_data.erase({chunk_cx, chunk_cz});
-            return;
-        }
-
-        float chunk_world_origin_x = static_cast<float>(chunk_cx * CHUNK_WIDTH);
-        float chunk_world_origin_z = static_cast<float>(chunk_cz * CHUNK_DEPTH);
-
-        for (int lx = 0; lx < CHUNK_WIDTH; ++lx) {
-            for (int ly = 0; ly < CHUNK_HEIGHT; ++ly) {
-                for (int lz = 0; lz < CHUNK_DEPTH; ++lz) {
-                    const Block* block = chunk->get_block(lx, ly, lz);
-                    if (!block || block->block_type == BlockType::Air) {
-                        continue;
-                    }
-
-                    bool is_current_block_transparent = block->is_transparent();
-                    glm::vec3 current_block_world_center(
-                        chunk_world_origin_x + lx + 0.5f,
-                        ly + 0.5f,
-                        chunk_world_origin_z + lz + 0.5f
-                    );
-
-                    const std::array<std::pair<CubeFace, glm::ivec3>, 6> face_definitions = {{
-                        {CubeFace::Front, {0, 0, -1}},
-                        {CubeFace::Back, {0, 0, 1}},
-                        {CubeFace::Right, {1, 0, 0}},
-                        {CubeFace::Left, {-1, 0, 0}},
-                        {CubeFace::Top, {0, 1, 0}},
-                        {CubeFace::Bottom, {0, -1, 0}}
-                    }};
-
-                    for (const auto& face_def : face_definitions) {
-                        CubeFace face_type = face_def.first;
-                        glm::ivec3 offset = face_def.second;
-
-                        float neighbor_world_bx = chunk_world_origin_x + lx + offset.x;
-                        float neighbor_world_by = static_cast<float>(ly) + offset.y;
-                        float neighbor_world_bz = chunk_world_origin_z + lz + offset.z;
-
-                        bool face_is_visible = false;
-                        uint8_t face_sky_light = 0;
-
-                        if (neighbor_world_by >= 0 && neighbor_world_by < CHUNK_HEIGHT) {
-                            const Block* neighbor_block = world.get_block_at_world(neighbor_world_bx, neighbor_world_by, neighbor_world_bz);
-                            if (!neighbor_block || neighbor_block->is_transparent()) {
-                                face_is_visible = true;
-                                if (neighbor_block) {
-                                    face_sky_light = neighbor_block->sky_light;
-                                }
-                            }
-                        } else {
-                            face_is_visible = true; // Face is at the world border (top/bottom)
-                        }
-
-
-                        if (face_is_visible) {
-                             if (!is_current_block_transparent) {
-                                auto vertices_template = CubeGeometry::get_vertices_template(face_type);
-                                const auto& local_indices = CubeGeometry::get_local_indices();
-
-                                float tex_size_x = 1.0f / ATLAS_COLS;
-                                float tex_size_y = 1.0f / ATLAS_ROWS;
-                                auto all_face_atlas_indices = block->get_texture_atlas_indices();
-
-                                glm::vec3 current_vertex_color; // Not set from template anymore
-
-                                const auto& face_specific_atlas_indices = all_face_atlas_indices[static_cast<int>(face_type)];
-
-                                if (block->block_type == BlockType::Grass) {
-                                     if (face_type == CubeFace::Top) {
-                                        current_vertex_color = {0.1f, 0.9f, 0.1f};
-                                    } else if (face_type == CubeFace::Bottom) {
-                                        current_vertex_color = {0.5f, 0.25f, 0.05f};
-                                    } else {
-                                        current_vertex_color = {0.0f, 0.8f, 0.1f};
-                                    }
-                                } else {
-                                    // A default color for other blocks
-                                    current_vertex_color = {0.5f, 0.5f, 0.5f};
-                                }
-
-
-                                float u_min = face_specific_atlas_indices[0] * tex_size_x;
-                                float v_min = face_specific_atlas_indices[1] * tex_size_y;
-                                float u_max = u_min + tex_size_x;
-                                float v_max = v_min + tex_size_y;
-
-                                std::array<glm::vec2, 4> uvs;
-                                switch (face_type) {
-                                    case CubeFace::Back:
-                                    case CubeFace::Top:
-                                        uvs = {{{u_min, v_max}, {u_max, v_max}, {u_max, v_min}, {u_min, v_min}}}; // BL, BR, TR, TL
-                                        break;
-                                    default:
-                                        uvs = {{{u_min, v_max}, {u_min, v_min}, {u_max, v_min}, {u_max, v_max}}}; // BL, TL, TR, BR
-                                        break;
-                                }
-
-                                for (size_t i = 0; i < vertices_template.size(); ++i) {
-                                    Vertex v = vertices_template[i];
-                                    v.position += current_block_world_center;
-                                    v.color = current_vertex_color;
-                                    v.uv = uvs[i];
-                                    v.sky_light = face_sky_light;
-                                    opaque_vertices.push_back(v);
-                                }
-
-                                for (uint16_t local_idx : local_indices) {
-                                    opaque_indices.push_back(opaque_vertex_offset + local_idx);
-                                }
-                                opaque_vertex_offset += static_cast<uint16_t>(vertices_template.size());
-                            }
-                        }
-                    }
-
-                    if (is_current_block_transparent) {
-                        transparent_block_render_list.push_back({*block, lx, ly, lz, current_block_world_center});
-                    }
-                }
-            }
-        }
-
-        // TODO: Implement transparent block meshing logic similar to the opaque one.
-        // For now, we'll just create the buffers for the opaque mesh.
-
-        ChunkRenderData& render_data = chunk_render_data[{chunk_cx, chunk_cz}];
-
-        if (!opaque_vertices.empty() && !opaque_indices.empty()) {
-            WGPUBufferDescriptor vertex_buff_desc = {};
-            vertex_buff_desc.label = flint_utils::makeStringView("Opaque Vertex Buffer");
-            vertex_buff_desc.size = opaque_vertices.size() * sizeof(Vertex);
-            vertex_buff_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-            WGPUBuffer vertex_buffer = wgpuDeviceCreateBuffer(device, &vertex_buff_desc);
-            wgpuQueueWriteBuffer(queue, vertex_buffer, 0, opaque_vertices.data(), vertex_buff_desc.size);
-
-            WGPUBufferDescriptor index_buff_desc = {};
-            index_buff_desc.label = flint_utils::makeStringView("Opaque Index Buffer");
-            index_buff_desc.size = opaque_indices.size() * sizeof(uint16_t);
-            index_buff_desc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
-            WGPUBuffer index_buffer = wgpuDeviceCreateBuffer(device, &index_buff_desc);
-            wgpuQueueWriteBuffer(queue, index_buffer, 0, opaque_indices.data(), index_buff_desc.size);
-
-            render_data.opaque_buffers.emplace();
-            render_data.opaque_buffers->vertex_buffer = vertex_buffer;
-            render_data.opaque_buffers->index_buffer = index_buffer;
-            render_data.opaque_buffers->num_indices = static_cast<uint32_t>(opaque_indices.size());
-        } else {
-            render_data.opaque_buffers.reset();
-        }
-
-        // In a complete implementation, you would do the same for transparent buffers.
-        render_data.transparent_buffers.reset();
-
-        if (!render_data.opaque_buffers && !render_data.transparent_buffers) {
-            chunk_render_data.erase({chunk_cx, chunk_cz});
-        }
+        // This is now empty, as we are not drawing anything yet.
     }
 
 } // namespace flint
