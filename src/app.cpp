@@ -545,29 +545,43 @@ namespace flint
 
     void App::render()
     {
+        std::cout << "[Render] Starting frame." << std::endl;
         WGPUSurfaceTexture surface_texture;
         wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
+        std::cout << "[Render] Surface status: " << surface_texture.status << std::endl;
+
 
         if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
+            std::cout << "[Render] Surface lost. Reconfiguring." << std::endl;
             if (surface_texture.texture) wgpuTextureRelease(surface_texture.texture);
             wgpuSurfaceConfigure(surface, &config);
             return;
         }
 
-        // Stop rendering if we didn't get a texture.
         if (!surface_texture.texture) {
+            std::cout << "[Render] Error: Failed to get surface texture." << std::endl;
             return;
         }
+        std::cout << "[Render] Surface texture acquired." << std::endl;
 
         WGPUTextureView view = wgpuTextureCreateView(surface_texture.texture, nullptr);
         if (!view) {
+            std::cout << "[Render] Error: Failed to create texture view." << std::endl;
             wgpuTextureRelease(surface_texture.texture);
             throw std::runtime_error("Failed to create surface texture view.");
         }
+        std::cout << "[Render] Texture view created." << std::endl;
 
         WGPUCommandEncoderDescriptor enc_desc = {};
         enc_desc.label = flint_utils::makeStringView("Render Encoder");
         WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &enc_desc);
+        if (!encoder) {
+            std::cout << "[Render] Error: Failed to create command encoder." << std::endl;
+            wgpuTextureViewRelease(view);
+            wgpuTextureRelease(surface_texture.texture);
+            throw std::runtime_error("Failed to create command encoder.");
+        }
+        std::cout << "[Render] Command encoder created." << std::endl;
 
         {
             WGPURenderPassColorAttachment color_attachment = {};
@@ -583,21 +597,29 @@ namespace flint
             pass_desc.depthStencilAttachment = nullptr; // No depth buffer needed for just a clear
 
             WGPURenderPassEncoder render_pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
+            std::cout << "[Render] Began render pass." << std::endl;
+
             wgpuRenderPassEncoderEnd(render_pass);
             wgpuRenderPassEncoderRelease(render_pass);
+            std::cout << "[Render] Ended render pass." << std::endl;
         }
 
         WGPUCommandBufferDescriptor cmd_buff_desc = {};
         cmd_buff_desc.label = flint_utils::makeStringView("Command Buffer");
         WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buff_desc);
+        std::cout << "[Render] Finished command encoder." << std::endl;
 
         wgpuQueueSubmit(queue, 1, &cmd_buffer);
+        std::cout << "[Render] Submitted command buffer to queue." << std::endl;
+
         wgpuSurfacePresent(surface);
+        std::cout << "[Render] Presented surface." << std::endl;
 
         wgpuTextureViewRelease(view);
         wgpuTextureRelease(surface_texture.texture);
         wgpuCommandEncoderRelease(encoder);
         wgpuCommandBufferRelease(cmd_buffer);
+        std::cout << "[Render] Frame finished." << std::endl;
     }
 
     void App::process_mouse_motion(float delta_x, float delta_y)
