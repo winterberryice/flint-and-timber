@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     printVideoSystemInfo();
 
     // Create window
-    SDL_Window *window = SDL_CreateWindow("Flint & Timber", 1280, 720, SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Flint & Timber", 1280, 720, 0);
     if (!window)
     {
         std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
