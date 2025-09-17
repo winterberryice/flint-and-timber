@@ -4,33 +4,33 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <iterator>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace flint
 {
     namespace player
     {
         // Helper function to get AABBs of solid blocks near the player
-        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::Chunk &chunk)
+        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::World &world)
         {
             std::vector<physics::AABB> nearby_blocks;
 
-            // Determine the range of world block coordinates that the player's AABB might overlap.
-            int min_bx = static_cast<int>(std::floor(player_world_box.min.x - 1.0f));
-            int max_bx = static_cast<int>(std::ceil(player_world_box.max.x + 1.0f));
-            int min_by = static_cast<int>(std::floor(player_world_box.min.y - 1.0f));
-            int max_by = static_cast<int>(std::ceil(player_world_box.max.y + 1.0f));
-            int min_bz = static_cast<int>(std::floor(player_world_box.min.z - 1.0f));
-            int max_bz = static_cast<int>(std::ceil(player_world_box.max.z + 1.0f));
+            int min_bx = static_cast<int>(std::floor(player_world_box.min.x));
+            int max_bx = static_cast<int>(std::ceil(player_world_box.max.x));
+            int min_by = static_cast<int>(std::floor(player_world_box.min.y));
+            int max_by = static_cast<int>(std::ceil(player_world_box.max.y));
+            int min_bz = static_cast<int>(std::floor(player_world_box.min.z));
+            int max_bz = static_cast<int>(std::ceil(player_world_box.max.z));
 
-            for (int bx = min_bx; bx < max_bx; ++bx)
+            for (int by = min_by; by < max_by; ++by)
             {
-                for (int by = min_by; by < max_by; ++by)
+                for (int bz = min_bz; bz < max_bz; ++bz)
                 {
-                    for (int bz = min_bz; bz < max_bz; ++bz)
+                    for (int bx = min_bx; bx < max_bx; ++bx)
                     {
-                        // This is a simplified check. We'll need a proper getBlock method in Chunk.
-                        // For now, assume we can check if a block is solid.
-                        if (chunk.is_solid(bx, by, bz))
+                        Block block = world.get_block_at_world({(float)bx, (float)by, (float)bz});
+                        if (block.is_solid())
                         {
                             glm::vec3 block_min_corner(bx, by, bz);
                             glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
@@ -90,7 +90,9 @@ namespace flint
             pitch = std::clamp(pitch, -89.0f, 89.0f);
         }
 
-        void Player::update(float dt, const flint::Chunk &chunk)
+#include "world.hpp"
+
+        void Player::update(float dt, const flint::World &world)
         {
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
@@ -142,7 +144,7 @@ namespace flint
             // --- Y-AXIS COLLISION ---
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
-            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_y_blocks)
             {
@@ -163,7 +165,7 @@ namespace flint
             // --- X-AXIS COLLISION ---
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
-            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_x_blocks)
             {
@@ -182,7 +184,7 @@ namespace flint
             // --- Z-AXIS COLLISION ---
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
-            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_z_blocks)
             {
@@ -206,6 +208,20 @@ namespace flint
         physics::AABB Player::get_world_bounding_box() const
         {
             return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
+        }
+
+        glm::mat4 Player::get_view_matrix() const {
+            glm::vec3 eye = position + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+            float yaw_radians = glm::radians(yaw);
+            float pitch_radians = glm::radians(pitch);
+
+            glm::vec3 front;
+            front.x = cos(yaw_radians) * cos(pitch_radians);
+            front.y = sin(pitch_radians);
+            front.z = sin(yaw_radians) * cos(pitch_radians);
+            front = glm::normalize(front);
+
+            return glm::lookAt(eye, eye + front, glm::vec3(0.0f, 1.0f, 0.0f));
         }
     }
 }

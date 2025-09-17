@@ -9,7 +9,7 @@
 
 namespace flint
 {
-    class Chunk; // Forward declaration
+    class World; // Forward declaration
 
     namespace player
     {
@@ -30,11 +30,12 @@ namespace flint
 
             void handle_input(const SDL_Event &event);
             void process_mouse_movement(float delta_x, float delta_y);
-            void update(float dt, const flint::Chunk &chunk);
+            void update(float dt, const flint::World &world);
 
             glm::vec3 get_position() const;
             float get_yaw() const;
             float get_pitch() const;
+            glm::mat4 get_view_matrix() const;
 
         private:
             glm::vec3 position; // Position of the player's feet

@@ -1,51 +1,35 @@
 #pragma once
 
-#include <webgpu/webgpu.h>
-#include <glm/glm.hpp>
 #include <vector>
-
+#include "glm/glm.hpp"
+#include "block.hpp"
+#include "constants.hpp"
 #include "graphics/mesh.hpp"
 
-namespace flint
-{
-    const int CHUNK_WIDTH = 16;
-    const int CHUNK_HEIGHT = 32;
-    const int CHUNK_DEPTH = 16;
+namespace flint {
 
-    enum class BlockType
-    {
-        Air,
-        Dirt,
-        Grass,
-    };
+    class World; // Forward declaration
 
-    class Chunk
-    {
+    class Chunk {
     public:
-        Chunk();
+        explicit Chunk(glm::ivec2 coord);
         ~Chunk();
 
-        bool initialize(WGPUDevice device);
-        void cleanup();
+        void generate_terrain();
+        void calculate_sky_light();
 
-        void render(WGPURenderPassEncoder renderPass) const;
+        Block get_block(int x, int y, int z) const;
+        void set_block(int x, int y, int z, Block block);
 
-        bool is_solid(int x, int y, int z) const;
+        graphics::ChunkMeshData build_mesh(const World* world) const;
+
+        glm::ivec2 get_coord() const { return coord; }
 
     private:
-        void generateChunkData();
-        void generateMesh();
+        glm::ivec2 coord;
+        std::vector<Block> blocks;
 
-        BlockType m_blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
-
-        // CPU data
-        std::vector<graphics::Vertex> m_vertices;
-        std::vector<uint16_t> m_indices;
-
-        // GPU buffers
-        WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUBuffer m_indexBuffer = nullptr;
-        WGPUDevice m_device = nullptr;
+        static inline int get_block_index(int x, int y, int z);
     };
 
-} // namespace flint
+}
