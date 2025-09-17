@@ -589,9 +589,9 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         // Create bind group for texture
         WGPUBindGroupEntry textureBindings[2] = {};
         textureBindings[0].binding = 0;
-        textureBindings[0].resource = m_blockAtlas.getView();
+        textureBindings[0].textureView = m_blockAtlas.getView();
         textureBindings[1].binding = 1;
-        textureBindings[1].resource = m_blockAtlas.getSampler();
+        textureBindings[1].sampler = m_blockAtlas.getSampler();
 
         WGPUBindGroupDescriptor textureBindGroupDesc = {};
         textureBindGroupDesc.layout = m_textureBindGroupLayout;

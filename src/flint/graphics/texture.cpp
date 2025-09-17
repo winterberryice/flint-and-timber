@@ -5,6 +5,16 @@
 
 #include <iostream>
 #include <vector>
+#include <cstring> // For strlen
+
+namespace {
+    WGPUStringView makeStringView(const char* str) {
+        return WGPUStringView {
+            .data = str,
+            .length = str ? strlen(str) : 0
+        };
+    }
+}
 
 namespace flint {
     namespace graphics {
@@ -29,12 +39,12 @@ namespace flint {
             // Create texture descriptor
             WGPUTextureDescriptor textureDesc = {};
             textureDesc.nextInChain = nullptr;
-            textureDesc.label = path.c_str();
+            textureDesc.label = makeStringView(path.c_str());
             textureDesc.size = { (uint32_t)width, (uint32_t)height, 1 };
             textureDesc.mipLevelCount = 1;
             textureDesc.sampleCount = 1;
             textureDesc.dimension = WGPUTextureDimension_2D;
-            textureDesc.format = WGPUTextureFormat_RGBA8UnormSrgb; // Use sRGB format for colors
+            textureDesc.format = WGPUTextureFormat_RGBA8UnormSrgb;
             textureDesc.usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst;
             textureDesc.viewFormatCount = 0;
             textureDesc.viewFormats = nullptr;
@@ -58,14 +68,14 @@ namespace flint {
             textureDataLayout.bytesPerRow = 4 * (uint32_t)width;
             textureDataLayout.rowsPerImage = (uint32_t)height;
 
-            wgpuQueueWriteTexture(queue, &imageCopyTexture, pixels, 4 * width * height, &textureDataLayout, &textureDesc.size);
+            wgpuQueueWriteTexture(queue, &imageCopyTexture, pixels, (size_t)4 * (size_t)width * (size_t)height, &textureDataLayout, &textureDesc.size);
 
             stbi_image_free(pixels);
 
             // Create texture view
             WGPUTextureViewDescriptor viewDesc = {};
             viewDesc.nextInChain = nullptr;
-            viewDesc.label = "Texture View";
+            viewDesc.label = makeStringView("Texture View");
             viewDesc.format = WGPUTextureFormat_RGBA8UnormSrgb;
             viewDesc.dimension = WGPUTextureViewDimension_2D;
             viewDesc.baseMipLevel = 0;
@@ -76,7 +86,7 @@ namespace flint {
 
             m_textureView = wgpuTextureCreateView(m_texture, &viewDesc);
             if (!m_textureView) {
-                std.cerr << "Failed to create texture view" << std::endl;
+                std::cerr << "Failed to create texture view" << std::endl;
                 cleanup();
                 return false;
             }
@@ -84,13 +94,13 @@ namespace flint {
             // Create sampler
             WGPUSamplerDescriptor samplerDesc = {};
             samplerDesc.nextInChain = nullptr;
-            samplerDesc.label = "Texture Sampler";
+            samplerDesc.label = makeStringView("Texture Sampler");
             samplerDesc.addressModeU = WGPUAddressMode_ClampToEdge;
             samplerDesc.addressModeV = WGPUAddressMode_ClampToEdge;
             samplerDesc.addressModeW = WGPUAddressMode_ClampToEdge;
             samplerDesc.magFilter = WGPUFilterMode_Nearest;
             samplerDesc.minFilter = WGPUFilterMode_Nearest;
-            samplerDesc.mipmapFilter = WGPUFilterMode_Nearest;
+            samplerDesc.mipmapFilter = WGPUMipmapFilterMode_Nearest;
             samplerDesc.lodMinClamp = 0.0f;
             samplerDesc.lodMaxClamp = 1.0f;
             samplerDesc.compare = WGPUCompareFunction_Undefined;
