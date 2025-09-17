@@ -616,14 +616,15 @@ namespace flint
     {
         WGPUSurfaceTexture surface_texture;
         wgpuSurfaceGetCurrentTexture(surface, &surface_texture);
-        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
-            if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Timeout ||
-                surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
-                surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
-                // We lost the surface, so we need to reconfigure it.
-                if (surface_texture.texture) wgpuTextureRelease(surface_texture.texture);
-                wgpuSurfaceConfigure(surface, &config);
-            }
+
+        if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
+            if (surface_texture.texture) wgpuTextureRelease(surface_texture.texture);
+            wgpuSurfaceConfigure(surface, &config);
+            return;
+        }
+
+        // Stop rendering if we didn't get a texture.
+        if (!surface_texture.texture) {
             return;
         }
 
