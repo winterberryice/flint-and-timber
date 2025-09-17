@@ -1,48 +1,21 @@
 #pragma once
 
-#include <webgpu/webgpu.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <cstdint>
 
-namespace flint
-{
-    namespace graphics
-    {
+namespace flint {
+    namespace graphics {
 
-        struct Vertex
-        {
+        struct Vertex {
             glm::vec3 position;
-            glm::vec3 color; // We'll give each face a different color
+            glm::vec3 color;
+            uint32_t sky_light;
         };
 
-        class CubeMesh
-        {
-        public:
-            CubeMesh();
-            ~CubeMesh();
-
-            // Initialize GPU buffers
-            bool initialize(WGPUDevice device);
-            void cleanup();
-
-            // Render the cube
-            void render(WGPURenderPassEncoder renderPass) const;
-
-            // Get vertex data (useful for debugging)
-            const std::vector<Vertex> &getVertices() const { return m_vertices; }
-            const std::vector<uint16_t> &getIndices() const { return m_indices; }
-
-        private:
-            void createCubeData();
-
-            // CPU data
-            std::vector<Vertex> m_vertices;
-            std::vector<uint16_t> m_indices;
-
-            // GPU buffers
-            WGPUBuffer m_vertexBuffer = nullptr;
-            WGPUBuffer m_indexBuffer = nullptr;
-            WGPUDevice m_device = nullptr;
+        struct ChunkMeshData {
+            std::vector<Vertex> vertices;
+            std::vector<uint16_t> indices;
         };
 
     } // namespace graphics

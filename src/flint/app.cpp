@@ -1,807 +1,341 @@
-#include "flint/app.hpp"
-#include "flint/player.hpp"
-#include "flint/physics.hpp"
+#include "app.hpp"
+#include "world.hpp"
+#include "player.hpp"
+#include "constants.hpp"
+#include "graphics/wgsl.h" // To be created
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace
-{
-
-    void printVideoSystemInfo()
-    {
-        // Get the current video driver
-        const char *videoDriver = SDL_GetCurrentVideoDriver();
-
-        printf("\n=== SDL3 Video System Information ===\n");
-        printf("Current Video Driver: %s\n", videoDriver ? videoDriver : "NULL");
-
-        if (videoDriver)
-        {
-            if (strcmp(videoDriver, "wayland") == 0)
-            {
-                printf("🌊 Running on WAYLAND\n");
-            }
-            else if (strcmp(videoDriver, "x11") == 0)
-            {
-                printf("🖥️  Running on X11\n");
-            }
-            else
-            {
-                printf("🤔 Running on: %s (other)\n", videoDriver);
-            }
-        }
-        else
-        {
-            printf("❌ No video driver detected\n");
-        }
-
-        // List all available video drivers
-        int numDrivers = SDL_GetNumVideoDrivers();
-        printf("\nAvailable video drivers (%d total):\n", numDrivers);
-        for (int i = 0; i < numDrivers; i++)
-        {
-            const char *driverName = SDL_GetVideoDriver(i);
-            bool isCurrent = (videoDriver && strcmp(videoDriver, driverName) == 0);
-            printf("  %s%s%s\n",
-                   isCurrent ? "[ACTIVE] " : "         ",
-                   driverName ? driverName : "NULL",
-                   isCurrent ? " ←" : "");
-        }
-    }
-
-    void printDetailedVideoInfo(SDL_Window *window)
-    {
-        const char *videoDriver = SDL_GetCurrentVideoDriver();
-
-        printf("\n=== Detailed Video System Info ===\n");
-        printf("SDL Video Driver: %s\n", videoDriver ? videoDriver : "NULL");
-
-        if (!videoDriver)
-            return;
-
-        if (strcmp(videoDriver, "wayland") == 0)
-        {
-            printf("🌊 **WAYLAND SESSION DETECTED** 🌊\n");
-
-            if (window)
-            {
-                SDL_PropertiesID props = SDL_GetWindowProperties(window);
-
-                // Check for Wayland-specific properties
-                if (SDL_HasProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER))
-                {
-                    void *waylandDisplay = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
-                    void *waylandSurface = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
-
-                    printf("  Wayland Display: %p\n", waylandDisplay);
-                    printf("  Wayland Surface: %p\n", waylandSurface);
-                    printf("  ✓ Native Wayland window detected\n");
-                }
-                else
-                {
-                    printf("  ❌ Wayland properties not available (running via XWayland?)\n");
-                }
-            }
-        }
-        else if (strcmp(videoDriver, "x11") == 0)
-        {
-            printf("🖥️  **X11 SESSION DETECTED** 🖥️\n");
-
-            if (window)
-            {
-                SDL_PropertiesID props = SDL_GetWindowProperties(window);
-
-                // Check for X11-specific properties
-                if (SDL_HasProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER))
-                {
-                    void *x11Display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
-                    Uint64 x11Window = SDL_GetNumberProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
-
-                    printf("  X11 Display: %p\n", x11Display);
-                    printf("  X11 Window: 0x%llx\n", (unsigned long long)x11Window);
-                    printf("  ✓ Native X11 window detected\n");
-                }
-                else
-                {
-                    printf("  ❌ X11 properties not available\n");
-                }
-            }
-        }
-        else
-        {
-            printf("🤔 **OTHER DRIVER: %s** 🤔\n", videoDriver);
-        }
-
-        // Environment variable checks (additional context)
-        const char *waylandDisplay = getenv("WAYLAND_DISPLAY");
-        const char *x11Display = getenv("DISPLAY");
-        const char *xdgSessionType = getenv("XDG_SESSION_TYPE");
-
-        printf("\n=== Environment Variables ===\n");
-        printf("WAYLAND_DISPLAY: %s\n", waylandDisplay ? waylandDisplay : "not set");
-        printf("DISPLAY: %s\n", x11Display ? x11Display : "not set");
-        printf("XDG_SESSION_TYPE: %s\n", xdgSessionType ? xdgSessionType : "not set");
-    }
-
-    WGPUStringView makeStringView(const char *str)
-    {
-        return WGPUStringView{
-            .data = str,
-            .length = str ? strlen(str) : 0};
-    }
-
-    // Helper for synchronous adapter request
-    struct AdapterRequestData
-    {
-        WGPUAdapter adapter = nullptr;
-        bool done = false;
-    };
-
-    static void OnAdapterReceived(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void *userdata1, void *userdata2)
-    {
-        std::cout << "OnAdapterReceived called with status: " << status << std::endl;
-
-        AdapterRequestData *data = static_cast<AdapterRequestData *>(userdata1);
-        if (status == WGPURequestAdapterStatus_Success)
-        {
-            std::cout << "Adapter request successful" << std::endl;
-            data->adapter = adapter;
-        }
-        else
-        {
-            std::string errorMsg = "Unknown error";
-            if (message.data && message.length > 0)
-            {
-                errorMsg = std::string(message.data, message.length);
-            }
-            std::cerr << "Failed to get adapter: " << errorMsg << " (status: " << status << ")" << std::endl;
-        }
-        data->done = true;
-    }
-
-    // Add this struct after AdapterRequestData
-    struct DeviceRequestData
-    {
-        WGPUDevice device = nullptr;
-        bool done = false;
-    };
-
-    // Add this callback function
-    static void OnDeviceReceived(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void *userdata1, void *userdata2)
-    {
-        std::cout << "OnDeviceReceived called with status: " << status << std::endl;
-
-        DeviceRequestData *data = static_cast<DeviceRequestData *>(userdata1);
-        if (status == WGPURequestDeviceStatus_Success)
-        {
-            std::cout << "Device request successful" << std::endl;
-            data->device = device;
-        }
-        else
-        {
-            std::string errorMsg = "Unknown error";
-            if (message.data && message.length > 0)
-            {
-                errorMsg = std::string(message.data, message.length);
-            }
-            std::cerr << "Failed to get device: " << errorMsg << " (status: " << status << ")" << std::endl;
-        }
-        data->done = true;
+namespace {
+    void print_wgpu_error(WGPUErrorType type, const char* message, void*) {
+        std::cerr << "WebGPU Error: " << type << " - " << message << std::endl;
     }
 }
 
-namespace flint
-{
-    App::App()
-        : m_player(
-              glm::vec3(8.0f, 20.0f, 8.0f), // Initial position
-              -90.0f,                       // Initial yaw
-              0.0f,                          // Initial pitch
-              0.1f                           // Mouse sensitivity
-          )
-    {
-    }
+namespace flint {
 
-    // Add these variables for delta time calculation
-    static Uint64 s_now = 0;
-    static Uint64 s_last = 0;
-    static float s_delta_time = 0.0f;
+    App::App() : m_player({8.0f, 20.0f, 8.0f}, -90.0f, 0.0f, 0.1f) {}
 
-    // Add this for mouse grab state
-    static bool s_mouse_grabbed = false;
-
-    bool App::Initialize(int width, int height)
-    {
-        std::cout << "Initializing app..." << std::endl;
-
+    bool App::Initialize(int width, int height) {
         m_windowWidth = width;
         m_windowHeight = height;
 
-        // Initialize SDL
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        {
+        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
             return false;
         }
 
-        printVideoSystemInfo();
-
-        // Create window
-        m_window = SDL_CreateWindow("Flint & Timber", m_windowWidth, m_windowHeight, 0);
-        if (!m_window)
-        {
+        m_window = SDL_CreateWindow("Flint", width, height, 0);
+        if (!m_window) {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
             return false;
         }
 
-        printDetailedVideoInfo(m_window);
-
-        std::cout << "SDL initialized successfully" << std::endl;
-
-        // Initialize WebGPU instance
         m_instance = wgpuCreateInstance(nullptr);
-        if (!m_instance)
-        {
-            std::cerr << "Failed to create WebGPU instance" << std::endl;
-            return false;
-        }
-
-        std::cout << "WebGPU instance created" << std::endl;
-
-        // Request adapter
-        WGPURequestAdapterOptions adapterOptions = {};
-        adapterOptions.compatibleSurface = nullptr;
-        adapterOptions.powerPreference = WGPUPowerPreference_Undefined;
-        adapterOptions.backendType = WGPUBackendType_Undefined;
-        adapterOptions.forceFallbackAdapter = false;
-
-        AdapterRequestData adapterData;
-
-        WGPURequestAdapterCallbackInfo callbackInfo = {};
-        callbackInfo.nextInChain = nullptr;
-        callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this!
-        callbackInfo.callback = OnAdapterReceived;
-        callbackInfo.userdata1 = &adapterData;
-        callbackInfo.userdata2 = nullptr;
-
-        std::cout << "Requesting WebGPU adapter..." << std::endl;
-        wgpuInstanceRequestAdapter(m_instance, &adapterOptions, callbackInfo);
-
-        std::cout << "Processing events until adapter callback..." << std::endl;
-        // Process events until callback is called
-        int attempts = 0;
-        while (!adapterData.done && attempts < 1000)
-        {
-            // Try to process pending events
-            wgpuInstanceProcessEvents(m_instance);
-
-            attempts++;
-            if (attempts % 100 == 0)
-            {
-                std::cout << "Still waiting... attempt " << attempts << std::endl;
-            }
-        }
-
-        std::cout << "Adapter callback completed. Done: " << adapterData.done << std::endl;
-
-        if (!adapterData.adapter)
-        {
-            std::cerr << "No suitable WebGPU adapter found" << std::endl;
-            return false;
-        }
-
-        m_adapter = adapterData.adapter;
-        std::cout << "WebGPU adapter obtained successfully" << std::endl;
-
-        // Request device
-        WGPUDeviceDescriptor deviceDesc = {};
-        deviceDesc.nextInChain = nullptr;
-        deviceDesc.label = {nullptr, 0};
-        deviceDesc.requiredFeatureCount = 0;
-        deviceDesc.requiredFeatures = nullptr;
-        deviceDesc.requiredLimits = nullptr;
-        deviceDesc.defaultQueue.nextInChain = nullptr;
-        deviceDesc.defaultQueue.label = {nullptr, 0};
-
-        DeviceRequestData deviceData;
-
-        WGPURequestDeviceCallbackInfo deviceCallbackInfo = {};
-        deviceCallbackInfo.nextInChain = nullptr;
-        deviceCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
-        deviceCallbackInfo.callback = OnDeviceReceived;
-        deviceCallbackInfo.userdata1 = &deviceData;
-        deviceCallbackInfo.userdata2 = nullptr;
-
-        std::cout << "Requesting WebGPU device..." << std::endl;
-        wgpuAdapterRequestDevice(m_adapter, &deviceDesc, deviceCallbackInfo);
-
-        std::cout << "Processing events until device callback..." << std::endl;
-        attempts = 0;
-        while (!deviceData.done && attempts < 1000)
-        {
-            wgpuInstanceProcessEvents(m_instance);
-            attempts++;
-            if (attempts % 100 == 0)
-            {
-                std::cout << "Still waiting for device... attempt " << attempts << std::endl;
-            }
-        }
-
-        std::cout << "Device callback completed. Done: " << deviceData.done << std::endl;
-
-        if (!deviceData.device)
-        {
-            std::cerr << "Failed to create WebGPU device" << std::endl;
-            return false;
-        }
-
-        m_device = deviceData.device;
-        std::cout << "WebGPU device created successfully" << std::endl;
-
-        // Get the queue
-        m_queue = wgpuDeviceGetQueue(m_device);
-        std::cout << "WebGPU queue obtained" << std::endl;
-
-        // Create surface
         m_surface = SDL_GetWGPUSurface(m_instance, m_window);
-        if (!m_surface)
-        {
-            std::cerr << "Failed to create WebGPU surface" << std::endl;
-            return false;
-        }
-        std::cout << "WebGPU surface created successfully" << std::endl;
 
-        // Get supported surface formats
-        WGPUSurfaceCapabilities surfaceCapabilities;
-        wgpuSurfaceGetCapabilities(m_surface, m_adapter, &surfaceCapabilities);
+        WGPURequestAdapterOptions adapter_opts = {};
+        adapter_opts.compatibleSurface = m_surface;
+        wgpuInstanceRequestAdapter(m_instance, &adapter_opts, [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* userdata) {
+            if (status == WGPURequestAdapterStatus_Success) {
+                *static_cast<WGPUAdapter*>(userdata) = adapter;
+            } else {
+                std::cerr << "Failed to get WGPU adapter: " << message << std::endl;
+            }
+        }, &m_adapter);
 
-        // Use the first supported format (this is the preferred one)
-        m_surfaceFormat = surfaceCapabilities.formats[0];
-        std::cout << "Using surface format: " << m_surfaceFormat << std::endl;
+        WGPUDeviceDescriptor device_desc = {};
+        device_desc.label = "Primary Device";
+        wgpuAdapterRequestDevice(m_adapter, &device_desc, [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* userdata) {
+            if (status == WGPURequestDeviceStatus_Success) {
+                *static_cast<WGPUDevice*>(userdata) = device;
+            } else {
+                std::cerr << "Failed to get WGPU device: " << message << std::endl;
+            }
+        }, &m_device);
+        wgpuDeviceSetUncapturedErrorCallback(m_device, print_wgpu_error, nullptr);
 
-        // Configure the surface
-        WGPUSurfaceConfiguration surfaceConfig = {};
-        surfaceConfig.nextInChain = nullptr;
-        surfaceConfig.device = m_device;
-        surfaceConfig.format = m_surfaceFormat; // Common format
-        surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
-        surfaceConfig.width = m_windowWidth;
-        surfaceConfig.height = m_windowHeight;
-        surfaceConfig.presentMode = WGPUPresentMode_Fifo;
-        surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
-        surfaceConfig.viewFormatCount = 0;
-        surfaceConfig.viewFormats = nullptr;
-        wgpuSurfaceCapabilitiesFreeMembers(surfaceCapabilities);
-        //
+        m_queue = wgpuDeviceGetQueue(m_device);
 
-        wgpuSurfaceConfigure(m_surface, &surfaceConfig);
-        std::cout << "WebGPU surface configured" << std::endl;
+        WGPUSurfaceCapabilities caps;
+        wgpuSurfaceGetCapabilities(m_surface, m_adapter, &caps);
+        m_surfaceFormat = caps.formats[0];
 
-        std::cout << "Creating triangle vertex data..." << std::endl;
+        WGPUSurfaceConfiguration config = {};
+        config.device = m_device;
+        config.format = m_surfaceFormat;
+        config.width = width;
+        config.height = height;
+        config.usage = WGPUTextureUsage_RenderAttachment;
+        config.presentMode = WGPUPresentMode_Fifo;
+        wgpuSurfaceConfigure(m_surface, &config);
 
-        // Triangle vertices in NDC coordinates (x, y, z)
-        float triangleVertices[] = {
-            0.0f, 0.5f, 0.0f,   // Top vertex
-            -0.5f, -0.5f, 0.0f, // Bottom left
-            0.5f, -0.5f, 0.0f   // Bottom right
-        };
+        // Create Shaders
+        WGPUShaderModuleWGSLDescriptor wgsl_desc = {};
+        wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+        wgsl_desc.code = graphics::SHADER_WGSL;
 
-        // Create vertex buffer descriptor
-        WGPUBufferDescriptor vertexBufferDesc = {};
-        vertexBufferDesc.nextInChain = nullptr;
-        vertexBufferDesc.label = makeStringView("Triangle Vertex Buffer");
-        vertexBufferDesc.size = sizeof(triangleVertices);
-        vertexBufferDesc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-        vertexBufferDesc.mappedAtCreation = false;
+        WGPUShaderModuleDescriptor shader_desc = {};
+        shader_desc.nextInChain = &wgsl_desc.chain;
+        WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(m_device, &shader_desc);
 
-        // Create the vertex buffer
-        m_vertexBuffer = wgpuDeviceCreateBuffer(m_device, &vertexBufferDesc);
-        if (!m_vertexBuffer)
-        {
-            std::cerr << "Failed to create vertex buffer!" << std::endl;
-            return -1;
-        }
+        // Create Uniform Bind Group Layout
+        WGPUBindGroupLayoutEntry bgl_entry = {};
+        bgl_entry.binding = 0;
+        bgl_entry.visibility = WGPUShaderStage_Vertex;
+        bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
 
-        // Upload vertex data to GPU
-        wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, triangleVertices, sizeof(triangleVertices));
+        WGPUBindGroupLayoutDescriptor bgl_desc = {};
+        bgl_desc.entryCount = 1;
+        bgl_desc.entries = &bgl_entry;
+        m_bindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &bgl_desc);
 
-        std::cout << "Vertex buffer created and data uploaded" << std::endl;
+        // Create Pipeline Layout
+        WGPUPipelineLayoutDescriptor layout_desc = {};
+        layout_desc.bindGroupLayoutCount = 1;
+        layout_desc.bindGroupLayouts = &m_bindGroupLayout;
+        WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(m_device, &layout_desc);
 
-        std::cout << "Creating shaders..." << std::endl;
+        // Create Depth Buffer
+        WGPUTextureDescriptor depth_texture_desc = {};
+        depth_texture_desc.dimension = WGPUTextureDimension_2D;
+        depth_texture_desc.format = WGPUTextureFormat_Depth32Float;
+        depth_texture_desc.size = { (uint32_t)width, (uint32_t)height, 1 };
+        depth_texture_desc.usage = WGPUTextureUsage_RenderAttachment;
+        depth_texture_desc.mipLevelCount = 1;
+        depth_texture_desc.sampleCount = 1;
+        m_depthTexture = wgpuDeviceCreateTexture(m_device, &depth_texture_desc);
+        m_depthTextureView = wgpuTextureCreateView(m_depthTexture, nullptr);
 
-        const char *vertexShaderSource = R"(
-struct Uniforms {
-    viewProjectionMatrix: mat4x4<f32>,
-};
+        // Create Render Pipeline
+        WGPURenderPipelineDescriptor pipeline_desc = {};
+        pipeline_desc.layout = pipeline_layout;
+        pipeline_desc.vertex.module = shader_module;
+        pipeline_desc.vertex.entryPoint = "vs_main";
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+        WGPUVertexAttribute vert_attrs[3] = {};
+        vert_attrs[0].format = WGPUVertexFormat_Float32x3; // position
+        vert_attrs[0].offset = 0;
+        vert_attrs[0].shaderLocation = 0;
+        vert_attrs[1].format = WGPUVertexFormat_Float32x3; // color
+        vert_attrs[1].offset = sizeof(glm::vec3);
+        vert_attrs[1].shaderLocation = 1;
+        vert_attrs[2].format = WGPUVertexFormat_Uint32; // sky_light
+        vert_attrs[2].offset = 2 * sizeof(glm::vec3);
+        vert_attrs[2].shaderLocation = 2;
 
-struct VertexInput {
-    @location(0) position: vec3<f32>,
-    @location(1) color: vec3<f32>,
-};
+        WGPUVertexBufferLayout vb_layout = {};
+        vb_layout.arrayStride = sizeof(graphics::Vertex);
+        vb_layout.attributeCount = 3;
+        vb_layout.attributes = vert_attrs;
+        pipeline_desc.vertex.bufferCount = 1;
+        pipeline_desc.vertex.buffers = &vb_layout;
 
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) color: vec3<f32>,
-};
+        WGPUColorTargetState color_target = {};
+        color_target.format = m_surfaceFormat;
+        color_target.writeMask = WGPUColorWriteMask_All;
 
-@vertex
-fn vs_main(input: VertexInput) -> VertexOutput {
-    var output: VertexOutput;
-    output.position = uniforms.viewProjectionMatrix * vec4<f32>(input.position, 1.0);
-    output.color = input.color;
-    return output;
-}
-)";
+        WGPUFragmentState fragment_state = {};
+        fragment_state.module = shader_module;
+        fragment_state.entryPoint = "fs_main";
+        fragment_state.targetCount = 1;
+        fragment_state.targets = &color_target;
+        pipeline_desc.fragment = &fragment_state;
 
-        const char *fragmentShaderSource = R"(
-@fragment
-fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
-    return vec4<f32>(color, 1.0);
-}
-)";
+        pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipeline_desc.primitive.cullMode = WGPUCullMode_Back;
 
-        // Create vertex shader module
-        WGPUShaderModuleWGSLDescriptor vertexShaderWGSLDesc = {};
-        vertexShaderWGSLDesc.chain.next = nullptr;
-        vertexShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        vertexShaderWGSLDesc.code = makeStringView(vertexShaderSource);
+        m_depthStencilState.format = WGPUTextureFormat_Depth32Float;
+        m_depthStencilState.depthWriteEnabled = true;
+        m_depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        pipeline_desc.depthStencil = &m_depthStencilState;
 
-        WGPUShaderModuleDescriptor vertexShaderDesc = {};
-        vertexShaderDesc.nextInChain = &vertexShaderWGSLDesc.chain;
-        vertexShaderDesc.label = makeStringView("Vertex Shader");
+        m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipeline_desc);
 
-        m_vertexShader = wgpuDeviceCreateShaderModule(m_device, &vertexShaderDesc);
+        // Create Uniform Buffer
+        WGPUBufferDescriptor uniform_buffer_desc = {};
+        uniform_buffer_desc.size = sizeof(glm::mat4);
+        uniform_buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+        m_uniformBuffer = wgpuDeviceCreateBuffer(m_device, &uniform_buffer_desc);
 
-        // Create fragment shader module
-        WGPUShaderModuleWGSLDescriptor fragmentShaderWGSLDesc = {};
-        fragmentShaderWGSLDesc.chain.next = nullptr;
-        fragmentShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        fragmentShaderWGSLDesc.code = makeStringView(fragmentShaderSource);
+        WGPUBindGroupEntry bg_entry = {};
+        bg_entry.binding = 0;
+        bg_entry.buffer = m_uniformBuffer;
+        bg_entry.size = sizeof(glm::mat4);
 
-        WGPUShaderModuleDescriptor fragmentShaderDesc = {};
-        fragmentShaderDesc.nextInChain = &fragmentShaderWGSLDesc.chain;
-        fragmentShaderDesc.label = makeStringView("Fragment Shader");
+        WGPUBindGroupDescriptor bg_desc = {};
+        bg_desc.layout = m_bindGroupLayout;
+        bg_desc.entryCount = 1;
+        bg_desc.entries = &bg_entry;
+        m_bindGroup = wgpuDeviceCreateBindGroup(m_device, &bg_desc);
 
-        m_fragmentShader = wgpuDeviceCreateShaderModule(m_device, &fragmentShaderDesc);
+        wgpuPipelineLayoutRelease(pipeline_layout);
+        wgpuShaderModuleRelease(shader_module);
 
-        if (!m_vertexShader || !m_fragmentShader)
-        {
-            std::cerr << "Failed to create shaders!" << std::endl;
-            return false; // Assuming your init function returns bool
-        }
-
-        std::cout << "Shaders created successfully" << std::endl;
-
-        std::cout << "Setting up 3D components..." << std::endl;
-
-        // Initialize chunk
-        if (!m_chunk.initialize(m_device))
-        {
-            std::cerr << "Failed to initialize chunk!" << std::endl;
-            return false;
-        }
-
-        // Create uniform buffer for camera matrices
-        WGPUBufferDescriptor uniformBufferDesc = {};
-        uniformBufferDesc.size = sizeof(glm::mat4); // Size of view-projection matrix
-        uniformBufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-        uniformBufferDesc.mappedAtCreation = false;
-
-        m_uniformBuffer = wgpuDeviceCreateBuffer(m_device, &uniformBufferDesc);
-        if (!m_uniformBuffer)
-        {
-            std::cerr << "Failed to create uniform buffer!" << std::endl;
-            return false;
-        }
-
-        std::cout << "3D components ready!" << std::endl;
-
-        std::cout << "Creating render pipeline..." << std::endl;
-
-        // Create bind group layout for uniforms first
-        WGPUBindGroupLayoutEntry bindingLayout = {};
-        bindingLayout.binding = 0;
-        bindingLayout.visibility = WGPUShaderStage_Vertex;
-        bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
-        bindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
-
-        WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-        bindGroupLayoutDesc.entryCount = 1;
-        bindGroupLayoutDesc.entries = &bindingLayout;
-
-        m_bindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &bindGroupLayoutDesc);
-        if (!m_bindGroupLayout)
-        {
-            std::cerr << "Failed to create bind group layout!" << std::endl;
-            return false;
-        }
-
-        // Create pipeline layout using our bind group layout
-        WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
-        pipelineLayoutDesc.bindGroupLayoutCount = 1;
-        pipelineLayoutDesc.bindGroupLayouts = &m_bindGroupLayout;
-
-        WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &pipelineLayoutDesc);
-
-        // NEW: Define vertex buffer layout for position + color
-        WGPUVertexAttribute vertexAttributes[2] = {};
-
-        // Position attribute (location 0)
-        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
-        vertexAttributes[0].offset = 0;
-        vertexAttributes[0].shaderLocation = 0;
-
-        // Color attribute (location 1)
-        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
-        vertexAttributes[1].offset = 3 * sizeof(float);          // After position
-        vertexAttributes[1].shaderLocation = 1;
-
-        WGPUVertexBufferLayout vertexBufferLayout = {};
-        vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
-        vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-        vertexBufferLayout.attributeCount = 2; // position + color
-        vertexBufferLayout.attributes = vertexAttributes;
-
-        // Create render pipeline descriptor
-        WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
-
-        // Vertex state
-        pipelineDescriptor.vertex.module = m_vertexShader;
-        pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
-        pipelineDescriptor.vertex.bufferCount = 1;
-        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
-
-        // Fragment state
-        WGPUFragmentState fragmentState = {};
-        fragmentState.module = m_fragmentShader;
-        fragmentState.entryPoint = makeStringView("fs_main");
-
-        // Color target (what we're rendering to)
-        WGPUColorTargetState colorTarget = {};
-        colorTarget.format = m_surfaceFormat;
-        colorTarget.writeMask = WGPUColorWriteMask_All;
-
-        fragmentState.targetCount = 1;
-        fragmentState.targets = &colorTarget;
-        pipelineDescriptor.fragment = &fragmentState;
-
-        // Primitive state - IMPORTANT: Enable depth testing for 3D
-        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
-        pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back; // Enable back-face culling
-
-        // Multisample state
-        pipelineDescriptor.multisample.count = 1;
-        pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
-        pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
-
-        // Use our custom layout (not auto)
-        pipelineDescriptor.layout = pipelineLayout;
-
-        // Create the pipeline
-        m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
-
-        // Clean up temporary layout
-        wgpuPipelineLayoutRelease(pipelineLayout);
-
-        if (!m_renderPipeline)
-        {
-            std::cerr << "Failed to create render pipeline!" << std::endl;
-            return false;
-        }
-
-        // Create bind group for uniforms
-        WGPUBindGroupEntry binding = {};
-        binding.binding = 0;
-        binding.buffer = m_uniformBuffer;
-        binding.offset = 0;
-        binding.size = sizeof(glm::mat4);
-
-        WGPUBindGroupDescriptor bindGroupDesc = {};
-        bindGroupDesc.layout = m_bindGroupLayout;
-        bindGroupDesc.entryCount = 1;
-        bindGroupDesc.entries = &binding;
-
-        m_bindGroup = wgpuDeviceCreateBindGroup(m_device, &bindGroupDesc);
-
-        std::cout << "Render pipeline created successfully" << std::endl;
-
-        // ====
         m_running = true;
         return true;
     }
 
-    void App::Run()
-    {
-        std::cout << "Running app..." << std::endl;
+    void App::Run() {
+        Uint64 last_time = SDL_GetPerformanceCounter();
+        while (m_running) {
+            Uint64 current_time = SDL_GetPerformanceCounter();
+            float delta_time = (current_time - last_time) / (float)SDL_GetPerformanceFrequency();
+            last_time = current_time;
 
-        s_last = SDL_GetPerformanceCounter();
-
-        SDL_Event e;
-        while (m_running)
-        {
-            s_now = SDL_GetPerformanceCounter();
-            s_delta_time = (s_now - s_last) / (float)SDL_GetPerformanceFrequency();
-            s_last = s_now;
-
-            // Handle events
-            while (SDL_PollEvent(&e))
-            {
-                if (e.type == SDL_EVENT_QUIT)
-                {
-                    m_running = false;
+            SDL_Event e;
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_EVENT_QUIT) m_running = false;
+                // Basic camera controls
+                if (e.type == SDL_EVENT_KEY_DOWN) {
+                    if (e.key.keysym.sym == SDLK_w) m_player.movement_intention.forward = true;
+                    if (e.key.keysym.sym == SDLK_s) m_player.movement_intention.backward = true;
+                    if (e.key.keysym.sym == SDLK_a) m_player.movement_intention.left = true;
+                    if (e.key.keysym.sym == SDLK_d) m_player.movement_intention.right = true;
                 }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
-                {
-                    s_mouse_grabbed = !s_mouse_grabbed;
-                    SDL_SetWindowRelativeMouseMode(m_window, s_mouse_grabbed);
+                if (e.type == SDL_EVENT_KEY_UP) {
+                    if (e.key.keysym.sym == SDLK_w) m_player.movement_intention.forward = false;
+                    if (e.key.keysym.sym == SDLK_s) m_player.movement_intention.backward = false;
+                    if (e.key.keysym.sym == SDLK_a) m_player.movement_intention.left = false;
+                    if (e.key.keysym.sym == SDLK_d) m_player.movement_intention.right = false;
                 }
-                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !s_mouse_grabbed)
-                {
-                    s_mouse_grabbed = true;
-                    SDL_SetWindowRelativeMouseMode(m_window, s_mouse_grabbed);
-                }
-
-                // Player input handling
-                if (s_mouse_grabbed)
-                {
-                    if (e.type == SDL_EVENT_MOUSE_MOTION)
-                    {
-                        m_player.process_mouse_movement(e.motion.xrel, e.motion.yrel);
-                    }
-                    m_player.handle_input(e);
+                 if (e.type == SDL_EVENT_MOUSE_MOTION) {
+                    m_player.process_mouse_movement(e.motion.xrel, e.motion.yrel);
                 }
             }
 
-            // Update player physics and state
-            m_player.update(s_delta_time, m_chunk);
-
-            // Render
+            update();
             render();
         }
     }
 
-    void App::render()
-    {
-        // Update camera matrix from player state and upload to GPU
-        glm::vec3 eye = m_player.get_position() + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
-        float yaw_radians = glm::radians(m_player.get_yaw());
-        float pitch_radians = glm::radians(m_player.get_pitch());
-
-        glm::vec3 front;
-        front.x = cos(yaw_radians) * cos(pitch_radians);
-        front.y = sin(pitch_radians);
-        front.z = sin(yaw_radians) * cos(pitch_radians);
-        front = glm::normalize(front);
-
-        glm::mat4 view = glm::lookAt(eye, eye + front, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)m_windowWidth / (float)m_windowHeight, 0.1f, 100.0f);
-
-        glm::mat4 viewProjectionMatrix = proj * view;
-        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &viewProjectionMatrix, sizeof(glm::mat4));
-
-        // Get surface texture
-        WGPUSurfaceTexture surfaceTexture;
-        wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
-
-        if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
-        {
-            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
-
-            WGPUCommandEncoderDescriptor encoderDesc = {};
-            encoderDesc.nextInChain = nullptr;
-            encoderDesc.label = {nullptr, 0};
-
-            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
-
-            WGPURenderPassColorAttachment colorAttachment = {};
-            colorAttachment.view = textureView;
-            colorAttachment.resolveTarget = nullptr;
-            colorAttachment.loadOp = WGPULoadOp_Clear;
-            colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
-            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-
-            WGPURenderPassDescriptor renderPassDesc = {};
-            renderPassDesc.nextInChain = nullptr;
-            renderPassDesc.label = {nullptr, 0};
-            renderPassDesc.colorAttachmentCount = 1;
-            renderPassDesc.colorAttachments = &colorAttachment;
-            renderPassDesc.depthStencilAttachment = nullptr;
-
-            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-
-            // NEW: 3D Cube rendering instead of triangle
-            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
-
-            // Bind the uniform buffer (camera matrix)
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
-
-            // Draw the chunk using our chunk class
-            m_chunk.render(renderPass);
-
-            wgpuRenderPassEncoderEnd(renderPass);
-
-            WGPUCommandBufferDescriptor cmdBufferDesc = {};
-            cmdBufferDesc.nextInChain = nullptr;
-            cmdBufferDesc.label = {nullptr, 0};
-
-            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
-            wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
-
-            wgpuSurfacePresent(m_surface);
-
-            // Cleanup
-            wgpuCommandBufferRelease(cmdBuffer);
-            wgpuRenderPassEncoderRelease(renderPass);
-            wgpuCommandEncoderRelease(encoder);
-            wgpuTextureViewRelease(textureView);
-        }
-
-        wgpuTextureRelease(surfaceTexture.texture);
+    void App::update() {
+        m_player.update(0.016f, m_world); // Fake delta time for now
+        load_chunks();
     }
 
-    void App::Terminate()
-    {
-        std::cout << "Terminating app..." << std::endl;
+    void App::load_chunks() {
+        int render_distance = 2;
+        glm::ivec2 player_chunk_pos(
+            floor(m_player.get_position().x / CHUNK_WIDTH),
+            floor(m_player.get_position().z / CHUNK_DEPTH)
+        );
 
-        if (m_uniformBuffer)
-            wgpuBufferRelease(m_uniformBuffer);
-        if (m_bindGroup)
-            wgpuBindGroupRelease(m_bindGroup);
-        if (m_bindGroupLayout)
-            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
-        if (m_renderPipeline)
-        {
-            wgpuRenderPipelineRelease(m_renderPipeline);
-            m_renderPipeline = nullptr;
+        m_active_chunk_coords.clear();
+        for (int x = -render_distance; x <= render_distance; ++x) {
+            for (int z = -render_distance; z <= render_distance; ++z) {
+                glm::ivec2 chunk_pos = player_chunk_pos + glm::ivec2(x, z);
+                m_active_chunk_coords.push_back(chunk_pos);
+                if (m_chunk_render_data.find(chunk_pos) == m_chunk_render_data.end()) {
+                    build_chunk_mesh(chunk_pos.x, chunk_pos.y);
+                }
+            }
         }
-        if (m_vertexShader)
-        {
-            wgpuShaderModuleRelease(m_vertexShader);
-            m_vertexShader = nullptr;
-        }
-        if (m_fragmentShader)
-        {
-            wgpuShaderModuleRelease(m_fragmentShader);
-            m_fragmentShader = nullptr;
-        }
-        if (m_vertexBuffer)
-        {
-            wgpuBufferRelease(m_vertexBuffer);
-        }
-        if (m_surface)
-        {
-            wgpuSurfaceRelease(m_surface);
-        }
-        if (m_queue)
-        {
-            wgpuQueueRelease(m_queue);
-        }
-        if (m_device)
-        {
-            wgpuDeviceRelease(m_device);
-        }
-        if (m_adapter)
-        {
-            wgpuAdapterRelease(m_adapter);
-        }
-        if (m_instance)
-        {
-            wgpuInstanceRelease(m_instance);
-        }
-        if (m_window)
-        {
-            SDL_DestroyWindow(m_window);
+    }
+
+    void App::build_chunk_mesh(int chunk_x, int chunk_z) {
+        Chunk* chunk = m_world.get_or_create_chunk(chunk_x, chunk_z);
+        if (!chunk) return;
+
+        // Only build mesh if the chunk is fully generated (for simplicity, we assume it is)
+        graphics::ChunkMeshData mesh_data = chunk->build_mesh(&m_world);
+
+        if (mesh_data.vertices.empty() || mesh_data.indices.empty()) {
+            return; // Don't create buffers for empty meshes
         }
 
+        ChunkRenderData render_data;
+        render_data.index_count = mesh_data.indices.size();
+
+        WGPUBufferDescriptor vb_desc = {};
+        vb_desc.size = mesh_data.vertices.size() * sizeof(graphics::Vertex);
+        vb_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+        render_data.vertex_buffer = wgpuDeviceCreateBuffer(m_device, &vb_desc);
+        wgpuQueueWriteBuffer(m_queue, render_data.vertex_buffer, 0, mesh_data.vertices.data(), vb_desc.size);
+
+        WGPUBufferDescriptor ib_desc = {};
+        ib_desc.size = mesh_data.indices.size() * sizeof(uint16_t);
+        ib_desc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
+        render_data.index_buffer = wgpuDeviceCreateBuffer(m_device, &ib_desc);
+        wgpuQueueWriteBuffer(m_queue, render_data.index_buffer, 0, mesh_data.indices.data(), ib_desc.size);
+
+        m_chunk_render_data[chunk->get_coord()] = render_data;
+    }
+
+    void App::render() {
+        // Update camera matrix
+        glm::mat4 view = m_player.get_view_matrix();
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)m_windowWidth / (float)m_windowHeight, 0.1f, 1000.0f);
+        glm::mat4 view_proj = proj * view;
+        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &view_proj, sizeof(glm::mat4));
+
+        WGPUSurfaceTexture surface_texture;
+        wgpuSurfaceGetCurrentTexture(m_surface, &surface_texture);
+        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) return;
+
+        WGPUTextureView view = wgpuTextureCreateView(surface_texture.texture, nullptr);
+
+        WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, nullptr);
+        WGPURenderPassColorAttachment color_attachment = {};
+        color_attachment.view = view;
+        color_attachment.loadOp = WGPULoadOp_Clear;
+        color_attachment.storeOp = WGPUStoreOp_Store;
+        color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
+
+        WGPURenderPassDepthStencilAttachment depth_attachment = {};
+        depth_attachment.view = m_depthTextureView;
+        depth_attachment.depthClearValue = 1.0f;
+        depth_attachment.depthLoadOp = WGPULoadOp_Clear;
+        depth_attachment.depthStoreOp = WGPUStoreOp_Store;
+
+        WGPURenderPassDescriptor pass_desc = {};
+        pass_desc.colorAttachmentCount = 1;
+        pass_desc.colorAttachments = &color_attachment;
+        pass_desc.depthStencilAttachment = &depth_attachment;
+
+        WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
+        wgpuRenderPassEncoderSetPipeline(pass, m_renderPipeline);
+        wgpuRenderPassEncoderSetBindGroup(pass, 0, m_bindGroup, 0, nullptr);
+
+        for (const auto& coord : m_active_chunk_coords) {
+            auto it = m_chunk_render_data.find(coord);
+            if (it != m_chunk_render_data.end()) {
+                const auto& render_data = it->second;
+                if (render_data.index_count > 0) {
+                    wgpuRenderPassEncoderSetVertexBuffer(pass, 0, render_data.vertex_buffer, 0, WGPU_WHOLE_SIZE);
+                    wgpuRenderPassEncoderSetIndexBuffer(pass, render_data.index_buffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
+                    wgpuRenderPassEncoderDrawIndexed(pass, render_data.index_count, 1, 0, 0, 0);
+                }
+            }
+        }
+
+        wgpuRenderPassEncoderEnd(pass);
+        WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, nullptr);
+        wgpuQueueSubmit(m_queue, 1, &commands);
+        wgpuSurfacePresent(m_surface);
+
+        wgpuTextureViewRelease(view);
+        wgpuCommandEncoderRelease(encoder);
+        wgpuRenderPassEncoderRelease(pass);
+        wgpuCommandBufferRelease(commands);
+    }
+
+    void App::Terminate() {
+        for (auto& pair : m_chunk_render_data) {
+            pair.second.cleanup();
+        }
+
+        wgpuBufferRelease(m_uniformBuffer);
+        wgpuBindGroupRelease(m_bindGroup);
+        wgpuBindGroupLayoutRelease(m_bindGroupLayout);
+        wgpuTextureViewRelease(m_depthTextureView);
+        wgpuTextureRelease(m_depthTexture);
+        wgpuRenderPipelineRelease(m_renderPipeline);
+        wgpuSurfaceRelease(m_surface);
+        wgpuDeviceRelease(m_device);
+        wgpuAdapterRelease(m_adapter);
+        wgpuInstanceRelease(m_instance);
+        SDL_DestroyWindow(m_window);
         SDL_Quit();
-
-        m_running = false;
     }
-
-} // namespace flint
+}
