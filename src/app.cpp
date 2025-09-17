@@ -404,9 +404,11 @@ namespace flint
         {
             WGPURenderPassColorAttachment color_attachment = {};
             color_attachment.view = view;
+            color_attachment.resolveTarget = nullptr;
             color_attachment.loadOp = WGPULoadOp_Clear;
             color_attachment.storeOp = WGPUStoreOp_Store;
             color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
+            color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
             WGPURenderPassDepthStencilAttachment depth_attachment = {};
             depth_attachment.view = depth_texture_view;
