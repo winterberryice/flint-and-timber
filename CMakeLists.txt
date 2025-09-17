@@ -95,6 +95,7 @@ endif()
 target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
 )
 
 
