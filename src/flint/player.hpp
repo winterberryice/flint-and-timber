@@ -35,6 +35,7 @@ namespace flint
             glm::vec3 get_position() const;
             float get_yaw() const;
             float get_pitch() const;
+            glm::mat4 get_view_matrix() const;
 
         private:
             glm::vec3 position; // Position of the player's feet

@@ -5,8 +5,40 @@
 #include "graphics/wgsl.h" // To be created
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include <functional>
 
 namespace {
+
+    struct AdapterRequestData {
+        WGPUAdapter adapter = nullptr;
+        bool done = false;
+    };
+
+    void on_adapter_received(WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* userdata) {
+        auto* data = static_cast<AdapterRequestData*>(userdata);
+        if (status == WGPURequestAdapterStatus_Success) {
+            data->adapter = adapter;
+        } else {
+            std::cerr << "Failed to get WGPU adapter: " << message << std::endl;
+        }
+        data->done = true;
+    }
+
+    struct DeviceRequestData {
+        WGPUDevice device = nullptr;
+        bool done = false;
+    };
+
+    void on_device_received(WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* userdata) {
+        auto* data = static_cast<DeviceRequestData*>(userdata);
+        if (status == WGPURequestDeviceStatus_Success) {
+            data->device = device;
+        } else {
+            std::cerr << "Failed to get WGPU device: " << message << std::endl;
+        }
+        data->done = true;
+    }
+
     void print_wgpu_error(WGPUErrorType type, const char* message, void*) {
         std::cerr << "WebGPU Error: " << type << " - " << message << std::endl;
     }
@@ -25,7 +57,7 @@ namespace flint {
             return false;
         }
 
-        m_window = SDL_CreateWindow("Flint", width, height, 0);
+        m_window = SDL_CreateWindow("Flint", width, height, SDL_WINDOW_RESIZABLE);
         if (!m_window) {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
             return false;
@@ -34,26 +66,28 @@ namespace flint {
         m_instance = wgpuCreateInstance(nullptr);
         m_surface = SDL_GetWGPUSurface(m_instance, m_window);
 
+        AdapterRequestData adapter_data;
         WGPURequestAdapterOptions adapter_opts = {};
         adapter_opts.compatibleSurface = m_surface;
-        wgpuInstanceRequestAdapter(m_instance, &adapter_opts, [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* userdata) {
-            if (status == WGPURequestAdapterStatus_Success) {
-                *static_cast<WGPUAdapter*>(userdata) = adapter;
-            } else {
-                std::cerr << "Failed to get WGPU adapter: " << message << std::endl;
-            }
-        }, &m_adapter);
+        wgpuInstanceRequestAdapter(m_instance, &adapter_opts, on_adapter_received, &adapter_data);
 
+        // This is a simplification. A real app would have a proper event loop here.
+        while (!adapter_data.done) {
+            // A single call to process events. In a real app, you'd integrate this
+            // with your main event loop.
+        }
+        m_adapter = adapter_data.adapter;
+
+
+        DeviceRequestData device_data;
         WGPUDeviceDescriptor device_desc = {};
         device_desc.label = "Primary Device";
-        wgpuAdapterRequestDevice(m_adapter, &device_desc, [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* userdata) {
-            if (status == WGPURequestDeviceStatus_Success) {
-                *static_cast<WGPUDevice*>(userdata) = device;
-            } else {
-                std::cerr << "Failed to get WGPU device: " << message << std::endl;
-            }
-        }, &m_device);
+        wgpuAdapterRequestDevice(m_adapter, &device_desc, on_device_received, &device_data);
+        while (!device_data.done) {
+        }
+        m_device = device_data.device;
         wgpuDeviceSetUncapturedErrorCallback(m_device, print_wgpu_error, nullptr);
+
 
         m_queue = wgpuDeviceGetQueue(m_device);
 
@@ -76,7 +110,7 @@ namespace flint {
         wgsl_desc.code = graphics::SHADER_WGSL;
 
         WGPUShaderModuleDescriptor shader_desc = {};
-        shader_desc.nextInChain = &wgsl_desc.chain;
+        shader_desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
         WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(m_device, &shader_desc);
 
         // Create Uniform Bind Group Layout
@@ -186,31 +220,21 @@ namespace flint {
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_EVENT_QUIT) m_running = false;
-                // Basic camera controls
-                if (e.type == SDL_EVENT_KEY_DOWN) {
-                    if (e.key.keysym.sym == SDLK_w) m_player.movement_intention.forward = true;
-                    if (e.key.keysym.sym == SDLK_s) m_player.movement_intention.backward = true;
-                    if (e.key.keysym.sym == SDLK_a) m_player.movement_intention.left = true;
-                    if (e.key.keysym.sym == SDLK_d) m_player.movement_intention.right = true;
-                }
-                if (e.type == SDL_EVENT_KEY_UP) {
-                    if (e.key.keysym.sym == SDLK_w) m_player.movement_intention.forward = false;
-                    if (e.key.keysym.sym == SDLK_s) m_player.movement_intention.backward = false;
-                    if (e.key.keysym.sym == SDLK_a) m_player.movement_intention.left = false;
-                    if (e.key.keysym.sym == SDLK_d) m_player.movement_intention.right = false;
-                }
-                 if (e.type == SDL_EVENT_MOUSE_MOTION) {
+
+                m_player.handle_input(e);
+
+                if (e.type == SDL_EVENT_MOUSE_MOTION) {
                     m_player.process_mouse_movement(e.motion.xrel, e.motion.yrel);
                 }
             }
 
-            update();
+            update(delta_time);
             render();
         }
     }
 
-    void App::update() {
-        m_player.update(0.016f, m_world); // Fake delta time for now
+    void App::update(float dt) {
+        m_player.update(dt, m_world);
         load_chunks();
     }
 
@@ -263,21 +287,23 @@ namespace flint {
     }
 
     void App::render() {
-        // Update camera matrix
+        WGPUSurfaceTexture surface_texture;
+        wgpuSurfaceGetCurrentTexture(m_surface, &surface_texture);
+        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+            if (surface_texture.texture) wgpuTextureRelease(surface_texture.texture);
+            return;
+        }
+
         glm::mat4 view = m_player.get_view_matrix();
         glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)m_windowWidth / (float)m_windowHeight, 0.1f, 1000.0f);
         glm::mat4 view_proj = proj * view;
         wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &view_proj, sizeof(glm::mat4));
 
-        WGPUSurfaceTexture surface_texture;
-        wgpuSurfaceGetCurrentTexture(m_surface, &surface_texture);
-        if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) return;
-
-        WGPUTextureView view = wgpuTextureCreateView(surface_texture.texture, nullptr);
-
+        WGPUTextureView frame_buffer_view = wgpuTextureCreateView(surface_texture.texture, nullptr);
         WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, nullptr);
+
         WGPURenderPassColorAttachment color_attachment = {};
-        color_attachment.view = view;
+        color_attachment.view = frame_buffer_view;
         color_attachment.loadOp = WGPULoadOp_Clear;
         color_attachment.storeOp = WGPUStoreOp_Store;
         color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
@@ -314,7 +340,8 @@ namespace flint {
         wgpuQueueSubmit(m_queue, 1, &commands);
         wgpuSurfacePresent(m_surface);
 
-        wgpuTextureViewRelease(view);
+        wgpuTextureViewRelease(frame_buffer_view);
+        wgpuTextureRelease(surface_texture.texture);
         wgpuCommandEncoderRelease(encoder);
         wgpuRenderPassEncoderRelease(pass);
         wgpuCommandBufferRelease(commands);

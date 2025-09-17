@@ -1,6 +1,7 @@
 #include "chunk.hpp"
 #include <vector>
 #include <queue>
+#include <iterator>
 
 namespace flint {
 

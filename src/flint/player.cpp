@@ -4,6 +4,8 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <iterator>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace flint
 {
@@ -206,6 +208,20 @@ namespace flint
         physics::AABB Player::get_world_bounding_box() const
         {
             return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
+        }
+
+        glm::mat4 Player::get_view_matrix() const {
+            glm::vec3 eye = position + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+            float yaw_radians = glm::radians(yaw);
+            float pitch_radians = glm::radians(pitch);
+
+            glm::vec3 front;
+            front.x = cos(yaw_radians) * cos(pitch_radians);
+            front.y = sin(pitch_radians);
+            front.z = sin(yaw_radians) * cos(pitch_radians);
+            front = glm::normalize(front);
+
+            return glm::lookAt(eye, eye + front, glm::vec3(0.0f, 1.0f, 0.0f));
         }
     }
 }
