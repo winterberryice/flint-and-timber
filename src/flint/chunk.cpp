@@ -1,9 +1,55 @@
 #include "chunk.hpp"
-
 #include <iostream>
+#include <vector>
 
 namespace flint
 {
+
+    enum class Face
+    {
+        Front,
+        Back,
+        Top,
+        Bottom,
+        Right,
+        Left
+    };
+
+    // Helper function to get texture atlas indices for a block type and face
+    glm::vec2 get_texture_atlas_indices(BlockType blockType, Face face)
+    {
+        switch (blockType)
+        {
+        case BlockType::Dirt:
+            return {2.0f, 0.0f};
+        case BlockType::Grass:
+            switch (face)
+            {
+            case Face::Top:
+                return {0.0f, 0.0f};
+            case Face::Bottom:
+                return {2.0f, 0.0f};
+            default:
+                return {1.0f, 0.0f};
+            }
+        case BlockType::Bedrock:
+            return {3.0f, 0.0f};
+        case BlockType::OakLog:
+            switch (face)
+            {
+            case Face::Top:
+            case Face::Bottom:
+                return {5.0f, 0.0f};
+            default:
+                return {4.0f, 0.0f};
+            }
+        case BlockType::OakLeaves:
+            return {6.0f, 0.0f};
+        default:
+            return {15.0f, 15.0f}; // Error texture
+        }
+    }
+
     Chunk::Chunk()
     {
     }
@@ -20,6 +66,11 @@ namespace flint
         generateChunkData();
         generateMesh();
 
+        if (m_vertices.empty() || m_indices.empty())
+        {
+            return true; // No mesh to create
+        }
+
         // Create vertex buffer
         WGPUBufferDescriptor vertexBufferDesc = {};
         vertexBufferDesc.size = m_vertices.size() * sizeof(graphics::Vertex);
@@ -33,7 +84,6 @@ namespace flint
             return false;
         }
 
-        // Upload vertex data
         wgpuQueueWriteBuffer(wgpuDeviceGetQueue(device), m_vertexBuffer, 0,
                              m_vertices.data(), vertexBufferDesc.size);
 
@@ -50,7 +100,6 @@ namespace flint
             return false;
         }
 
-        // Upload index data
         wgpuQueueWriteBuffer(wgpuDeviceGetQueue(device), m_indexBuffer, 0,
                              m_indices.data(), indexBufferDesc.size);
 
@@ -76,7 +125,6 @@ namespace flint
         if (!m_vertexBuffer || !m_indexBuffer)
             return;
 
-        // Bind buffers and draw
         wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, WGPU_WHOLE_SIZE);
         wgpuRenderPassEncoderSetIndexBuffer(renderPass, m_indexBuffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
         wgpuRenderPassEncoderDrawIndexed(renderPass, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
@@ -86,9 +134,10 @@ namespace flint
     {
         if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_DEPTH)
         {
-            return false; // Outside of this chunk, considered not solid by this chunk.
+            return false;
         }
-        return m_blocks[x][y][z] != BlockType::Air;
+        BlockType type = m_blocks[x][y][z];
+        return type != BlockType::Air && type != BlockType::OakLeaves;
     }
 
     void Chunk::generateChunkData()
@@ -97,36 +146,45 @@ namespace flint
         {
             for (int z = 0; z < CHUNK_DEPTH; ++z)
             {
-                for (int y = 0; y < CHUNK_HEIGHT; ++y)
+                m_blocks[x][0][z] = BlockType::Bedrock;
+                for (int y = 1; y < CHUNK_HEIGHT / 2; ++y)
                 {
-                    // Create a floor
-                    if (y < CHUNK_HEIGHT / 2)
-                    {
-                         m_blocks[x][y][z] = BlockType::Dirt;
-                    }
-                    else
-                    {
-                        m_blocks[x][y][z] = BlockType::Air;
-                    }
+                    m_blocks[x][y][z] = BlockType::Dirt;
+                }
+                m_blocks[x][CHUNK_HEIGHT / 2][z] = BlockType::Grass;
+                for (int y = CHUNK_HEIGHT / 2 + 1; y < CHUNK_HEIGHT; ++y)
+                {
+                    m_blocks[x][y][z] = BlockType::Air;
                 }
             }
         }
 
-        // Add some features
-        // A pillar
-        m_blocks[5][CHUNK_HEIGHT / 2][5] = BlockType::Grass;
-        m_blocks[5][CHUNK_HEIGHT / 2 + 1][5] = BlockType::Grass;
+        // Add a tree
+        int treeX = CHUNK_WIDTH / 2;
+        int treeZ = CHUNK_DEPTH / 2;
+        int trunkHeight = 5;
+        for (int i = 1; i <= trunkHeight; ++i)
+        {
+            m_blocks[treeX][CHUNK_HEIGHT / 2 + i][treeZ] = BlockType::OakLog;
+        }
 
-        // A higher platform
-        m_blocks[10][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2][10] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2][11] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2 + 1][10] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
-        m_blocks[11][CHUNK_HEIGHT / 2 + 1][11] = BlockType::Grass;
-        m_blocks[10][CHUNK_HEIGHT / 2 + 2][11] = BlockType::Grass;
+        int leavesHeight = 3;
+        int leavesRadius = 2;
+        for (int y = CHUNK_HEIGHT / 2 + trunkHeight; y < CHUNK_HEIGHT / 2 + trunkHeight + leavesHeight; ++y)
+        {
+            for (int x = treeX - leavesRadius; x <= treeX + leavesRadius; ++x)
+            {
+                for (int z = treeZ - leavesRadius; z <= treeZ + leavesRadius; ++z)
+                {
+                    if (x >= 0 && x < CHUNK_WIDTH && z >= 0 && z < CHUNK_DEPTH)
+                    {
+                         if (m_blocks[x][y][z] == BlockType::Air) {
+                            m_blocks[x][y][z] = BlockType::OakLeaves;
+                         }
+                    }
+                }
+            }
+        }
     }
 
     void Chunk::generateMesh()
@@ -134,8 +192,10 @@ namespace flint
         m_vertices.clear();
         m_indices.clear();
 
-        glm::vec3 dirtColor = {0.5f, 0.25f, 0.0f};
-        glm::vec3 grassColor = {0.0f, 1.0f, 0.0f};
+        const float ATLAS_COLS = 16.0f;
+        const float ATLAS_ROWS = 1.0f;
+        const float TEX_SIZE_X = 1.0f / ATLAS_COLS;
+        const float TEX_SIZE_Y = 1.0f / ATLAS_ROWS;
 
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
@@ -143,104 +203,80 @@ namespace flint
             {
                 for (int z = 0; z < CHUNK_DEPTH; ++z)
                 {
-                    if (m_blocks[x][y][z] == BlockType::Air)
+                    BlockType blockType = m_blocks[x][y][z];
+                    if (blockType == BlockType::Air)
                     {
                         continue;
                     }
 
-                    glm::vec3 color = (m_blocks[x][y][z] == BlockType::Grass) ? grassColor : dirtColor;
                     glm::vec3 position = {(float)x, (float)y, (float)z};
 
-                    // Check each face
-                    // Front face
-                    if (z == CHUNK_DEPTH - 1 || m_blocks[x][y][z + 1] == BlockType::Air)
-                    {
+                    auto addFace = [&](Face face, const std::vector<glm::vec3>& face_vertices) {
                         uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
+
+                        glm::vec2 atlas_indices = get_texture_atlas_indices(blockType, face);
+                        float u_min = atlas_indices.x * TEX_SIZE_X;
+                        float v_min = atlas_indices.y * TEX_SIZE_Y;
+                        float u_max = u_min + TEX_SIZE_X;
+                        float v_max = v_min + TEX_SIZE_Y;
+
+                        std::vector<glm::vec2> uvs = {
+                            {u_min, v_max}, {u_max, v_max}, {u_max, v_min}, {u_min, v_min}
+                        };
+
+                        for(size_t i = 0; i < 4; ++i) {
+                            m_vertices.push_back({position + face_vertices[i], uvs[i]});
+                        }
+
                         m_indices.push_back(baseIndex);
+                        m_indices.push_back(baseIndex + 2);
                         m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
                         m_indices.push_back(baseIndex);
+                        m_indices.push_back(baseIndex + 3);
+                        m_indices.push_back(baseIndex + 2);
+                    };
+
+                    // Front face (+z)
+                    if (z == CHUNK_DEPTH - 1 || !is_solid(x, y, z + 1))
+                    {
+                        addFace(Face::Front, {
+                            {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f}, {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}
+                        });
                     }
-                    // Back face
-                    if (z == 0 || m_blocks[x][y][z - 1] == BlockType::Air)
+                    // Back face (-z)
+                    if (z == 0 || !is_solid(x, y, z - 1))
                     {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
+                        addFace(Face::Back, {
+                            {-0.5f, -0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f}, {0.5f, 0.5f, -0.5f}, {0.5f, -0.5f, -0.5f}
+                        });
                     }
-                    // Top face
-                    if (y == CHUNK_HEIGHT - 1 || m_blocks[x][y + 1][z] == BlockType::Air)
+                    // Top face (+y)
+                    if (y == CHUNK_HEIGHT - 1 || !is_solid(x, y + 1, z))
                     {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
-                        m_indices.push_back(baseIndex);
+                        addFace(Face::Top, {
+                           {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f}, {0.5f, 0.5f, 0.5f}, {0.5f, 0.5f, -0.5f}
+                        });
                     }
-                    // Bottom face
-                    if (y == 0 || m_blocks[x][y - 1][z] == BlockType::Air)
+                    // Bottom face (-y)
+                    if (y == 0 || !is_solid(x, y - 1, z))
                     {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
+                        addFace(Face::Bottom, {
+                            {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, 0.5f}
+                        });
                     }
-                    // Right face
-                    if (x == CHUNK_WIDTH - 1 || m_blocks[x + 1][y][z] == BlockType::Air)
+                    // Right face (+x)
+                    if (x == CHUNK_WIDTH - 1 || !is_solid(x + 1, y, z))
                     {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(0.5f, 0.5f, 0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 3);
-                        m_indices.push_back(baseIndex);
+                        addFace(Face::Right, {
+                            {0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}, {0.5f, -0.5f, 0.5f}
+                        });
                     }
-                    // Left face
-                    if (x == 0 || m_blocks[x - 1][y][z] == BlockType::Air)
+                    // Left face (-x)
+                    if (x == 0 || !is_solid(x - 1, y, z))
                     {
-                        uint16_t baseIndex = m_vertices.size();
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, 0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, -0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, -0.5f)}, color});
-                        m_vertices.push_back({{position + glm::vec3(-0.5f, 0.5f, 0.5f)}, color});
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex + 2);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
+                        addFace(Face::Left, {
+                            {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, -0.5f}
+                        });
                     }
                 }
             }

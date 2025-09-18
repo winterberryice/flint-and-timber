@@ -17,6 +17,9 @@ namespace flint
         Air,
         Dirt,
         Grass,
+        Bedrock,
+        OakLog,
+        OakLeaves,
     };
 
     class Chunk

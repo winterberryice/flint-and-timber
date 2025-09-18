@@ -12,7 +12,7 @@ namespace flint
         struct Vertex
         {
             glm::vec3 position;
-            glm::vec3 color; // We'll give each face a different color
+            glm::vec2 uv;
         };
 
         class CubeMesh
