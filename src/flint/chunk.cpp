@@ -228,12 +228,13 @@ namespace flint
                             m_vertices.push_back({position + face_vertices[i], uvs[i]});
                         }
 
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 2);
+                        // Corrected winding order for CCW faces
+                        m_indices.push_back(baseIndex + 0);
                         m_indices.push_back(baseIndex + 1);
-                        m_indices.push_back(baseIndex);
-                        m_indices.push_back(baseIndex + 3);
                         m_indices.push_back(baseIndex + 2);
+                        m_indices.push_back(baseIndex + 0);
+                        m_indices.push_back(baseIndex + 2);
+                        m_indices.push_back(baseIndex + 3);
                     };
 
                     // Front face (+z)
