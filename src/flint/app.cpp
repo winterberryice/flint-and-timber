@@ -379,18 +379,6 @@ namespace flint
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
 
-        depthTextureViewDesc.baseMipLevel = 0;
-        depthTextureViewDesc.mipLevelCount = 1;
-        depthTextureViewDesc.baseArrayLayer = 0;
-        depthTextureViewDesc.arrayLayerCount = 1;
-        depthTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
-
-        m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
-        if (!m_depthTextureView) {
-            std::cerr << "Failed to create depth texture view!" << std::endl;
-            return false;
-        }
-
         std::cout << "Creating shaders..." << std::endl;
 
         const char *vertexShaderSource = R"(
@@ -571,27 +559,6 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
         pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
 
-        // Depth/Stencil state
-        WGPUDepthStencilState depthStencilState = {};
-        depthStencilState.format = WGPUTextureFormat_Depth24PlusStencil8;
-        depthStencilState.depthWriteEnabled = true;
-        depthStencilState.depthCompare = WGPUCompareFunction_Less;
-
-        // Stencil settings (if you were using them)
-        depthStencilState.stencilReadMask = 0xFFFFFFFF;
-        depthStencilState.stencilWriteMask = 0xFFFFFFFF;
-        depthStencilState.stencilFront.compare = WGPUCompareFunction_Always;
-        depthStencilState.stencilFront.failOp = WGPUStencilOperation_Keep;
-        depthStencilState.stencilFront.depthFailOp = WGPUStencilOperation_Keep;
-        depthStencilState.stencilFront.passOp = WGPUStencilOperation_Keep;
-        depthStencilState.stencilBack.compare = WGPUCompareFunction_Always;
-        depthStencilState.stencilBack.failOp = WGPUStencilOperation_Keep;
-        depthStencilState.stencilBack.depthFailOp = WGPUStencilOperation_Keep;
-        depthStencilState.stencilBack.passOp = WGPUStencilOperation_Keep;
-
-
-        pipelineDescriptor.depthStencil = &depthStencilState;
-
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
@@ -732,26 +699,12 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
             colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
             colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
-            WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
-            depthStencilAttachment.view = m_depthTextureView;
-            depthStencilAttachment.depthClearValue = 1.0f;
-            depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
-            depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
-            depthStencilAttachment.depthReadOnly = false;
-
-            // Stencil ops (if you were using them)
-            depthStencilAttachment.stencilClearValue = 0;
-            depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
-            depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
-            depthStencilAttachment.stencilReadOnly = true;
-
-
             WGPURenderPassDescriptor renderPassDesc = {};
             renderPassDesc.nextInChain = nullptr;
             renderPassDesc.label = {nullptr, 0};
             renderPassDesc.colorAttachmentCount = 1;
             renderPassDesc.colorAttachments = &colorAttachment;
-            renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
+            renderPassDesc.depthStencilAttachment = nullptr;
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
@@ -791,13 +744,6 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         std::cout << "Terminating app..." << std::endl;
 
         m_blockAtlas.cleanup();
-
-        if (m_depthTextureView) {
-            wgpuTextureViewRelease(m_depthTextureView);
-        }
-        if (m_depthTexture) {
-            wgpuTextureRelease(m_depthTexture);
-        }
 
         if (m_uniformBuffer)
             wgpuBufferRelease(m_uniformBuffer);
