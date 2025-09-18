@@ -2,6 +2,7 @@
 #include "flint/player.hpp"
 #include "flint/physics.hpp"
 #include "flint/graphics/shaders.hpp"
+#include "atlas_bytes.hpp"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -432,10 +433,10 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         }
         std::cout << "Shader module created successfully" << std::endl;
 
-        // Load the texture atlas
-        if (!m_blockAtlas.loadFromFile(m_device, m_queue, "assets/textures/block/atlas.png"))
+        // Load the texture atlas from embedded data
+        if (!m_blockAtlas.loadFromMemory(m_device, m_queue, assets_textures_block_atlas_png, assets_textures_block_atlas_png_len))
         {
-            std::cerr << "Failed to load block atlas texture!" << std::endl;
+            std::cerr << "Failed to load block atlas texture from memory!" << std::endl;
             return false;
         }
         std::cout << "Block atlas texture loaded successfully" << std::endl;

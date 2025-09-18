@@ -25,21 +25,21 @@ namespace flint {
             cleanup();
         }
 
-        bool Texture::loadFromFile(WGPUDevice device, WGPUQueue queue, const std::string& path) {
+        bool Texture::loadFromMemory(WGPUDevice device, WGPUQueue queue, const unsigned char* buffer, unsigned int len) {
             m_device = device;
 
             int width, height, channels;
-            stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, 4); // Force 4 channels (RGBA)
+            stbi_uc* pixels = stbi_load_from_memory(buffer, len, &width, &height, &channels, 4); // Force 4 channels (RGBA)
 
             if (!pixels) {
-                std::cerr << "Failed to load texture: " << path << std::endl;
+                std::cerr << "Failed to load texture from memory" << std::endl;
                 return false;
             }
 
             // Create texture
             WGPUTextureDescriptor textureDesc = {};
             textureDesc.nextInChain = nullptr;
-            textureDesc.label = makeStringView(path.c_str());
+            textureDesc.label = makeStringView("embedded_atlas");
             textureDesc.size = { (uint32_t)width, (uint32_t)height, 1 };
             textureDesc.mipLevelCount = 1;
             textureDesc.sampleCount = 1;

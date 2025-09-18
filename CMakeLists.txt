@@ -91,11 +91,28 @@ if(APPLE)
     )
 endif()
 
+# --- Generate texture atlas header ---
+set(GENERATED_ATLAS_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/atlas_bytes.hpp")
+set(ATLAS_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/block/atlas.png")
+
+add_custom_command(
+    OUTPUT ${GENERATED_ATLAS_HEADER}
+    COMMAND ${CMAKE_COMMAND} -D ATLAS_INPUT_FILE=${ATLAS_SOURCE_FILE} -D ATLAS_OUTPUT_FILE=${GENERATED_ATLAS_HEADER} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateAtlasHeader.cmake"
+    DEPENDS ${ATLAS_SOURCE_FILE} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateAtlasHeader.cmake"
+    COMMENT "Converting ${ATLAS_SOURCE_FILE} to C++ header via CMake script"
+    VERBATIM
+)
+
+add_custom_target(GenerateAtlasHeader DEPENDS ${GENERATED_ATLAS_HEADER})
+add_dependencies(${TARGET_NAME} GenerateAtlasHeader)
+
+
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
 

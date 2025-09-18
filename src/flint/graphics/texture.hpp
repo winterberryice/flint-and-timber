@@ -11,8 +11,8 @@ namespace flint {
             Texture();
             ~Texture();
 
-            // Load a texture from a file and upload it to the GPU
-            bool loadFromFile(WGPUDevice device, WGPUQueue queue, const std::string& path);
+            // Load a texture from a memory buffer and upload it to the GPU
+            bool loadFromMemory(WGPUDevice device, WGPUQueue queue, const unsigned char* buffer, unsigned int len);
 
             // Release GPU resources
             void cleanup();
