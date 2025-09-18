@@ -379,6 +379,22 @@ namespace flint
         wgpuSurfaceConfigure(m_surface, &surfaceConfig);
         std::cout << "WebGPU surface configured" << std::endl;
 
+        // Create depth texture
+        WGPUTextureDescriptor depthTextureDesc = {};
+        depthTextureDesc.dimension = WGPUTextureDimension_2D;
+        depthTextureDesc.size = {(uint32_t)m_windowWidth, (uint32_t)m_windowHeight, 1};
+        depthTextureDesc.format = WGPUTextureFormat_Depth24Plus8Stencil1;
+        depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
+        depthTextureDesc.mipLevelCount = 1;
+        depthTextureDesc.sampleCount = 1;
+        m_depthTexture = wgpuDeviceCreateTexture(m_device, &depthTextureDesc);
+
+        WGPUTextureViewDescriptor depthTextureViewDesc = {};
+        depthTextureViewDesc.format = WGPUTextureFormat_Depth24Plus8Stencil1;
+        depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
+        depthTextureViewDesc.aspect = WGPUTextureAspect_All;
+        m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
+
         std::cout << "Creating shaders..." << std::endl;
 
         const char *vertexShaderSource = R"(
@@ -559,12 +575,20 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
         pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
 
+        // Depth Stencil State
+        WGPUDepthStencilState depthStencilState = {};
+        depthStencilState.format = WGPUTextureFormat_Depth24Plus8Stencil1;
+        depthStencilState.depthWriteEnabled = true;
+        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        pipelineDescriptor.depthStencil = &depthStencilState;
+
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
 
         m_renderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDescriptor);
+
         wgpuPipelineLayoutRelease(pipelineLayout);
 
         if (!m_renderPipeline)
@@ -681,61 +705,56 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-        if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
-        {
-            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
-
-            WGPUCommandEncoderDescriptor encoderDesc = {};
-            encoderDesc.nextInChain = nullptr;
-            encoderDesc.label = {nullptr, 0};
-
-            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
-
-            WGPURenderPassColorAttachment colorAttachment = {};
-            colorAttachment.view = textureView;
-            colorAttachment.resolveTarget = nullptr;
-            colorAttachment.loadOp = WGPULoadOp_Clear;
-            colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
-            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-
-            WGPURenderPassDescriptor renderPassDesc = {};
-            renderPassDesc.nextInChain = nullptr;
-            renderPassDesc.label = {nullptr, 0};
-            renderPassDesc.colorAttachmentCount = 1;
-            renderPassDesc.colorAttachments = &colorAttachment;
-            renderPassDesc.depthStencilAttachment = nullptr;
-
-            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-
-            // Set the render pipeline
-            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
-
-            // Bind the camera and texture bind groups
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_cameraBindGroup, 0, nullptr);
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 1, m_textureBindGroup, 0, nullptr);
-
-            // Draw the chunk
-            m_chunk.render(renderPass);
-
-            wgpuRenderPassEncoderEnd(renderPass);
-
-            WGPUCommandBufferDescriptor cmdBufferDesc = {};
-            cmdBufferDesc.nextInChain = nullptr;
-            cmdBufferDesc.label = {nullptr, 0};
-
-            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
-            wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
-
-            wgpuSurfacePresent(m_surface);
-
-            // Cleanup
-            wgpuCommandBufferRelease(cmdBuffer);
-            wgpuRenderPassEncoderRelease(renderPass);
-            wgpuCommandEncoderRelease(encoder);
-            wgpuTextureViewRelease(textureView);
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+            if (surfaceTexture.texture) wgpuTextureRelease(surfaceTexture.texture);
+            return;
         }
 
+        WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+
+        WGPUCommandEncoderDescriptor encoderDesc = {};
+        WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+
+        WGPURenderPassColorAttachment colorAttachment = {};
+        colorAttachment.view = textureView;
+        colorAttachment.loadOp = WGPULoadOp_Clear;
+        colorAttachment.storeOp = WGPUStoreOp_Store;
+        colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f};
+
+        WGPURenderPassDepthStencilAttachment depthAttachment = {};
+        depthAttachment.view = m_depthTextureView;
+        depthAttachment.depthClearValue = 1.0f;
+        depthAttachment.depthLoadOp = WGPULoadOp_Clear;
+        depthAttachment.depthStoreOp = WGPUStoreOp_Store;
+        depthAttachment.stencilLoadOp = WGPULoadOp_Undefined;
+        depthAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
+
+        WGPURenderPassDescriptor renderPassDesc = {};
+        renderPassDesc.colorAttachmentCount = 1;
+        renderPassDesc.colorAttachments = &colorAttachment;
+        renderPassDesc.depthStencilAttachment = &depthAttachment;
+
+        WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+
+        // Draw geometry
+        wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
+        wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_cameraBindGroup, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(renderPass, 1, m_textureBindGroup, 0, nullptr);
+        m_chunk.render(renderPass);
+
+        wgpuRenderPassEncoderEnd(renderPass);
+
+        WGPUCommandBufferDescriptor cmdBufferDesc = {};
+        WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+        wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
+
+        wgpuSurfacePresent(m_surface);
+
+        // Cleanup
+        wgpuCommandBufferRelease(cmdBuffer);
+        wgpuRenderPassEncoderRelease(renderPass);
+        wgpuCommandEncoderRelease(encoder);
+        wgpuTextureViewRelease(textureView);
         wgpuTextureRelease(surfaceTexture.texture);
     }
 
@@ -759,6 +778,16 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         {
             wgpuRenderPipelineRelease(m_renderPipeline);
             m_renderPipeline = nullptr;
+        }
+        if (m_depthTextureView)
+        {
+            wgpuTextureViewRelease(m_depthTextureView);
+            m_depthTextureView = nullptr;
+        }
+        if (m_depthTexture)
+        {
+            wgpuTextureRelease(m_depthTexture);
+            m_depthTexture = nullptr;
         }
         if (m_shaderModule)
         {

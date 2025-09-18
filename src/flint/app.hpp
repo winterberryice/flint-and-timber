@@ -38,6 +38,10 @@ namespace flint
         WGPUShaderModule m_shaderModule = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
 
+        // Depth Stencil
+        WGPUTexture m_depthTexture = nullptr;
+        WGPUTextureView m_depthTextureView = nullptr;
+
         // New texture atlas
         graphics::Texture m_blockAtlas;
 
