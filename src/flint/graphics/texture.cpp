@@ -36,7 +36,7 @@ namespace flint {
                 return false;
             }
 
-            // Create texture descriptor
+            // Create texture
             WGPUTextureDescriptor textureDesc = {};
             textureDesc.nextInChain = nullptr;
             textureDesc.label = makeStringView(path.c_str());
@@ -56,21 +56,56 @@ namespace flint {
                 return false;
             }
 
-            // Upload texture data
-            WGPUImageCopyTexture imageCopyTexture = {};
-            imageCopyTexture.texture = m_texture;
-            imageCopyTexture.mipLevel = 0;
-            imageCopyTexture.origin = { 0, 0, 0 };
-            imageCopyTexture.aspect = WGPUTextureAspect_All;
+            // --- Upload texture data using a staging buffer ---
 
-            WGPUTextureDataLayout textureDataLayout = {};
-            textureDataLayout.offset = 0;
-            textureDataLayout.bytesPerRow = 4 * (uint32_t)width;
-            textureDataLayout.rowsPerImage = (uint32_t)height;
+            // 1. Create a staging buffer
+            size_t bufferSize = (size_t)width * (size_t)height * 4;
+            WGPUBufferDescriptor bufferDesc = {};
+            bufferDesc.label = makeStringView("Texture Staging Buffer");
+            bufferDesc.usage = WGPUBufferUsage_CopySrc;
+            bufferDesc.size = bufferSize;
+            bufferDesc.mappedAtCreation = false;
+            WGPUBuffer stagingBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
-            wgpuQueueWriteTexture(queue, &imageCopyTexture, pixels, (size_t)4 * (size_t)width * (size_t)height, &textureDataLayout, &textureDesc.size);
-
+            // 2. Write pixel data to the staging buffer
+            wgpuQueueWriteBuffer(queue, stagingBuffer, 0, pixels, bufferSize);
             stbi_image_free(pixels);
+
+            // 3. Create a command encoder to copy from buffer to texture
+            WGPUCommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.label = makeStringView("Texture Upload Command Encoder");
+            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &encoderDesc);
+
+            // 4. Define source and destination for the copy
+            WGPUImageCopyBuffer bufferCopyView = {};
+            bufferCopyView.buffer = stagingBuffer;
+            bufferCopyView.layout.offset = 0;
+            bufferCopyView.layout.bytesPerRow = 4 * (uint32_t)width;
+            bufferCopyView.layout.rowsPerImage = (uint32_t)height;
+
+            WGPUImageCopyTexture textureCopyView = {};
+            textureCopyView.texture = m_texture;
+            textureCopyView.mipLevel = 0;
+            textureCopyView.origin = {0, 0, 0};
+            textureCopyView.aspect = WGPUTextureAspect_All;
+
+            WGPUExtent3D copySize = {(uint32_t)width, (uint32_t)height, 1};
+
+            // 5. Encode the copy command
+            wgpuCommandEncoderCopyBufferToTexture(encoder, &bufferCopyView, &textureCopyView, &copySize);
+
+            // 6. Submit the command
+            WGPUCommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.label = makeStringView("Texture Upload Command Buffer");
+            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+            wgpuQueueSubmit(queue, 1, &cmdBuffer);
+
+            // 7. Clean up temporary resources
+            wgpuCommandBufferRelease(cmdBuffer);
+            wgpuCommandEncoderRelease(encoder);
+            wgpuBufferRelease(stagingBuffer);
+
+            // --- End of texture upload ---
 
             // Create texture view
             WGPUTextureViewDescriptor viewDesc = {};
