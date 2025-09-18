@@ -383,14 +383,14 @@ namespace flint
         WGPUTextureDescriptor depthTextureDesc = {};
         depthTextureDesc.dimension = WGPUTextureDimension_2D;
         depthTextureDesc.size = {(uint32_t)m_windowWidth, (uint32_t)m_windowHeight, 1};
-        depthTextureDesc.format = WGPUTextureFormat_Depth24Plus8Stencil1;
+        depthTextureDesc.format = WGPUTextureFormat_Depth24PlusStencil8;
         depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
         depthTextureDesc.mipLevelCount = 1;
         depthTextureDesc.sampleCount = 1;
         m_depthTexture = wgpuDeviceCreateTexture(m_device, &depthTextureDesc);
 
         WGPUTextureViewDescriptor depthTextureViewDesc = {};
-        depthTextureViewDesc.format = WGPUTextureFormat_Depth24Plus8Stencil1;
+        depthTextureViewDesc.format = WGPUTextureFormat_Depth24PlusStencil8;
         depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
         depthTextureViewDesc.aspect = WGPUTextureAspect_All;
         m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
@@ -577,8 +577,8 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
         // Depth Stencil State
         WGPUDepthStencilState depthStencilState = {};
-        depthStencilState.format = WGPUTextureFormat_Depth24Plus8Stencil1;
-        depthStencilState.depthWriteEnabled = true;
+        depthStencilState.format = WGPUTextureFormat_Depth24PlusStencil8;
+        depthStencilState.depthWriteEnabled = 1;
         depthStencilState.depthCompare = WGPUCompareFunction_Less;
         pipelineDescriptor.depthStencil = &depthStencilState;
 
@@ -705,7 +705,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
             if (surfaceTexture.texture) wgpuTextureRelease(surfaceTexture.texture);
             return;
         }
