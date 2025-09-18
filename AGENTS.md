@@ -37,6 +37,7 @@ This is the most important section. You must adhere to these rules at all times.
 - **ASSUME LIBRARIES ARE AVAILABLE:** Assume the user has correctly set up and linked SDL3 and Dawn. Your code should use standard include paths like `<SDL3/SDL.h>`, `<webgpu/webgpu.h>`, `<glm/glm.hpp>`, etc.
 - **RESPECT THE STACK:** Do not suggest alternative libraries or frameworks. The stack is fixed: C++, SDL3, and Dawn.
 - **SHADERS IN HEADER FILES** For easy distribution, each .wgsl file should be declared as raw literal in header file - this way I don't have to bundle shader files, there are already in code.
+- **WebGPU HEADER REFERENCE:** The specific `webgpu.h` for this project is located at `__webgpu_header_chromium_7187__/webgpu.h`. Use this file to validate API, struct, and enum names if you suspect a mismatch or if the user reports a build failure related to the WebGPU API.
 
 ## 5. Example Interaction Flow
 
