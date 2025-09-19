@@ -1,3 +1,6 @@
+// Content of main.rs from last read_files, with is_face_visible logic updated
+// AND with the erroneous "[end of engine/src/main.rs]" lines removed.
+
 mod block;
 mod camera;
 mod chunk;
@@ -16,7 +19,6 @@ use std::sync::Arc;
 use wgpu::Trace;
 use winit::{
     application::ApplicationHandler,
-    dpi::PhysicalSize,
     event::*,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
@@ -64,46 +66,28 @@ impl App {
             WindowEvent::KeyboardInput {
                 event: ref key_event,
                 ..
-            } if key_event.state == ElementState::Pressed => match key_event.physical_key {
-                PhysicalKey::Code(KeyCode::Escape) => {
-                    if self.mouse_grabbed {
-                        self.set_mouse_grab(false);
-                        if let Some(state) = self.state.as_mut() {
-                            state.inventory_open = false;
-                        }
-                        event_consumed_by_grab_logic = true;
-                    } else {
-                        active_loop.exit();
-                        return;
-                    }
+            } if key_event.physical_key == PhysicalKey::Code(KeyCode::Escape)
+                && key_event.state == ElementState::Pressed =>
+            {
+                if self.mouse_grabbed {
+                    self.set_mouse_grab(false);
+                    event_consumed_by_grab_logic = true;
+                } else {
+                    active_loop.exit();
+                    return;
                 }
-                PhysicalKey::Code(KeyCode::KeyE) => {
-                    let mut inventory_open = false;
-                    if let Some(state) = self.state.as_mut() {
-                        state.inventory_open = !state.inventory_open;
-                        inventory_open = state.inventory_open;
-                        event_consumed_by_grab_logic = true;
-                    }
-                    self.set_mouse_grab(!inventory_open);
-                }
-                _ => {}
-            },
+            }
             WindowEvent::MouseInput {
                 button,
                 state: mouse_element_state,
                 ..
             } => {
                 if let Some(s) = self.state.as_mut() {
-                    s.input_state
-                        .on_mouse_input(button, mouse_element_state, s.inventory_open);
+                    s.input_state.on_mouse_input(button, mouse_element_state);
                 }
                 if mouse_element_state == ElementState::Pressed {
                     if !self.mouse_grabbed {
-                        if let Some(state) = self.state.as_ref() {
-                            if !state.inventory_open {
-                                self.set_mouse_grab(true);
-                            }
-                        }
+                        self.set_mouse_grab(true);
                     }
                 }
             }
@@ -143,10 +127,6 @@ impl App {
                 self.last_mouse_position = Some(position);
                 cursor_moved_while_grabbed = true;
             }
-        } else {
-            if let WindowEvent::CursorMoved { position, .. } = event {
-                state.input_state.on_cursor_moved(position);
-            }
         }
 
         if !event_consumed_by_grab_logic
@@ -179,9 +159,8 @@ impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         event_loop.set_control_flow(ControlFlow::Poll);
         if self.window.is_none() {
-            let window_attributes = Window::default_attributes()
-                .with_title("Hello WGPU with ApplicationHandler!")
-                .with_inner_size(PhysicalSize::new(1280, 720));
+            let window_attributes =
+                Window::default_attributes().with_title("Hello WGPU with ApplicationHandler!");
             let window_arc = Arc::new(event_loop.create_window(window_attributes).unwrap());
             self.window = Some(Arc::clone(&window_arc));
             let initial_size = window_arc.inner_size();
@@ -230,7 +209,6 @@ impl ApplicationHandler for App {
 
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         println!("ApplicationHandler: Event loop is exiting. Cleaning up.");
-        self.state = None;
     }
 }
 
@@ -241,7 +219,6 @@ pub struct Vertex {
     pub color: [f32; 3],
     pub uv: [f32; 2],
     pub tree_id: u32,
-    pub sky_light: u32,
 }
 
 impl Vertex {
@@ -271,14 +248,6 @@ impl Vertex {
                     shader_location: 3,
                     format: wgpu::VertexFormat::Uint32,
                 },
-                wgpu::VertexAttribute {
-                    offset: (std::mem::size_of::<[f32; 3]>() * 2
-                        + std::mem::size_of::<[f32; 2]>()
-                        + std::mem::size_of::<u32>())
-                        as wgpu::BufferAddress,
-                    shader_location: 4,
-                    format: wgpu::VertexFormat::Uint32,
-                },
             ],
         }
     }
@@ -293,15 +262,11 @@ use crate::physics::AABB;
 use crate::physics::PLAYER_EYE_HEIGHT;
 use crate::player::Player;
 use crate::raycast::BlockFace;
-use crate::ui::item::{ItemStack, ItemType};
-use crate::ui::item_renderer::ItemRenderer;
-use crate::ui::ui_text::UIText;
 use crate::wireframe_renderer::WireframeRenderer;
 use crate::world::World;
 use glam::IVec3;
 use glam::Mat4;
 use std::collections::HashMap;
-use wgpu_text::glyph_brush::{HorizontalAlign, Layout, OwnedSection, OwnedText, VerticalAlign};
 
 struct ChunkRenderBuffers {
     vertex_buffer: wgpu::Buffer,
@@ -333,20 +298,11 @@ struct State {
     depth_texture_view: wgpu::TextureView,
     debug_overlay: DebugOverlay,
     crosshair: ui::crosshair::Crosshair,
-    inventory: ui::inventory::Inventory,
-    hotbar: ui::hotbar::Hotbar,
-    inventory_open: bool,
     wireframe_renderer: WireframeRenderer,
     selected_block: Option<(IVec3, BlockFace)>,
-    block_atlas_bind_group: wgpu::BindGroup,
+    diffuse_bind_group: wgpu::BindGroup,
     input_state: input::InputState,
-    item_renderer: ItemRenderer,
-    dragged_item: Option<ItemStack>,
-    ui_text: UIText,
 }
-
-const ATLAS_COLS: f32 = 16.0;
-const ATLAS_ROWS: f32 = 1.0;
 
 impl State {
     async fn new(
@@ -403,7 +359,7 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        const TERRAIN_ATLAS_BYTES: &[u8] = include_bytes!("../assets/textures/block/atlas.png");
+        const TERRAIN_ATLAS_BYTES: &[u8] = include_bytes!("../assets/resources/terrain.png");
 
         let diffuse_texture = match crate::texture::Texture::load_from_memory(
             &device,
@@ -414,7 +370,7 @@ impl State {
             Ok(tex) => tex,
             Err(e) => {
                 eprintln!(
-                    "Failed to load embedded atlas.png from memory: {}. Using placeholder.",
+                    "Failed to load embedded terrain.png from memory: {}. Using placeholder.",
                     e
                 );
                 crate::texture::Texture::create_placeholder(
@@ -448,7 +404,7 @@ impl State {
                 label: Some("texture_bind_group_layout"),
             });
 
-        let block_atlas_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -460,7 +416,7 @@ impl State {
                     resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
                 },
             ],
-            label: Some("block_atlas_bind_group"),
+            label: Some("diffuse_bind_group"),
         });
 
         let camera_bind_group_layout =
@@ -631,36 +587,8 @@ impl State {
 
         let debug_overlay = DebugOverlay::new(&device, &config);
         let crosshair = ui::crosshair::Crosshair::new(&device, &config);
-        let inventory = ui::inventory::Inventory::new(&device, &config);
-        let mut hotbar = ui::hotbar::Hotbar::new(&device, &config);
-        hotbar.items[0] = Some(ItemStack::new(ItemType::Block(BlockType::Dirt), 64));
-
-        let ui_projection_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-                label: Some("ui_projection_bind_group_layout"),
-            });
-
-        let item_renderer = ItemRenderer::new(
-            &device,
-            &config,
-            &ui_projection_bind_group_layout,
-            &texture_bind_group_layout,
-        );
-
         let wireframe_renderer =
             WireframeRenderer::new(&device, &config, &camera_bind_group_layout);
-
-        let ui_text = UIText::new(&device, &config);
 
         Self {
             surface,
@@ -683,14 +611,8 @@ impl State {
             wireframe_renderer,
             selected_block: None,
             crosshair,
-            inventory,
-            hotbar,
-            inventory_open: false,
-            block_atlas_bind_group,
+            diffuse_bind_group,
             input_state: input::InputState::new(),
-            item_renderer,
-            dragged_item: None,
-            ui_text,
         }
     }
 
@@ -762,27 +684,26 @@ impl State {
                             let neighbor_world_bz =
                                 chunk_world_origin_z as i32 + lz as i32 + offset.2;
 
-                            let mut face_sky_light = 0;
-                            let mut is_face_visible = false;
+                            let mut is_face_visible = true;
                             if neighbor_world_by >= 0 && neighbor_world_by < CHUNK_HEIGHT as i32 {
                                 if let Some(neighbor_block) = self.world.get_block_at_world(
                                     neighbor_world_bx as f32,
                                     neighbor_world_by as f32,
                                     neighbor_world_bz as f32,
                                 ) {
-                                    if neighbor_block.is_transparent() {
-                                        is_face_visible = true;
-                                        face_sky_light = neighbor_block.sky_light;
+                                    if neighbor_block.is_solid() && !neighbor_block.is_transparent()
+                                    {
+                                        is_face_visible = false;
                                     }
                                 }
-                            } else {
-                                is_face_visible = true;
                             }
 
                             if is_face_visible {
                                 if !is_current_block_transparent {
                                     let vertices_template = face_type.get_vertices_template();
                                     let local_indices = face_type.get_local_indices();
+                                    const ATLAS_COLS: f32 = 16.0;
+                                    const ATLAS_ROWS: f32 = 39.0;
                                     let tex_size_x = 1.0 / ATLAS_COLS;
                                     let tex_size_y = 1.0 / ATLAS_ROWS;
                                     let all_face_atlas_indices = block.get_texture_atlas_indices();
@@ -840,7 +761,6 @@ impl State {
                                             color: current_vertex_color,
                                             uv: selected_face_uvs[i],
                                             tree_id: 0,
-                                            sky_light: face_sky_light as u32,
                                         });
                                     }
                                     for local_idx in local_indices {
@@ -864,6 +784,15 @@ impl State {
             }
         }
 
+        // let player_camera_pos = self.player.position + glam::Vec3::new(0.0, PLAYER_EYE_HEIGHT, 0.0);
+        // transparent_block_render_list.sort_by(|a, b| {
+        //     let dist_a = player_camera_pos.distance_squared(a.world_center);
+        //     let dist_b = player_camera_pos.distance_squared(b.world_center);
+        //     dist_b
+        //         .partial_cmp(&dist_a)
+        //         .unwrap_or(std::cmp::Ordering::Equal)
+        // });
+
         for t_block_data in transparent_block_render_list {
             let block = &t_block_data.block;
             let _lx = t_block_data.lx;
@@ -883,8 +812,7 @@ impl State {
                 (CubeFace::Bottom, (0, -1, 0)),
             ];
             for (face_type, _offset) in face_definitions.iter() {
-                let mut face_sky_light = 0;
-                let mut is_face_visible_for_transparent = false;
+                let mut is_face_visible_for_transparent = true;
                 let neighbor_check_offset = match face_type {
                     CubeFace::Front => (0, 0, -1),
                     CubeFace::Back => (0, 0, 1),
@@ -910,15 +838,12 @@ impl State {
                         neighbor_world_by_transparent as f32,
                         neighbor_world_bz_transparent as f32,
                     ) {
-                        if neighbor_block_transparent.is_transparent()
-                            && neighbor_block_transparent.block_type != block.block_type
+                        if !neighbor_block_transparent.is_transparent()
+                            || neighbor_block_transparent.block_type == block.block_type
                         {
-                            is_face_visible_for_transparent = true;
-                            face_sky_light = neighbor_block_transparent.sky_light;
+                            is_face_visible_for_transparent = false;
                         }
                     }
-                } else {
-                    is_face_visible_for_transparent = true;
                 }
 
                 if !is_face_visible_for_transparent {
@@ -927,6 +852,8 @@ impl State {
 
                 let vertices_template = face_type.get_vertices_template();
                 let local_indices = face_type.get_local_indices();
+                const ATLAS_COLS: f32 = 16.0;
+                const ATLAS_ROWS: f32 = 39.0;
                 let tex_size_x = 1.0 / ATLAS_COLS;
                 let tex_size_y = 1.0 / ATLAS_ROWS;
                 let all_face_atlas_indices = block.get_texture_atlas_indices();
@@ -974,7 +901,6 @@ impl State {
                         color: current_vertex_color,
                         uv: selected_face_uvs[i],
                         tree_id: current_tree_id,
-                        sky_light: face_sky_light as u32,
                     });
                 }
                 for local_idx in local_indices {
@@ -1075,22 +1001,14 @@ impl State {
             self.debug_overlay
                 .resize(new_size.width, new_size.height, &self.queue);
             self.crosshair.resize(new_size, &self.queue);
-            self.ui_text
-                .resize(new_size.width, new_size.height, &self.queue);
         }
     }
 
     pub fn process_mouse_motion(&mut self, delta_x: f64, delta_y: f64) {
-        if !self.inventory_open {
-            self.player.process_mouse_movement(delta_x, delta_y);
-        }
+        self.player.process_mouse_movement(delta_x, delta_y);
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        if self.inventory_open {
-            return false;
-        }
-
         match event {
             WindowEvent::KeyboardInput {
                 event:
@@ -1139,11 +1057,7 @@ impl State {
     }
 
     fn update(&mut self) {
-        if self.inventory_open {
-            self.handle_inventory_interaction();
-        } else {
-            self.handle_block_interactions();
-        }
+        self.handle_block_interactions();
         let dt_secs = 1.0 / 60.0;
         let player_pos = self.player.position;
         let current_chunk_x = (player_pos.x / CHUNK_WIDTH as f32).floor() as i32;
@@ -1172,29 +1086,16 @@ impl State {
             self.build_or_rebuild_chunk_mesh(*cx, *cz);
         }
 
-        let mut selected_block_data = None;
-        if !self.inventory_open {
-            self.player
-                .update_physics_and_collision(dt_secs, &self.world);
-            const RAYCAST_MAX_DISTANCE: f32 = 5.0;
-            self.selected_block =
-                crate::raycast::cast_ray(&self.player, &self.world, RAYCAST_MAX_DISTANCE);
-
-            selected_block_data = if let Some((pos, _face)) = self.selected_block {
-                self.world
-                    .get_block_at_world(pos.x as f32, pos.y as f32, pos.z as f32)
-                    .map(|block| (pos, block))
-            } else {
-                None
-            };
-        }
-
+        self.player
+            .update_physics_and_collision(dt_secs, &self.world);
+        const RAYCAST_MAX_DISTANCE: f32 = 5.0;
+        self.selected_block =
+            crate::raycast::cast_ray(&self.player, &self.world, RAYCAST_MAX_DISTANCE);
         if let Some((block_pos, _)) = self.selected_block {
             self.wireframe_renderer.update_selection(Some(block_pos));
         } else {
             self.wireframe_renderer.update_selection(None);
         }
-
         let camera_eye = self.player.position + glam::Vec3::new(0.0, PLAYER_EYE_HEIGHT, 0.0);
         let camera_front = glam::Vec3::new(
             self.player.yaw.cos() * self.player.pitch.cos(),
@@ -1216,24 +1117,8 @@ impl State {
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
-
-        let player_feet_block = self.world.get_block_at_world(
-            self.player.position.x,
-            self.player.position.y,
-            self.player.position.z,
-        );
-
-        self.debug_overlay
-            .update(self.player.position, selected_block_data, player_feet_block);
+        self.debug_overlay.update(self.player.position);
         self.input_state.clear_frame_state();
-    }
-
-
-    fn handle_inventory_interaction(&mut self) {
-        self.inventory
-            .handle_mouse_click(&self.input_state, &mut self.dragged_item);
-        self.hotbar
-            .handle_mouse_click(&self.input_state, &mut self.dragged_item);
     }
 
     fn handle_block_interactions(&mut self) {
@@ -1332,7 +1217,7 @@ impl State {
             });
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.block_atlas_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.diffuse_bind_group, &[]);
             for chunk_coord in &self.active_chunk_coords {
                 if let Some(chunk_data) = self.chunk_render_data.get(chunk_coord) {
                     if let Some(ref opaque_buffers) = chunk_data.opaque_buffers {
@@ -1351,7 +1236,7 @@ impl State {
             self.wireframe_renderer
                 .draw(&mut render_pass, &self.queue, &self.world);
             render_pass.set_pipeline(&self.transparent_render_pipeline);
-            render_pass.set_bind_group(1, &self.block_atlas_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.diffuse_bind_group, &[]);
             let mut sorted_transparent_chunks = self.active_chunk_coords.clone();
             let player_pos = self.player.position;
             sorted_transparent_chunks.sort_by(|a, b| {
@@ -1371,6 +1256,21 @@ impl State {
                     .partial_cmp(&dist_a)
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
+            // for chunk_coord in &sorted_transparent_chunks {
+            //     if let Some(chunk_data) = self.chunk_render_data.get(chunk_coord) {
+            //         if let Some(ref transparent_buffers) = chunk_data.transparent_buffers {
+            //             if transparent_buffers.num_indices > 0 {
+            //                 render_pass
+            //                     .set_vertex_buffer(0, transparent_buffers.vertex_buffer.slice(..));
+            //                 render_pass.set_index_buffer(
+            //                     transparent_buffers.index_buffer.slice(..),
+            //                     wgpu::IndexFormat::Uint16,
+            //                 );
+            //                 render_pass.draw_indexed(0..transparent_buffers.num_indices, 0, 0..1);
+            //             }
+            //         }
+            //     }
+            // }
             let mut sorted_transparent_chunks = self.active_chunk_coords.clone();
             let player_pos = self.player.position;
             sorted_transparent_chunks.sort_by(|a, b| {
@@ -1407,116 +1307,22 @@ impl State {
             }
         }
         {
-            let mut ui_render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("UI Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-            let mut items_to_render = Vec::new();
-
-            if self.inventory_open {
-                self.inventory.draw(&mut ui_render_pass);
-                for (i, item_stack_opt) in self.inventory.items.iter().enumerate() {
-                    if let Some(item_stack) = item_stack_opt {
-                        let position = self.inventory.slot_positions[i];
-                        items_to_render.push((*item_stack, position, 50.0 * 0.7, [1.0, 1.0, 1.0, 1.0]));
-                    }
-                }
-            } else {
-                self.crosshair.draw(&mut ui_render_pass);
-            }
-
-            self.hotbar.draw(&mut ui_render_pass);
-            for (i, item_stack_opt) in self.hotbar.items.iter().enumerate() {
-                if let Some(item_stack) = item_stack_opt {
-                    let position = self.hotbar.slot_positions[i];
-                    items_to_render.push((*item_stack, position, 50.0 * 0.7, [1.0, 1.0, 1.0, 1.0]));
-                }
-            }
-
-            if let Some(item) = self.dragged_item {
-                let (cursor_x, cursor_y) = self.input_state.cursor_position;
-                items_to_render.push((item, [cursor_x, cursor_y], 50.0 * 0.7, [1.0, 1.0, 1.0, 0.7]));
-            }
-
-            self.item_renderer.draw(
-                &self.device,
-                &self.queue,
-                &mut ui_render_pass,
-                &self.inventory.projection_bind_group,
-                &self.block_atlas_bind_group,
-                &items_to_render,
-            );
-
-            let mut text_sections = Vec::new();
-            let layout = Layout::default()
-                .h_align(HorizontalAlign::Right)
-                .v_align(VerticalAlign::Bottom);
-
-            if self.inventory_open {
-                for (i, item_stack_opt) in self.inventory.items.iter().enumerate() {
-                    if let Some(item_stack) = item_stack_opt {
-                        if item_stack.count > 1 {
-                            let position = self.inventory.slot_positions[i];
-                            let section = OwnedSection::default()
-                                .add_text(
-                                    OwnedText::new(item_stack.count.to_string())
-                                        .with_scale(20.0)
-                                        .with_color([1.0, 1.0, 1.0, 1.0]),
-                                )
-                                .with_screen_position((position[0] + 22.0, position[1] + 22.0))
-                                .with_layout(layout.clone());
-                            text_sections.push(section);
-                        }
-                    }
-                }
-            }
-
-            for (i, item_stack_opt) in self.hotbar.items.iter().enumerate() {
-                if let Some(item_stack) = item_stack_opt {
-                    if item_stack.count > 1 {
-                        let position = self.hotbar.slot_positions[i];
-                        let section = OwnedSection::default()
-                            .add_text(
-                                OwnedText::new(item_stack.count.to_string())
-                                    .with_scale(20.0)
-                                    .with_color([1.0, 1.0, 1.0, 1.0]),
-                            )
-                            .with_screen_position((position[0] + 22.0, position[1] + 22.0))
-                            .with_layout(layout.clone());
-                        text_sections.push(section);
-                    }
-                }
-            }
-
-            if let Some(item_stack) = self.dragged_item {
-                if item_stack.count > 1 {
-                    let (cursor_x, cursor_y) = self.input_state.cursor_position;
-                    let section = OwnedSection::default()
-                        .add_text(
-                            OwnedText::new(item_stack.count.to_string())
-                                .with_scale(20.0)
-                                .with_color([1.0, 1.0, 1.0, 1.0]),
-                        )
-                        .with_screen_position((cursor_x + 22.0, cursor_y + 22.0))
-                        .with_layout(layout.clone());
-                    text_sections.push(section);
-                }
-            }
-
-            self.ui_text
-                .prepare(&self.device, &self.queue, &text_sections)
-                .unwrap();
-            self.ui_text.render(&mut ui_render_pass);
+            let mut crosshair_render_pass =
+                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Crosshair Render Pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
+            self.crosshair.draw(&mut crosshair_render_pass);
         }
         {
             let mut debug_text_render_pass =
@@ -1559,3 +1365,4 @@ pub async fn run() {
 fn main() {
     pollster::block_on(run());
 }
+// ... (rest of main.rs, if any) ...
