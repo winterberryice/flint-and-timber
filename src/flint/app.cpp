@@ -579,7 +579,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         WGPUDepthStencilState depthStencilState = {};
         depthStencilState.format = WGPUTextureFormat_Depth24PlusStencil8;
         depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
-        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        depthStencilState.depthCompare = WGPUCompareFunction_Always;
         pipelineDescriptor.depthStencil = &depthStencilState;
 
         // Multisample state
