@@ -99,7 +99,6 @@ namespace flint
         getWgpuDevice();
         mQueue = wgpuDeviceGetQueue(mDevice);
         initSwapChain();
-        initDepthTexture();
     }
 
     void Application::getWgpuDevice()
@@ -161,29 +160,9 @@ namespace flint
         mSurfaceConfig.width = mSize.x;
         mSurfaceConfig.height = mSize.y;
         mSurfaceConfig.presentMode = WGPUPresentMode_Fifo;
-        mSurfaceConfig.alphaMode = caps.alphaModes[0];
+        mSurfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
 
         wgpuSurfaceConfigure(mSurface, &mSurfaceConfig);
-    }
-
-    void Application::initDepthTexture()
-    {
-        if (mDepthTextureView)
-            wgpuTextureViewRelease(mDepthTextureView);
-        if (mDepthTexture)
-            wgpuTextureRelease(mDepthTexture);
-
-        WGPUTextureDescriptor desc = {};
-        desc.label = makeStringView("Depth Texture"); //"Depth Texture";
-        desc.dimension = WGPUTextureDimension_2D;
-        desc.size = {mSize.x, mSize.y, 1};
-        desc.format = WGPUTextureFormat_Depth32Float;
-        desc.usage = WGPUTextureUsage_RenderAttachment;
-        desc.mipLevelCount = 1;
-        desc.sampleCount = 1;
-
-        mDepthTexture = wgpuDeviceCreateTexture(mDevice, &desc);
-        mDepthTextureView = wgpuTextureCreateView(mDepthTexture, nullptr);
     }
 
     void Application::initCameraAndChunk()
@@ -265,11 +244,7 @@ namespace flint
         fragment_state.targets = &color_target;
         rp_desc.fragment = &fragment_state;
 
-        WGPUDepthStencilState depth_state = {};
-        depth_state.format = WGPUTextureFormat_Depth32Float;
-        depth_state.depthWriteEnabled = WGPUOptionalBool_True;
-        depth_state.depthCompare = WGPUCompareFunction_Less;
-        rp_desc.depthStencil = &depth_state;
+        rp_desc.depthStencil = nullptr;
 
         rp_desc.multisample.count = 1;
 
@@ -391,16 +366,10 @@ namespace flint
         color_attachment.storeOp = WGPUStoreOp_Store;
         color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
 
-        WGPURenderPassDepthStencilAttachment depth_attachment = {};
-        depth_attachment.view = mDepthTextureView;
-        depth_attachment.depthLoadOp = WGPULoadOp_Clear;
-        depth_attachment.depthStoreOp = WGPUStoreOp_Store;
-        depth_attachment.depthClearValue = 1.0f;
-
         WGPURenderPassDescriptor pass_desc = {};
         pass_desc.colorAttachmentCount = 1;
         pass_desc.colorAttachments = &color_attachment;
-        pass_desc.depthStencilAttachment = &depth_attachment;
+        pass_desc.depthStencilAttachment = nullptr;
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
         wgpuRenderPassEncoderSetPipeline(pass, mRenderPipeline);
@@ -520,7 +489,6 @@ namespace flint
             mSize = {(unsigned int)new_width, (unsigned int)new_height};
             mCamera.aspect = (float)mSize.x / (float)mSize.y;
             initSwapChain();
-            initDepthTexture();
         }
     }
 
@@ -544,8 +512,6 @@ namespace flint
     void Application::cleanup()
     {
         wgpuRenderPipelineRelease(mRenderPipeline);
-        wgpuTextureViewRelease(mDepthTextureView);
-        wgpuTextureRelease(mDepthTexture);
         wgpuBufferRelease(mChunkIndexBuffer);
         wgpuBufferRelease(mChunkVertexBuffer);
         wgpuBindGroupRelease(mCameraBindGroup);

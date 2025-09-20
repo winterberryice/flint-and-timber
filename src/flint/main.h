@@ -33,7 +33,6 @@ namespace flint
         void initWebGpu();
         void getWgpuDevice();
         void initSwapChain();
-        void initDepthTexture();
         void initCameraAndChunk();
         void initPipeline();
 
@@ -69,8 +68,6 @@ namespace flint
         // --- WebGPU Rendering State ---
         WGPUSurfaceConfiguration mSurfaceConfig{};
         WGPURenderPipeline mRenderPipeline = nullptr;
-        WGPUTexture mDepthTexture = nullptr;
-        WGPUTextureView mDepthTextureView = nullptr;
 
         // --- Application Logic Objects ---
         Camera mCamera;
