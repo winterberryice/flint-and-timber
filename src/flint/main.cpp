@@ -5,6 +5,7 @@
 #include <sstream>
 #include <future>
 #include <chrono>
+#include "debug.h"
 
 // Platform-specific function to create a WGPUSurface from an SDL_Window
 WGPUSurface createSurface(WGPUInstance instance, SDL_Window *window)
@@ -72,12 +73,16 @@ namespace flint
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
             throw std::runtime_error("Could not initialize SDL");
 
+        printVideoSystemInfo();
+
         int width = 1280, height = 720;
         mSize = {width, height};
 
         mWindow = SDL_CreateWindow("Flint (C++)", width, height, SDL_WINDOW_RESIZABLE);
         if (!mWindow)
             throw std::runtime_error("Could not create SDL window");
+
+        printDetailedVideoInfo(mWindow);
     }
 
     void Application::initWebGpu()

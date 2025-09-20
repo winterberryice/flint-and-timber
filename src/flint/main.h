@@ -1,11 +1,5 @@
 #pragma once
 
-// Disable annoying MinGW/Windows macros
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 #include <sdl3webgpu.h>
 #include <webgpu/webgpu.h>
 #include <SDL3/SDL.h>
