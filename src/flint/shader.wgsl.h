@@ -3,8 +3,8 @@
 namespace flint
 {
 
-    const char *SHADER_SOURCE = R"(
-        // Vertex shader
+    inline constexpr const char *SHADER_WGSL_SOURCE = R"(
+// Vertex shader
 
 struct CameraUniform {
     view_proj: mat4x4<f32>,

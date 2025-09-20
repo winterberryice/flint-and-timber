@@ -1,20 +1,18 @@
 #include <iostream>
 
-#include "flint/app.h"
+#include "flint/main.h"
 
 int main()
 {
-    flint::App app;
-
     try
     {
+        flint::Application app;
         app.run();
     }
     catch (const std::exception &e)
     {
-        std::cerr << "An error occurred: " << e.what() << std::endl;
+        std::cerr << "An unhandled exception occurred: " << e.what() << std::endl;
         return 1;
     }
-
     return 0;
 }
