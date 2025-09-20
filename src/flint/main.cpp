@@ -161,7 +161,7 @@ namespace flint
         mSurfaceConfig.width = mSize.x;
         mSurfaceConfig.height = mSize.y;
         mSurfaceConfig.presentMode = WGPUPresentMode_Fifo;
-        mSurfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
+        mSurfaceConfig.alphaMode = caps.alphaModes[0];
 
         wgpuSurfaceConfigure(mSurface, &mSurfaceConfig);
     }
@@ -275,6 +275,7 @@ namespace flint
 
         mRenderPipeline = wgpuDeviceCreateRenderPipeline(mDevice, &rp_desc);
 
+        // TODO check if this is needed
         wgpuPipelineLayoutRelease(pipeline_layout);
         wgpuBindGroupLayoutRelease(camera_bgl);
         wgpuShaderModuleRelease(shader_module);
