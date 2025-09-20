@@ -91,7 +91,11 @@ namespace flint
         if (!mInstance)
             throw std::runtime_error("Could not create WGPU instance");
 
+        std::cout << "WGPU instance created" << std::endl;
+
         mSurface = createSurface(mInstance, mWindow);
+        std::cout << "WGPU surface created" << std::endl;
+
         getWgpuDevice();
         mQueue = wgpuDeviceGetQueue(mDevice);
         initSwapChain();
@@ -100,31 +104,49 @@ namespace flint
 
     void Application::getWgpuDevice()
     {
-        WGPURequestAdapterOptions adapter_opts = {};
-        adapter_opts.compatibleSurface = mSurface;
-        adapter_opts.powerPreference = WGPUPowerPreference_HighPerformance;
+        WGPURequestAdapterOptions adapterOptions = {};
+        adapterOptions.compatibleSurface = nullptr;
+        adapterOptions.powerPreference = WGPUPowerPreference_Undefined;
+        adapterOptions.backendType = WGPUBackendType_Undefined;
+        adapterOptions.forceFallbackAdapter = false;
 
         std::promise<WGPUAdapter> adapter_promise;
         auto adapter_future = adapter_promise.get_future();
         WGPURequestAdapterCallbackInfo adapter_callback_info = {};
-        adapter_callback_info.mode = WGPUCallbackMode_WaitAnyOnly;
-        adapter_callback_info.callback = OnAdapterReceived; // [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *userdata)
+        adapter_callback_info.nextInChain = nullptr;
+        adapter_callback_info.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this!
+        adapter_callback_info.callback = OnAdapterReceived;               // [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *userdata)
         adapter_callback_info.userdata1 = &adapter_promise;
-        wgpuInstanceRequestAdapter(mInstance, &adapter_opts, adapter_callback_info);
+        wgpuInstanceRequestAdapter(mInstance, &adapterOptions, adapter_callback_info);
+        while (adapter_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        {
+            // Process all pending WebGPU events and trigger callbacks.
+            wgpuInstanceProcessEvents(mInstance);
+        }
         mAdapter = adapter_future.get();
         if (!mAdapter)
             throw std::runtime_error("Failed to get WGPU adapter.");
 
+        std::cout << "WGPU got adapter" << std::endl;
+
         std::promise<WGPUDevice> device_promise;
         auto device_future = device_promise.get_future();
         WGPURequestDeviceCallbackInfo device_callback_info = {};
-        device_callback_info.mode = WGPUCallbackMode_WaitAnyOnly;
+        device_callback_info.nextInChain = nullptr;
+        device_callback_info.mode = WGPUCallbackMode_AllowProcessEvents;
         device_callback_info.callback = OnDeviceReceived; //[](WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void *userdata1, void *userdata2)
         device_callback_info.userdata1 = &device_promise;
         wgpuAdapterRequestDevice(mAdapter, nullptr, device_callback_info);
+        while (device_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        {
+            // Process all pending WebGPU events and trigger callbacks.
+            wgpuInstanceProcessEvents(mInstance);
+        }
         mDevice = device_future.get();
         if (!mDevice)
             throw std::runtime_error("Failed to get WGPU device.");
+
+        std::cout << "WGPU got device" << std::endl;
     }
 
     void Application::initSwapChain()
