@@ -354,7 +354,10 @@ namespace flint
         if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
         {
             if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost)
+            {
+                // Reconfigure the swap chain if it's lost
                 initSwapChain();
+            }
             return;
         }
 
@@ -365,7 +368,7 @@ namespace flint
         color_attachment.view = view;
         color_attachment.loadOp = WGPULoadOp_Clear;
         color_attachment.storeOp = WGPUStoreOp_Store;
-        color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
+        color_attachment.clearValue = {1.0, 0.0, 1.0, 1.0}; // Pink
 
         WGPURenderPassDescriptor pass_desc = {};
         pass_desc.colorAttachmentCount = 1;
@@ -373,15 +376,8 @@ namespace flint
         pass_desc.depthStencilAttachment = nullptr;
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
-        wgpuRenderPassEncoderSetPipeline(pass, mRenderPipeline);
-        wgpuRenderPassEncoderSetBindGroup(pass, 0, mCameraBindGroup, 0, nullptr);
 
-        if (mChunkVertexBuffer && mChunkIndexBuffer && mNumChunkIndices > 0)
-        {
-            wgpuRenderPassEncoderSetVertexBuffer(pass, 0, mChunkVertexBuffer, 0, WGPU_WHOLE_SIZE);
-            wgpuRenderPassEncoderSetIndexBuffer(pass, mChunkIndexBuffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
-            wgpuRenderPassEncoderDrawIndexed(pass, mNumChunkIndices, 1, 0, 0, 0);
-        }
+        // No drawing, just clearing
 
         wgpuRenderPassEncoderEnd(pass);
         wgpuRenderPassEncoderRelease(pass);
