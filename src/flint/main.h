@@ -69,6 +69,9 @@ namespace flint
         // --- WebGPU Rendering State ---
         WGPUSurfaceConfiguration mSurfaceConfig{};
         WGPURenderPipeline mRenderPipeline = nullptr;
+        WGPUShaderModule mShaderModule = nullptr;
+        WGPUBindGroupLayout mCameraBindGroupLayout = nullptr;
+        WGPUPipelineLayout mPipelineLayout = nullptr;
 
         // --- Application Logic Objects ---
         Camera mCamera;

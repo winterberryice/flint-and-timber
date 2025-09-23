@@ -193,7 +193,7 @@ namespace flint
     void Application::initPipeline()
     {
         std::string shader_source = SHADER_WGSL_SOURCE; // readFile("shader.wgsl");
-        WGPUShaderModule shader_module = createShaderModule(shader_source);
+        mShaderModule = createShaderModule(shader_source);
 
         WGPUBindGroupLayoutEntry bgl_entry = {};
         bgl_entry.binding = 0;
@@ -203,12 +203,12 @@ namespace flint
         WGPUBindGroupLayoutDescriptor bgl_desc = {};
         bgl_desc.entryCount = 1;
         bgl_desc.entries = &bgl_entry;
-        WGPUBindGroupLayout camera_bgl = wgpuDeviceCreateBindGroupLayout(mDevice, &bgl_desc);
+        mCameraBindGroupLayout = wgpuDeviceCreateBindGroupLayout(mDevice, &bgl_desc);
 
         WGPUPipelineLayoutDescriptor layout_desc = {};
         layout_desc.bindGroupLayoutCount = 1;
-        layout_desc.bindGroupLayouts = &camera_bgl;
-        WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(mDevice, &layout_desc);
+        layout_desc.bindGroupLayouts = &mCameraBindGroupLayout;
+        mPipelineLayout = wgpuDeviceCreatePipelineLayout(mDevice, &layout_desc);
 
         WGPUBindGroupEntry bg_entry = {};
         bg_entry.binding = 0;
@@ -216,16 +216,16 @@ namespace flint
         bg_entry.size = sizeof(CameraUniform);
 
         WGPUBindGroupDescriptor bg_desc = {};
-        bg_desc.layout = camera_bgl;
+        bg_desc.layout = mCameraBindGroupLayout;
         bg_desc.entryCount = 1;
         bg_desc.entries = &bg_entry;
         mCameraBindGroup = wgpuDeviceCreateBindGroup(mDevice, &bg_desc);
 
         WGPURenderPipelineDescriptor rp_desc = {};
-        rp_desc.layout = pipeline_layout;
+        rp_desc.layout = mPipelineLayout;
 
         WGPUVertexBufferLayout vb_layout = Vertex::getLayout();
-        rp_desc.vertex.module = shader_module;
+        rp_desc.vertex.module = mShaderModule;
         rp_desc.vertex.entryPoint = makeStringView("vs_main"); //"vs_main";
         rp_desc.vertex.bufferCount = 1;
         rp_desc.vertex.buffers = &vb_layout;
@@ -251,10 +251,8 @@ namespace flint
 
         mRenderPipeline = wgpuDeviceCreateRenderPipeline(mDevice, &rp_desc);
 
-        // TODO check if this is needed
-        wgpuPipelineLayoutRelease(pipeline_layout);
-        wgpuBindGroupLayoutRelease(camera_bgl);
-        wgpuShaderModuleRelease(shader_module);
+        // Intermediary objects are now stored as member variables
+        // and released in cleanup().
     }
 
     void Application::mainLoop()
@@ -581,6 +579,9 @@ namespace flint
     void Application::cleanup()
     {
         wgpuRenderPipelineRelease(mRenderPipeline);
+        wgpuPipelineLayoutRelease(mPipelineLayout);
+        wgpuBindGroupLayoutRelease(mCameraBindGroupLayout);
+        wgpuShaderModuleRelease(mShaderModule);
         wgpuBufferRelease(mChunkIndexBuffer);
         wgpuBufferRelease(mChunkVertexBuffer);
         wgpuBindGroupRelease(mCameraBindGroup);
