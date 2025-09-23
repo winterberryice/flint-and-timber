@@ -22,20 +22,38 @@ namespace
             .length = str ? strlen(str) : 0};
     }
 
+    // Helper for synchronous adapter request
+    struct AdapterRequestData
+    {
+        WGPUAdapter adapter = nullptr;
+        bool done = false;
+    };
+
     static void OnAdapterReceived(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void *userdata1, void *userdata2)
     {
+        AdapterRequestData *data = static_cast<AdapterRequestData *>(userdata1);
         if (status == WGPURequestAdapterStatus_Success)
-            static_cast<std::promise<WGPUAdapter> *>(userdata1)->set_value(adapter);
-        else
-            static_cast<std::promise<WGPUAdapter> *>(userdata1)->set_value(nullptr);
+        {
+            data->adapter = adapter;
+        }
+        data->done = true;
     }
+
+    // Helper for synchronous device request
+    struct DeviceRequestData
+    {
+        WGPUDevice device = nullptr;
+        bool done = false;
+    };
 
     static void OnDeviceReceived(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void *userdata1, void *userdata2)
     {
+        DeviceRequestData *data = static_cast<DeviceRequestData *>(userdata1);
         if (status == WGPURequestDeviceStatus_Success)
-            static_cast<std::promise<WGPUDevice> *>(userdata1)->set_value(device);
-        else
-            static_cast<std::promise<WGPUDevice> *>(userdata1)->set_value(nullptr);
+        {
+            data->device = device;
+        }
+        data->done = true;
     }
 }
 
@@ -103,49 +121,50 @@ namespace flint
 
     void Application::getWgpuDevice()
     {
+        // Request adapter
         WGPURequestAdapterOptions adapterOptions = {};
-        adapterOptions.compatibleSurface = nullptr;
-        adapterOptions.powerPreference = WGPUPowerPreference_Undefined;
-        adapterOptions.backendType = WGPUBackendType_Undefined;
-        adapterOptions.forceFallbackAdapter = false;
+        adapterOptions.compatibleSurface = mSurface; // Link to the surface
 
-        std::promise<WGPUAdapter> adapter_promise;
-        auto adapter_future = adapter_promise.get_future();
-        WGPURequestAdapterCallbackInfo adapter_callback_info = {};
-        adapter_callback_info.nextInChain = nullptr;
-        adapter_callback_info.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this!
-        adapter_callback_info.callback = OnAdapterReceived;               // [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *userdata)
-        adapter_callback_info.userdata1 = &adapter_promise;
-        wgpuInstanceRequestAdapter(mInstance, &adapterOptions, adapter_callback_info);
-        while (adapter_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        AdapterRequestData adapterData;
+        WGPURequestAdapterCallbackInfo adapterCallbackInfo = {};
+        adapterCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
+        adapterCallbackInfo.callback = OnAdapterReceived;
+        adapterCallbackInfo.userdata1 = &adapterData;
+
+        wgpuInstanceRequestAdapter(mInstance, &adapterOptions, adapterCallbackInfo);
+
+        // Loop until the adapter is received
+        while (!adapterData.done)
         {
-            // Process all pending WebGPU events and trigger callbacks.
             wgpuInstanceProcessEvents(mInstance);
         }
-        mAdapter = adapter_future.get();
-        if (!mAdapter)
+
+        if (!adapterData.adapter)
+        {
             throw std::runtime_error("Failed to get WGPU adapter.");
+        }
+        mAdapter = adapterData.adapter;
 
-        std::cout << "WGPU got adapter" << std::endl;
+        // Request device
+        DeviceRequestData deviceData;
+        WGPURequestDeviceCallbackInfo deviceCallbackInfo = {};
+        deviceCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
+        deviceCallbackInfo.callback = OnDeviceReceived;
+        deviceCallbackInfo.userdata1 = &deviceData;
 
-        std::promise<WGPUDevice> device_promise;
-        auto device_future = device_promise.get_future();
-        WGPURequestDeviceCallbackInfo device_callback_info = {};
-        device_callback_info.nextInChain = nullptr;
-        device_callback_info.mode = WGPUCallbackMode_AllowProcessEvents;
-        device_callback_info.callback = OnDeviceReceived; //[](WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void *userdata1, void *userdata2)
-        device_callback_info.userdata1 = &device_promise;
-        wgpuAdapterRequestDevice(mAdapter, nullptr, device_callback_info);
-        while (device_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        wgpuAdapterRequestDevice(mAdapter, nullptr, deviceCallbackInfo);
+
+        // Loop until the device is received
+        while (!deviceData.done)
         {
-            // Process all pending WebGPU events and trigger callbacks.
             wgpuInstanceProcessEvents(mInstance);
         }
-        mDevice = device_future.get();
-        if (!mDevice)
-            throw std::runtime_error("Failed to get WGPU device.");
 
-        std::cout << "WGPU got device" << std::endl;
+        if (!deviceData.device)
+        {
+            throw std::runtime_error("Failed to get WGPU device.");
+        }
+        mDevice = deviceData.device;
     }
 
     void Application::initSwapChain()
@@ -352,10 +371,7 @@ namespace flint
         if (surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
         {
             if (surface_texture.status == WGPUSurfaceGetCurrentTextureStatus_Lost)
-            {
-                // Reconfigure the swap chain if it's lost
                 initSwapChain();
-            }
             return;
         }
 
@@ -366,7 +382,7 @@ namespace flint
         color_attachment.view = view;
         color_attachment.loadOp = WGPULoadOp_Clear;
         color_attachment.storeOp = WGPUStoreOp_Store;
-        color_attachment.clearValue = {1.0, 0.0, 1.0, 1.0}; // Pink
+        color_attachment.clearValue = {0.1, 0.2, 0.3, 1.0};
 
         WGPURenderPassDescriptor pass_desc = {};
         pass_desc.colorAttachmentCount = 1;
@@ -374,8 +390,15 @@ namespace flint
         pass_desc.depthStencilAttachment = nullptr;
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &pass_desc);
+        wgpuRenderPassEncoderSetPipeline(pass, mRenderPipeline);
+        wgpuRenderPassEncoderSetBindGroup(pass, 0, mCameraBindGroup, 0, nullptr);
 
-        // No drawing, just clearing
+        if (mChunkVertexBuffer && mChunkIndexBuffer && mNumChunkIndices > 0)
+        {
+            wgpuRenderPassEncoderSetVertexBuffer(pass, 0, mChunkVertexBuffer, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderSetIndexBuffer(pass, mChunkIndexBuffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDrawIndexed(pass, mNumChunkIndices, 1, 0, 0, 0);
+        }
 
         wgpuRenderPassEncoderEnd(pass);
         wgpuRenderPassEncoderRelease(pass);
