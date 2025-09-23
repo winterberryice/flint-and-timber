@@ -109,21 +109,19 @@ namespace flint
         if (!mInstance)
             throw std::runtime_error("Could not create WGPU instance");
 
-        std::cout << "WGPU instance created" << std::endl;
-
         mSurface = createSurface(mInstance, mWindow);
-        std::cout << "WGPU surface created" << std::endl;
 
         getWgpuDevice();
         mQueue = wgpuDeviceGetQueue(mDevice);
         initSwapChain();
+        // NOTE: No depth texture
     }
 
     void Application::getWgpuDevice()
     {
         // Request adapter
         WGPURequestAdapterOptions adapterOptions = {};
-        adapterOptions.compatibleSurface = mSurface; // Link to the surface
+        adapterOptions.compatibleSurface = mSurface;
 
         AdapterRequestData adapterData;
         WGPURequestAdapterCallbackInfo adapterCallbackInfo = {};
@@ -133,7 +131,6 @@ namespace flint
 
         wgpuInstanceRequestAdapter(mInstance, &adapterOptions, adapterCallbackInfo);
 
-        // Loop until the adapter is received
         while (!adapterData.done)
         {
             wgpuInstanceProcessEvents(mInstance);
@@ -154,7 +151,6 @@ namespace flint
 
         wgpuAdapterRequestDevice(mAdapter, nullptr, deviceCallbackInfo);
 
-        // Loop until the device is received
         while (!deviceData.done)
         {
             wgpuInstanceProcessEvents(mInstance);
@@ -204,74 +200,81 @@ namespace flint
         buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
         mCameraBuffer = wgpuDeviceCreateBuffer(mDevice, &buffer_desc);
 
-        // mChunk.generateTerrain();
-        // buildChunkMesh();
         createHardcodedMesh();
     }
 
     void Application::initPipeline()
     {
-        std::string shader_source = SHADER_WGSL_SOURCE; // readFile("shader.wgsl");
-        mShaderModule = createShaderModule(shader_source);
+        // Create Shader Modules
+        mVertexShader = createShaderModule(VERTEX_SHADER_SOURCE);
+        mFragmentShader = createShaderModule(FRAGMENT_SHADER_SOURCE);
 
-        WGPUBindGroupLayoutEntry bgl_entry = {};
-        bgl_entry.binding = 0;
-        bgl_entry.visibility = WGPUShaderStage_Vertex;
-        bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
+        // Create Bind Group Layout
+        WGPUBindGroupLayoutEntry bindingLayout = {};
+        bindingLayout.binding = 0;
+        bindingLayout.visibility = WGPUShaderStage_Vertex;
+        bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
+        bindingLayout.buffer.minBindingSize = sizeof(CameraUniform);
 
-        WGPUBindGroupLayoutDescriptor bgl_desc = {};
-        bgl_desc.entryCount = 1;
-        bgl_desc.entries = &bgl_entry;
-        mCameraBindGroupLayout = wgpuDeviceCreateBindGroupLayout(mDevice, &bgl_desc);
+        WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
+        bindGroupLayoutDesc.entryCount = 1;
+        bindGroupLayoutDesc.entries = &bindingLayout;
+        mCameraBindGroupLayout = wgpuDeviceCreateBindGroupLayout(mDevice, &bindGroupLayoutDesc);
 
-        WGPUPipelineLayoutDescriptor layout_desc = {};
-        layout_desc.bindGroupLayoutCount = 1;
-        layout_desc.bindGroupLayouts = &mCameraBindGroupLayout;
-        mPipelineLayout = wgpuDeviceCreatePipelineLayout(mDevice, &layout_desc);
+        // Create Pipeline Layout
+        WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+        pipelineLayoutDesc.bindGroupLayoutCount = 1;
+        pipelineLayoutDesc.bindGroupLayouts = &mCameraBindGroupLayout;
+        mPipelineLayout = wgpuDeviceCreatePipelineLayout(mDevice, &pipelineLayoutDesc);
 
-        WGPUBindGroupEntry bg_entry = {};
-        bg_entry.binding = 0;
-        bg_entry.buffer = mCameraBuffer;
-        bg_entry.size = sizeof(CameraUniform);
+        // Define Vertex Buffer Layout
+        WGPUVertexBufferLayout vertexBufferLayout = Vertex::getLayout();
 
-        WGPUBindGroupDescriptor bg_desc = {};
-        bg_desc.layout = mCameraBindGroupLayout;
-        bg_desc.entryCount = 1;
-        bg_desc.entries = &bg_entry;
-        mCameraBindGroup = wgpuDeviceCreateBindGroup(mDevice, &bg_desc);
+        // Create Render Pipeline
+        WGPURenderPipelineDescriptor pipelineDescriptor = {};
+        pipelineDescriptor.layout = mPipelineLayout;
 
-        WGPURenderPipelineDescriptor rp_desc = {};
-        rp_desc.layout = mPipelineLayout;
+        // Vertex State
+        pipelineDescriptor.vertex.module = mVertexShader;
+        pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
+        pipelineDescriptor.vertex.bufferCount = 1;
+        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
 
-        WGPUVertexBufferLayout vb_layout = Vertex::getLayout();
-        rp_desc.vertex.module = mShaderModule;
-        rp_desc.vertex.entryPoint = makeStringView("vs_main"); //"vs_main";
-        rp_desc.vertex.bufferCount = 1;
-        rp_desc.vertex.buffers = &vb_layout;
+        // Fragment State
+        WGPUFragmentState fragmentState = {};
+        fragmentState.module = mFragmentShader;
+        fragmentState.entryPoint = makeStringView("fs_main");
 
-        rp_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        rp_desc.primitive.frontFace = WGPUFrontFace_CCW;
-        rp_desc.primitive.cullMode = WGPUCullMode_Back;
+        WGPUColorTargetState colorTarget = {};
+        colorTarget.format = mSurfaceConfig.format;
+        colorTarget.writeMask = WGPUColorWriteMask_All;
+        fragmentState.targetCount = 1;
+        fragmentState.targets = &colorTarget;
+        pipelineDescriptor.fragment = &fragmentState;
 
-        WGPUColorTargetState color_target = {};
-        color_target.format = mSurfaceConfig.format;
-        color_target.writeMask = WGPUColorWriteMask_All;
+        // Primitive State
+        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
 
-        WGPUFragmentState fragment_state = {};
-        fragment_state.module = shader_module;
-        fragment_state.entryPoint = makeStringView("fs_main"); //"fs_main";
-        fragment_state.targetCount = 1;
-        fragment_state.targets = &color_target;
-        rp_desc.fragment = &fragment_state;
+        // Other state
+        pipelineDescriptor.depthStencil = nullptr;
+        pipelineDescriptor.multisample.count = 1;
 
-        rp_desc.depthStencil = nullptr;
+        mRenderPipeline = wgpuDeviceCreateRenderPipeline(mDevice, &pipelineDescriptor);
 
-        rp_desc.multisample.count = 1;
+        // Create Bind Group (AFTER pipeline creation, to match user's example)
+        WGPUBindGroupEntry binding = {};
+        binding.binding = 0;
+        binding.buffer = mCameraBuffer;
+        binding.offset = 0;
+        binding.size = sizeof(CameraUniform);
 
-        mRenderPipeline = wgpuDeviceCreateRenderPipeline(mDevice, &rp_desc);
-
-        // Intermediary objects are now stored as member variables
-        // and released in cleanup().
+        WGPUBindGroupDescriptor bindGroupDesc = {};
+        bindGroupDesc.layout = mCameraBindGroupLayout;
+        bindGroupDesc.entryCount = 1;
+        bindGroupDesc.entries = &binding;
+        mCameraBindGroup = wgpuDeviceCreateBindGroup(mDevice, &bindGroupDesc);
     }
 
     void Application::mainLoop()
@@ -500,78 +503,6 @@ namespace flint
         }
     }
 
-    void Application::createHardcodedMesh()
-    {
-        std::vector<Vertex> vertices;
-        std::vector<uint16_t> indices;
-
-        glm::vec3 center = {8.0f, 64.0f, 8.0f};
-
-        // Define the 8 corners of the cube
-        glm::vec3 corners[8] = {
-            center + glm::vec3(-0.5f, -0.5f, -0.5f), // 0
-            center + glm::vec3(0.5f, -0.5f, -0.5f),  // 1
-            center + glm::vec3(0.5f, 0.5f, -0.5f),   // 2
-            center + glm::vec3(-0.5f, 0.5f, -0.5f),  // 3
-            center + glm::vec3(-0.5f, -0.5f, 0.5f),  // 4
-            center + glm::vec3(0.5f, -0.5f, 0.5f),   // 5
-            center + glm::vec3(0.5f, 0.5f, 0.5f),    // 6
-            center + glm::vec3(-0.5f, 0.5f, 0.5f)    // 7
-        };
-
-        // Define the 6 faces, each with 4 vertices and a color
-        struct Face
-        {
-            uint16_t indices[4];
-            glm::vec3 color;
-        };
-
-        Face faces[6] = {
-            {{0, 3, 2, 1}, {1.0f, 0.0f, 0.0f}}, // Front
-            {{5, 6, 7, 4}, {0.0f, 1.0f, 0.0f}}, // Back
-            {{1, 2, 6, 5}, {0.0f, 0.0f, 1.0f}}, // Right
-            {{4, 7, 3, 0}, {1.0f, 1.0f, 0.0f}}, // Left
-            {{3, 7, 6, 2}, {1.0f, 0.0f, 1.0f}}, // Top
-            {{4, 0, 1, 5}, {0.0f, 1.0f, 1.0f}}  // Bottom
-        };
-
-        uint16_t vertex_offset = 0;
-        for (const auto &face : faces)
-        {
-            vertices.push_back({corners[face.indices[0]], face.color});
-            vertices.push_back({corners[face.indices[1]], face.color});
-            vertices.push_back({corners[face.indices[2]], face.color});
-            vertices.push_back({corners[face.indices[3]], face.color});
-
-            indices.push_back(vertex_offset + 0);
-            indices.push_back(vertex_offset + 1);
-            indices.push_back(vertex_offset + 2);
-            indices.push_back(vertex_offset + 0);
-            indices.push_back(vertex_offset + 2);
-            indices.push_back(vertex_offset + 3);
-
-            vertex_offset += 4;
-        }
-
-        // Create and write to GPU buffers
-        if (mChunkVertexBuffer) wgpuBufferRelease(mChunkVertexBuffer);
-        if (mChunkIndexBuffer) wgpuBufferRelease(mChunkIndexBuffer);
-
-        WGPUBufferDescriptor vb_desc = {};
-        vb_desc.size = vertices.size() * sizeof(Vertex);
-        vb_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
-        mChunkVertexBuffer = wgpuDeviceCreateBuffer(mDevice, &vb_desc);
-        wgpuQueueWriteBuffer(mQueue, mChunkVertexBuffer, 0, vertices.data(), vb_desc.size);
-
-        WGPUBufferDescriptor ib_desc = {};
-        ib_desc.size = indices.size() * sizeof(uint16_t);
-        ib_desc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
-        mChunkIndexBuffer = wgpuDeviceCreateBuffer(mDevice, &ib_desc);
-        wgpuQueueWriteBuffer(mQueue, mChunkIndexBuffer, 0, indices.data(), ib_desc.size);
-
-        mNumChunkIndices = indices.size();
-    }
-
     void Application::resize(int new_width, int new_height)
     {
         if (new_width > 0 && new_height > 0)
@@ -604,7 +535,8 @@ namespace flint
         wgpuRenderPipelineRelease(mRenderPipeline);
         wgpuPipelineLayoutRelease(mPipelineLayout);
         wgpuBindGroupLayoutRelease(mCameraBindGroupLayout);
-        wgpuShaderModuleRelease(mShaderModule);
+        wgpuShaderModuleRelease(mVertexShader);
+        wgpuShaderModuleRelease(mFragmentShader);
         wgpuBufferRelease(mChunkIndexBuffer);
         wgpuBufferRelease(mChunkVertexBuffer);
         wgpuBindGroupRelease(mCameraBindGroup);

@@ -3,9 +3,7 @@
 namespace flint
 {
 
-    inline constexpr const char *SHADER_WGSL_SOURCE = R"(
-// Vertex shader
-
+    inline constexpr const char *VERTEX_SHADER_SOURCE = R"(
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 }
@@ -13,35 +11,35 @@ struct CameraUniform {
 var<uniform> camera: CameraUniform;
 
 struct VertexInput {
-    @location(0) position: vec3<f32>, // Now world position
-    @location(1) color: vec3<f32>,    // Vertex color (block type color)
+    @location(0) position: vec3<f32>,
+    @location(1) color: vec3<f32>,
 };
-
-// InstanceInput is no longer used for blocks
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
-    @location(0) color: vec3<f32>, // Color to pass to fragment shader
+    @location(0) color: vec3<f32>,
 };
 
 @vertex
-fn vs_main(model: VertexInput) -> VertexOutput { // No instance input
+fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    // Vertex position is already in world space (or chunk-local world space).
-    // Transform directly by view_proj matrix.
     out.clip_position = camera.view_proj * vec4<f32>(model.position, 1.0);
-    // Color comes directly from the vertex data.
     out.color = model.color;
     return out;
 }
+)";
 
-// Fragment shader
-
+    inline constexpr const char *FRAGMENT_SHADER_SOURCE = R"(
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // We declare the VertexOutput struct again here so the fragment shader
+    // knows the shape of the data coming from the vertex shader.
+    struct VertexOutput {
+        @builtin(position) clip_position: vec4<f32>,
+        @location(0) color: vec3<f32>,
+    };
     return vec4<f32>(in.color, 1.0);
 }
-
 )";
 
 } // namespace flint
