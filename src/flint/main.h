@@ -49,6 +49,7 @@ namespace flint
         void resize(int new_width, int new_height);
         void setMouseGrab(bool grab);
         void buildChunkMesh();
+        void createHardcodedMesh();
         WGPUShaderModule createShaderModule(const std::string &source);
         void processKeyboardInput(const SDL_KeyboardEvent &keyEvent);
 

@@ -185,8 +185,9 @@ namespace flint
         buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
         mCameraBuffer = wgpuDeviceCreateBuffer(mDevice, &buffer_desc);
 
-        mChunk.generateTerrain();
-        buildChunkMesh();
+        // mChunk.generateTerrain();
+        // buildChunkMesh();
+        createHardcodedMesh();
     }
 
     void Application::initPipeline()
@@ -480,6 +481,78 @@ namespace flint
             mChunkVertexBuffer = nullptr;
             mChunkIndexBuffer = nullptr;
         }
+    }
+
+    void Application::createHardcodedMesh()
+    {
+        std::vector<Vertex> vertices;
+        std::vector<uint16_t> indices;
+
+        glm::vec3 center = {8.0f, 64.0f, 8.0f};
+
+        // Define the 8 corners of the cube
+        glm::vec3 corners[8] = {
+            center + glm::vec3(-0.5f, -0.5f, -0.5f), // 0
+            center + glm::vec3(0.5f, -0.5f, -0.5f),  // 1
+            center + glm::vec3(0.5f, 0.5f, -0.5f),   // 2
+            center + glm::vec3(-0.5f, 0.5f, -0.5f),  // 3
+            center + glm::vec3(-0.5f, -0.5f, 0.5f),  // 4
+            center + glm::vec3(0.5f, -0.5f, 0.5f),   // 5
+            center + glm::vec3(0.5f, 0.5f, 0.5f),    // 6
+            center + glm::vec3(-0.5f, 0.5f, 0.5f)    // 7
+        };
+
+        // Define the 6 faces, each with 4 vertices and a color
+        struct Face
+        {
+            uint16_t indices[4];
+            glm::vec3 color;
+        };
+
+        Face faces[6] = {
+            {{0, 3, 2, 1}, {1.0f, 0.0f, 0.0f}}, // Front
+            {{5, 6, 7, 4}, {0.0f, 1.0f, 0.0f}}, // Back
+            {{1, 2, 6, 5}, {0.0f, 0.0f, 1.0f}}, // Right
+            {{4, 7, 3, 0}, {1.0f, 1.0f, 0.0f}}, // Left
+            {{3, 7, 6, 2}, {1.0f, 0.0f, 1.0f}}, // Top
+            {{4, 0, 1, 5}, {0.0f, 1.0f, 1.0f}}  // Bottom
+        };
+
+        uint16_t vertex_offset = 0;
+        for (const auto &face : faces)
+        {
+            vertices.push_back({corners[face.indices[0]], face.color});
+            vertices.push_back({corners[face.indices[1]], face.color});
+            vertices.push_back({corners[face.indices[2]], face.color});
+            vertices.push_back({corners[face.indices[3]], face.color});
+
+            indices.push_back(vertex_offset + 0);
+            indices.push_back(vertex_offset + 1);
+            indices.push_back(vertex_offset + 2);
+            indices.push_back(vertex_offset + 0);
+            indices.push_back(vertex_offset + 2);
+            indices.push_back(vertex_offset + 3);
+
+            vertex_offset += 4;
+        }
+
+        // Create and write to GPU buffers
+        if (mChunkVertexBuffer) wgpuBufferRelease(mChunkVertexBuffer);
+        if (mChunkIndexBuffer) wgpuBufferRelease(mChunkIndexBuffer);
+
+        WGPUBufferDescriptor vb_desc = {};
+        vb_desc.size = vertices.size() * sizeof(Vertex);
+        vb_desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst;
+        mChunkVertexBuffer = wgpuDeviceCreateBuffer(mDevice, &vb_desc);
+        wgpuQueueWriteBuffer(mQueue, mChunkVertexBuffer, 0, vertices.data(), vb_desc.size);
+
+        WGPUBufferDescriptor ib_desc = {};
+        ib_desc.size = indices.size() * sizeof(uint16_t);
+        ib_desc.usage = WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst;
+        mChunkIndexBuffer = wgpuDeviceCreateBuffer(mDevice, &ib_desc);
+        wgpuQueueWriteBuffer(mQueue, mChunkIndexBuffer, 0, indices.data(), ib_desc.size);
+
+        mNumChunkIndices = indices.size();
     }
 
     void Application::resize(int new_width, int new_height)
