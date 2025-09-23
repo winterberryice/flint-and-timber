@@ -71,21 +71,19 @@ namespace flint
         WGPURenderPipeline mRenderPipeline = nullptr;
         WGPUShaderModule mVertexShader = nullptr;
         WGPUShaderModule mFragmentShader = nullptr;
-        WGPUBindGroupLayout mCameraBindGroupLayout = nullptr;
+        WGPUBindGroupLayout mBindGroupLayout = nullptr;
+        WGPUBindGroup mBindGroup = nullptr;
         WGPUPipelineLayout mPipelineLayout = nullptr;
 
         // --- Application Logic Objects ---
         Camera mCamera;
-        CameraController mCameraController;
         CameraUniform mCameraUniform;
-        Chunk mChunk;
 
         // --- GPU Buffers ---
-        WGPUBuffer mCameraBuffer = nullptr;
-        WGPUBindGroup mCameraBindGroup = nullptr;
-        WGPUBuffer mChunkVertexBuffer = nullptr;
-        WGPUBuffer mChunkIndexBuffer = nullptr;
-        uint32_t mNumChunkIndices = 0;
+        WGPUBuffer mUniformBuffer = nullptr; // For camera
+        WGPUBuffer mVertexBuffer = nullptr;
+        WGPUBuffer mIndexBuffer = nullptr;
+        uint32_t mNumIndices = 0;
     };
 
 } // namespace flint
