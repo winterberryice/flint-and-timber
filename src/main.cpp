@@ -1,18 +1,19 @@
 #include <iostream>
 
-#include "flint/main.h"
+#include "flint/app.hpp"
 
 int main()
 {
-    try
+    flint::App app;
+
+    if (!app.Initialize())
     {
-        flint::Application app;
-        app.run();
+        std::cerr << "Failed to initialize app" << std::endl;
+        return -1;
     }
-    catch (const std::exception &e)
-    {
-        std::cerr << "An unhandled exception occurred: " << e.what() << std::endl;
-        return 1;
-    }
+
+    app.Run();
+    app.Terminate();
+
     return 0;
 }
