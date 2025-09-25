@@ -1,4 +1,4 @@
-#include "flint/app.hpp"
+#include "app.hpp"
 #include <iostream>
 
 namespace
@@ -189,18 +189,18 @@ namespace
 
 namespace flint
 {
-    bool App::Initialize(int width, int height)
+    App::App()
     {
         std::cout << "Initializing app..." << std::endl;
 
-        m_windowWidth = width;
-        m_windowHeight = height;
+        m_windowWidth = 800;
+        m_windowHeight = 600;
 
         // Initialize SDL
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
         {
             std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-            return false;
+            throw std::runtime_error("Failed to initialize SDL");
         }
 
         printVideoSystemInfo();
@@ -210,7 +210,7 @@ namespace flint
         if (!m_window)
         {
             std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create window");
         }
 
         printDetailedVideoInfo(m_window);
@@ -222,7 +222,7 @@ namespace flint
         if (!m_instance)
         {
             std::cerr << "Failed to create WebGPU instance" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create WebGPU instance");
         }
 
         std::cout << "WebGPU instance created" << std::endl;
@@ -266,7 +266,7 @@ namespace flint
         if (!adapterData.adapter)
         {
             std::cerr << "No suitable WebGPU adapter found" << std::endl;
-            return false;
+            throw std::runtime_error("No suitable WebGPU adapter found");
         }
 
         m_adapter = adapterData.adapter;
@@ -311,7 +311,7 @@ namespace flint
         if (!deviceData.device)
         {
             std::cerr << "Failed to create WebGPU device" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create WebGPU device");
         }
 
         m_device = deviceData.device;
@@ -326,7 +326,7 @@ namespace flint
         if (!m_surface)
         {
             std::cerr << "Failed to create WebGPU surface" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create WebGPU surface");
         }
         std::cout << "WebGPU surface created successfully" << std::endl;
 
@@ -378,7 +378,7 @@ namespace flint
         if (!m_vertexBuffer)
         {
             std::cerr << "Failed to create vertex buffer!" << std::endl;
-            return -1;
+            throw std::runtime_error("Failed to create vertex buffer!");
         }
 
         // Upload vertex data to GPU
@@ -448,7 +448,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         if (!m_vertexShader || !m_fragmentShader)
         {
             std::cerr << "Failed to create shaders!" << std::endl;
-            return false; // Assuming your init function returns bool
+            throw std::runtime_error("Failed to create shaders!");
         }
 
         std::cout << "Shaders created successfully" << std::endl;
@@ -464,7 +464,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         if (!m_cubeMesh.initialize(m_device))
         {
             std::cerr << "Failed to initialize cube mesh!" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to initialize cube mesh!");
         }
 
         // Create uniform buffer for camera matrices
@@ -477,7 +477,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         if (!m_uniformBuffer)
         {
             std::cerr << "Failed to create uniform buffer!" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create uniform buffer!");
         }
 
         std::cout << "3D components ready!" << std::endl;
@@ -499,7 +499,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         if (!m_bindGroupLayout)
         {
             std::cerr << "Failed to create bind group layout!" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create bind group layout!");
         }
 
         // Create pipeline layout using our bind group layout
@@ -575,7 +575,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         if (!m_renderPipeline)
         {
             std::cerr << "Failed to create render pipeline!" << std::endl;
-            return false;
+            throw std::runtime_error("Failed to create render pipeline!");
         }
 
         // Create bind group for uniforms
@@ -596,10 +596,9 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
 
         // ====
         m_running = true;
-        return true;
     }
 
-    void App::Run()
+    void App::run()
     {
         std::cout << "Running app..." << std::endl;
 
@@ -693,7 +692,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         wgpuTextureRelease(surfaceTexture.texture);
     }
 
-    void App::Terminate()
+    App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
 

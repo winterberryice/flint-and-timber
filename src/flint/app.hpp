@@ -13,9 +13,10 @@ namespace flint
     class App
     {
     public:
-        bool Initialize(int width = 800, int height = 600);
-        void Run();
-        void Terminate();
+        App();
+        ~App();
+
+        void run();
 
     private:
         void render();

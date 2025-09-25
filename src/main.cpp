@@ -4,16 +4,15 @@
 
 int main()
 {
-    flint::App app;
-
-    if (!app.Initialize())
+    try
     {
-        std::cerr << "Failed to initialize app" << std::endl;
-        return -1;
+        flint::App app;
+        app.run();
     }
-
-    app.Run();
-    app.Terminate();
-
+    catch (const std::exception &e)
+    {
+        std::cerr << "An unhandled exception occurred: " << e.what() << std::endl;
+        return 1;
+    }
     return 0;
 }
