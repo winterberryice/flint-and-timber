@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "ostream": "cpp",
-    "*.def": "cpp"
+    "*.def": "cpp",
+    "iostream": "cpp",
+    "stdexcept": "cpp"
   }
 }

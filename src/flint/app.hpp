@@ -2,7 +2,6 @@
 
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
-#include <sdl3webgpu.h>
 
 #include "math/camera.hpp"
 #include "graphics/mesh.hpp"
