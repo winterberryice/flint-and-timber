@@ -2,6 +2,7 @@
 #include <iostream>
 #include "init/sdl.h"
 #include "init/wgpu.h"
+#include "shader.wgsl.h"
 
 namespace
 {
@@ -68,44 +69,11 @@ namespace flint
 
         std::cout << "Creating shaders..." << std::endl;
 
-        const char *vertexShaderSource = R"(
-struct Uniforms {
-    viewProjectionMatrix: mat4x4<f32>,
-};
-
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
-
-struct VertexInput {
-    @location(0) position: vec3<f32>,
-    @location(1) color: vec3<f32>,
-};
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) color: vec3<f32>,
-};
-
-@vertex
-fn vs_main(input: VertexInput) -> VertexOutput {
-    var output: VertexOutput;
-    output.position = uniforms.viewProjectionMatrix * vec4<f32>(input.position, 1.0);
-    output.color = input.color;
-    return output;
-}
-)";
-
-        const char *fragmentShaderSource = R"(
-@fragment
-fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
-    return vec4<f32>(color, 1.0);
-}
-)";
-
         // Create vertex shader module
         WGPUShaderModuleWGSLDescriptor vertexShaderWGSLDesc = {};
         vertexShaderWGSLDesc.chain.next = nullptr;
         vertexShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        vertexShaderWGSLDesc.code = makeStringView(vertexShaderSource);
+        vertexShaderWGSLDesc.code = makeStringView(WGSL_vertexShaderSource);
 
         WGPUShaderModuleDescriptor vertexShaderDesc = {};
         vertexShaderDesc.nextInChain = &vertexShaderWGSLDesc.chain;
@@ -117,7 +85,7 @@ fn fs_main(@location(0) color: vec3<f32>) -> @location(0) vec4<f32> {
         WGPUShaderModuleWGSLDescriptor fragmentShaderWGSLDesc = {};
         fragmentShaderWGSLDesc.chain.next = nullptr;
         fragmentShaderWGSLDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
-        fragmentShaderWGSLDesc.code = makeStringView(fragmentShaderSource);
+        fragmentShaderWGSLDesc.code = makeStringView(WGSL_fragmentShaderSource);
 
         WGPUShaderModuleDescriptor fragmentShaderDesc = {};
         fragmentShaderDesc.nextInChain = &fragmentShaderWGSLDesc.chain;
