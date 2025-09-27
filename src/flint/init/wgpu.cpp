@@ -1,4 +1,4 @@
-#include "wgpu_core.h"
+#include "wgpu.h"
 
 #include <iostream>
 #include <future>
@@ -49,17 +49,7 @@ namespace
     }
 }
 
-void flint::init_wgpu(
-    const uint32_t width,
-    const uint32_t height,
-    SDL_Window *window,
-    WGPUInstance &out_instance,
-    WGPUSurface &out_surface,
-    WGPUTextureFormat &out_surface_format,
-    WGPUAdapter &out_adapter,
-    WGPUDevice &out_device,
-    WGPUQueue &out_queue //
-)
+void flint::init::wgpu(const uint32_t width, const uint32_t height, SDL_Window *window, WGPUInstance &out_instance, WGPUSurface &out_surface, WGPUTextureFormat &out_surface_format, WGPUAdapter &out_adapter, WGPUDevice &out_device, WGPUQueue &out_queue)
 {
     // Initialize WebGPU instance
     auto m_instance = wgpuCreateInstance(nullptr);

@@ -1,7 +1,7 @@
 #include "app.hpp"
 #include <iostream>
-#include "wgpu_core.h"
-#include "debug.h"
+#include "init/sdl.h"
+#include "init/wgpu.h"
 
 namespace
 {
@@ -20,32 +20,11 @@ namespace flint
     App::App()
     {
         std::cout << "Initializing app..." << std::endl;
-
         m_windowWidth = 800;
         m_windowHeight = 600;
+        m_window = init::sdl(m_windowWidth, m_windowHeight);
 
-        // Initialize SDL
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        {
-            std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-            throw std::runtime_error("Failed to initialize SDL");
-        }
-
-        printVideoSystemInfo();
-
-        // Create window
-        m_window = SDL_CreateWindow("Flint & Timber", m_windowWidth, m_windowHeight, 0);
-        if (!m_window)
-        {
-            std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
-            throw std::runtime_error("Failed to create window");
-        }
-
-        printDetailedVideoInfo(m_window);
-
-        std::cout << "SDL initialized successfully" << std::endl;
-
-        init_wgpu(
+        init::wgpu(
             m_windowWidth,
             m_windowHeight,
             m_window,
