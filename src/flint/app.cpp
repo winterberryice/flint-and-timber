@@ -39,13 +39,13 @@ namespace flint
         std::cout << "Setting up 3D components..." << std::endl;
 
         m_camera = Camera(
-            {CHUNK_WIDTH * 1.5f, CHUNK_HEIGHT * 1.5f, CHUNK_DEPTH * 1.5f}, // eye
+            {CHUNK_WIDTH * 1.5f, CHUNK_HEIGHT * 0.7f, CHUNK_DEPTH * 1.5f}, // eye
             {CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f, CHUNK_DEPTH / 2.0f}, // target
-            {0.0f, 1.0f, 0.0f},                                           // up
-            (float)m_windowWidth / (float)m_windowHeight,                 // aspect
-            45.0f,                                                        // fovy
-            0.1f,                                                         // znear
-            1000.0f                                                       // zfar
+            {0.0f, 1.0f, 0.0f},                                            // up
+            (float)m_windowWidth / (float)m_windowHeight,                  // aspect
+            45.0f,                                                         // fovy
+            0.1f,                                                          // znear
+            1000.0f                                                        // zfar
         );
         m_cameraController = CameraController(15.0f, 0.003f);
 
