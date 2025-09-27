@@ -3,7 +3,6 @@
 #include "init/sdl.h"
 #include "init/wgpu.h"
 #include "init/utils.h"
-#include "init/mesh.h"
 #include "init/shader.h"
 #include "init/buffer.h"
 #include "init/pipeline.h"
@@ -30,8 +29,6 @@ namespace flint
             m_queue //
         );
 
-        m_vertexBuffer = init::create_triangle_vertex_buffer(m_device, m_queue);
-
         std::cout << "Creating shaders..." << std::endl;
 
         m_vertexShader = init::create_shader_module(m_device, "Vertex Shader", WGSL_vertexShaderSource);
@@ -42,25 +39,25 @@ namespace flint
         std::cout << "Setting up 3D components..." << std::endl;
 
         m_camera = Camera(
-            {2.0f, 3.0f, 4.0f},                           // eye
-            {0.0f, 0.0f, 0.0f},                           // target
-            {0.0f, 1.0f, 0.0f},                           // up
-            (float)m_windowWidth / (float)m_windowHeight, // aspect
-            45.0f,                                        // fovy
-            0.1f,                                         // znear
-            1000.0f                                       // zfar
+            {CHUNK_WIDTH * 1.5f, CHUNK_HEIGHT * 1.5f, CHUNK_DEPTH * 1.5f}, // eye
+            {CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f, CHUNK_DEPTH / 2.0f}, // target
+            {0.0f, 1.0f, 0.0f},                                           // up
+            (float)m_windowWidth / (float)m_windowHeight,                 // aspect
+            45.0f,                                                        // fovy
+            0.1f,                                                         // znear
+            1000.0f                                                       // zfar
         );
         m_cameraController = CameraController(15.0f, 0.003f);
 
-        // Initialize cube mesh
-        if (!m_cubeMesh.initialize(m_device))
-        {
-            std::cerr << "Failed to initialize cube mesh!" << std::endl;
-            throw std::runtime_error("Failed to initialize cube mesh!");
-        }
+        // Generate terrain and mesh
+        std::cout << "Generating terrain..." << std::endl;
+        m_chunk.generateTerrain();
+        std::cout << "Generating chunk mesh..." << std::endl;
+        m_chunkMesh.generate(m_device, m_chunk);
+        std::cout << "Chunk mesh generated." << std::endl;
 
         // Create uniform buffer for camera matrices
-        m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(glm::mat4));
+        m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
         std::cout << "3D components ready!" << std::endl;
 
@@ -148,8 +145,8 @@ namespace flint
             // Bind the uniform buffer (camera matrix)
             wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
 
-            // Draw the cube using our mesh class
-            m_cubeMesh.render(renderPass);
+            // Draw the chunk
+            m_chunkMesh.render(renderPass);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
@@ -175,6 +172,8 @@ namespace flint
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
+
+        m_chunkMesh.cleanup();
 
         if (m_uniformBuffer)
             wgpuBufferRelease(m_uniformBuffer);

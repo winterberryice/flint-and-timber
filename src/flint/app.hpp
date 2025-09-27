@@ -4,7 +4,8 @@
 #include <webgpu/webgpu.h>
 
 #include "camera.h"
-#include "graphics/mesh.hpp"
+#include "chunk.h"
+#include "graphics/chunk_mesh.hpp"
 
 namespace flint
 {
@@ -39,7 +40,9 @@ namespace flint
         Camera m_camera;
         CameraController m_cameraController;
         CameraUniform m_cameraUniform;
-        graphics::CubeMesh m_cubeMesh;
+
+        Chunk m_chunk;
+        graphics::ChunkMesh m_chunkMesh;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
