@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
 
-#include "math/camera.hpp"
+#include "camera.h"
 #include "graphics/mesh.hpp"
 
 namespace flint
@@ -36,7 +36,9 @@ namespace flint
         WGPUShaderModule m_fragmentShader = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
 
-        math::Camera m_camera;
+        Camera m_camera;
+        CameraController m_cameraController;
+        CameraUniform m_cameraUniform;
         graphics::CubeMesh m_cubeMesh;
 
         WGPUBuffer m_uniformBuffer = nullptr;

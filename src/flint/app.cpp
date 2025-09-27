@@ -9,6 +9,10 @@
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
 
+constexpr size_t CHUNK_WIDTH = 16;
+constexpr size_t CHUNK_HEIGHT = 32;
+constexpr size_t CHUNK_DEPTH = 16;
+
 namespace flint
 {
     App::App()
@@ -41,10 +45,36 @@ namespace flint
 
         std::cout << "Setting up 3D components..." << std::endl;
 
-        // Initialize camera
-        m_camera.setPosition(glm::vec3(2.0f, 2.0f, 3.0f));             // Position camera to see cube at angle
-        m_camera.setTarget(glm::vec3(0.0f, 0.0f, 0.0f));               // Look at origin
-        m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f); // FOV, aspect ratio, near, far
+        // // Initialize camera
+        // m_camera.setPosition(glm::vec3(2.0f, 2.0f, 3.0f));             // Position camera to see cube at angle
+        // m_camera.setTarget(glm::vec3(0.0f, 0.0f, 0.0f));               // Look at origin
+        // m_camera.setPerspective(45.0f, 800.0f / 600.0f, 0.1f, 100.0f); // FOV, aspect ratio, near, far
+
+        // m_camera = Camera(
+        //     {2.0f, 2.0f, 3.0f},                           // {CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT * 0.75f, CHUNK_DEPTH * 2.0f}, // eye
+        //     {0.0f, 0.0f, 0.0f},                           //{CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f, CHUNK_DEPTH / 2.0f},  // target
+        //     {0.0f, 1.0f, 0.0f},                           // up
+        //     (float)m_windowWidth / (float)m_windowHeight, // aspect
+        //     45.0f,                                        // fovy
+        //     0.1f,                                         // znear
+        //     100.0f                                        // zfar
+        // );
+        m_camera = Camera(
+            // eye / position: Directly in front of the cube
+            {1.0f, 1.0f, 3.0f},
+            // target: Look at the center of the cube
+            {0.0f, 0.0f, 0.0f},
+            // up vector: Standard positive Y
+            {0.0f, 1.0f, 0.0f},
+            // aspect ratio
+            800.0f / 600.0f,
+            // fovy (Field of View Y)
+            45.0f,
+            // znear (near clipping plane)
+            0.1f,
+            // zfar (far clipping plane)
+            100.0f);
+        m_cameraController = CameraController(15.0f, 0.003f);
 
         // Initialize cube mesh
         if (!m_cubeMesh.initialize(m_device))
@@ -101,8 +131,13 @@ namespace flint
     void App::render()
     {
         // Update camera matrix and upload to GPU
-        glm::mat4 viewProjectionMatrix = m_camera.getViewProjectionMatrix();
-        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &viewProjectionMatrix, sizeof(glm::mat4));
+        // glm::mat4 viewProjectionMatrix = m_camera.getViewProjectionMatrix();
+        // wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &viewProjectionMatrix, sizeof(glm::mat4));
+
+        float dt = 1.0f / 60.0f;
+        m_cameraController.updateCamera(m_camera, dt);
+        m_cameraUniform.updateViewProj(m_camera);
+        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
