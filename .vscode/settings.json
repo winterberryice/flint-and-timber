@@ -3,6 +3,7 @@
     "ostream": "cpp",
     "*.def": "cpp",
     "iostream": "cpp",
-    "stdexcept": "cpp"
+    "stdexcept": "cpp",
+    "future": "cpp"
   }
 }

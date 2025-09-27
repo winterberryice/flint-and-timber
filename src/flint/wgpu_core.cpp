@@ -1,25 +1,19 @@
 #include "wgpu_core.h"
 
 #include <iostream>
+#include <future>
+#include <chrono>
 
 namespace
 {
-    // Helper for synchronous adapter request
-    struct AdapterRequestData
-    {
-        WGPUAdapter adapter = nullptr;
-        bool done = false;
-    };
-
     static void OnAdapterReceived(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void *userdata1, void *userdata2)
     {
         std::cout << "OnAdapterReceived called with status: " << status << std::endl;
 
-        AdapterRequestData *data = static_cast<AdapterRequestData *>(userdata1);
         if (status == WGPURequestAdapterStatus_Success)
         {
             std::cout << "Adapter request successful" << std::endl;
-            data->adapter = adapter;
+            static_cast<std::promise<WGPUAdapter> *>(userdata1)->set_value(adapter);
         }
         else
         {
@@ -29,27 +23,18 @@ namespace
                 errorMsg = std::string(message.data, message.length);
             }
             std::cerr << "Failed to get adapter: " << errorMsg << " (status: " << status << ")" << std::endl;
+            static_cast<std::promise<WGPUAdapter> *>(userdata1)->set_value(nullptr);
         }
-        data->done = true;
     }
 
-    // Add this struct after AdapterRequestData
-    struct DeviceRequestData
-    {
-        WGPUDevice device = nullptr;
-        bool done = false;
-    };
-
-    // Add this callback function
     static void OnDeviceReceived(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void *userdata1, void *userdata2)
     {
         std::cout << "OnDeviceReceived called with status: " << status << std::endl;
 
-        DeviceRequestData *data = static_cast<DeviceRequestData *>(userdata1);
         if (status == WGPURequestDeviceStatus_Success)
         {
             std::cout << "Device request successful" << std::endl;
-            data->device = device;
+            static_cast<std::promise<WGPUDevice> *>(userdata1)->set_value(device);
         }
         else
         {
@@ -59,8 +44,8 @@ namespace
                 errorMsg = std::string(message.data, message.length);
             }
             std::cerr << "Failed to get device: " << errorMsg << " (status: " << status << ")" << std::endl;
+            static_cast<std::promise<WGPUDevice> *>(userdata1)->set_value(nullptr);
         }
-        data->done = true;
     }
 }
 
@@ -87,6 +72,9 @@ void flint::init_wgpu(
 
     std::cout << "WebGPU instance created" << std::endl;
 
+    std::promise<WGPUAdapter> adapter_promise;
+    auto adapter_future = adapter_promise.get_future();
+
     // Request adapter
     WGPURequestAdapterOptions adapterOptions = {};
     adapterOptions.compatibleSurface = nullptr;
@@ -94,42 +82,25 @@ void flint::init_wgpu(
     adapterOptions.backendType = WGPUBackendType_Undefined;
     adapterOptions.forceFallbackAdapter = false;
 
-    AdapterRequestData adapterData;
-
     WGPURequestAdapterCallbackInfo callbackInfo = {};
     callbackInfo.nextInChain = nullptr;
-    callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents; // Changed this!
+    callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
     callbackInfo.callback = OnAdapterReceived;
-    callbackInfo.userdata1 = &adapterData;
+    callbackInfo.userdata1 = &adapter_promise;
     callbackInfo.userdata2 = nullptr;
 
     std::cout << "Requesting WebGPU adapter..." << std::endl;
     wgpuInstanceRequestAdapter(m_instance, &adapterOptions, callbackInfo);
-
-    std::cout << "Processing events until adapter callback..." << std::endl;
-    // Process events until callback is called
-    int attempts = 0;
-    while (!adapterData.done && attempts < 1000)
+    while (adapter_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
     {
-        // Try to process pending events
+        // Process all pending WebGPU events and trigger callbacks.
         wgpuInstanceProcessEvents(m_instance);
-
-        attempts++;
-        if (attempts % 100 == 0)
-        {
-            std::cout << "Still waiting... attempt " << attempts << std::endl;
-        }
     }
-
-    std::cout << "Adapter callback completed. Done: " << adapterData.done << std::endl;
-
-    if (!adapterData.adapter)
+    auto m_adapter = adapter_future.get();
+    if (!m_adapter)
     {
-        std::cerr << "No suitable WebGPU adapter found" << std::endl;
-        throw std::runtime_error("No suitable WebGPU adapter found");
+        throw std::runtime_error("Failed to get WGPU adapter.");
     }
-
-    auto m_adapter = adapterData.adapter;
     out_adapter = m_adapter;
     std::cout << "WebGPU adapter obtained successfully" << std::endl;
 
@@ -143,39 +114,31 @@ void flint::init_wgpu(
     deviceDesc.defaultQueue.nextInChain = nullptr;
     deviceDesc.defaultQueue.label = {nullptr, 0};
 
-    DeviceRequestData deviceData;
+    std::promise<WGPUDevice> device_promise;
+    auto device_future = device_promise.get_future();
 
     WGPURequestDeviceCallbackInfo deviceCallbackInfo = {};
     deviceCallbackInfo.nextInChain = nullptr;
     deviceCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
     deviceCallbackInfo.callback = OnDeviceReceived;
-    deviceCallbackInfo.userdata1 = &deviceData;
+    deviceCallbackInfo.userdata1 = &device_promise;
     deviceCallbackInfo.userdata2 = nullptr;
 
     std::cout << "Requesting WebGPU device..." << std::endl;
     wgpuAdapterRequestDevice(m_adapter, &deviceDesc, deviceCallbackInfo);
 
     std::cout << "Processing events until device callback..." << std::endl;
-    attempts = 0;
-    while (!deviceData.done && attempts < 1000)
+    while (device_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
     {
+        // Process all pending WebGPU events and trigger callbacks.
         wgpuInstanceProcessEvents(m_instance);
-        attempts++;
-        if (attempts % 100 == 0)
-        {
-            std::cout << "Still waiting for device... attempt " << attempts << std::endl;
-        }
     }
-
-    std::cout << "Device callback completed. Done: " << deviceData.done << std::endl;
-
-    if (!deviceData.device)
+    auto m_device = device_future.get();
+    if (!m_device)
     {
         std::cerr << "Failed to create WebGPU device" << std::endl;
         throw std::runtime_error("Failed to create WebGPU device");
     }
-
-    auto m_device = deviceData.device;
     out_device = m_device;
     std::cout << "WebGPU device created successfully" << std::endl;
 
