@@ -24,7 +24,7 @@ namespace flint::init
         // Depth Stencil State
         WGPUDepthStencilState depthStencilState = {};
         depthStencilState.format = depthTextureFormat;
-        depthStencilState.depthWriteEnabled = true;
+        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
         depthStencilState.depthCompare = WGPUCompareFunction_Less;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
