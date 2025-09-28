@@ -71,11 +71,34 @@ namespace flint
 
         std::cout << "3D components ready!" << std::endl;
 
+        // Create depth texture
+        WGPUTextureDescriptor depthTextureDesc = {};
+        depthTextureDesc.dimension = WGPUTextureDimension_2D;
+        depthTextureDesc.format = m_depthTextureFormat;
+        depthTextureDesc.mipLevelCount = 1;
+        depthTextureDesc.sampleCount = 1;
+        depthTextureDesc.size = {static_cast<uint32_t>(m_windowWidth), static_cast<uint32_t>(m_windowHeight), 1};
+        depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
+        depthTextureDesc.viewFormatCount = 1;
+        depthTextureDesc.viewFormats = &m_depthTextureFormat;
+        m_depthTexture = wgpuDeviceCreateTexture(m_device, &depthTextureDesc);
+
+        WGPUTextureViewDescriptor depthTextureViewDesc = {};
+        depthTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
+        depthTextureViewDesc.baseArrayLayer = 0;
+        depthTextureViewDesc.arrayLayerCount = 1;
+        depthTextureViewDesc.baseMipLevel = 0;
+        depthTextureViewDesc.mipLevelCount = 1;
+        depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
+        depthTextureViewDesc.format = m_depthTextureFormat;
+        m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
+
         m_renderPipeline = init::create_render_pipeline(
             m_device,
             m_vertexShader,
             m_fragmentShader,
             m_surfaceFormat,
+            m_depthTextureFormat,
             &m_bindGroupLayout);
 
         m_bindGroup = init::create_bind_group(m_device, m_bindGroupLayout, m_uniformBuffer);
@@ -170,12 +193,23 @@ namespace flint
             colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
             colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
+            WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
+            depthStencilAttachment.view = m_depthTextureView;
+            depthStencilAttachment.depthClearValue = 1.0f;
+            depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
+            depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
+            depthStencilAttachment.depthReadOnly = false;
+            depthStencilAttachment.stencilClearValue = 0;
+            depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
+            depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
+            depthStencilAttachment.stencilReadOnly = true;
+
             WGPURenderPassDescriptor renderPassDesc = {};
             renderPassDesc.nextInChain = nullptr;
             renderPassDesc.label = {nullptr, 0};
             renderPassDesc.colorAttachmentCount = 1;
             renderPassDesc.colorAttachments = &colorAttachment;
-            renderPassDesc.depthStencilAttachment = nullptr;
+            renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
@@ -214,6 +248,11 @@ namespace flint
         std::cout << "Terminating app..." << std::endl;
 
         m_chunkMesh.cleanup();
+
+        if (m_depthTextureView)
+            wgpuTextureViewRelease(m_depthTextureView);
+        if (m_depthTexture)
+            wgpuTextureRelease(m_depthTexture);
 
         if (m_uniformBuffer)
             wgpuBufferRelease(m_uniformBuffer);

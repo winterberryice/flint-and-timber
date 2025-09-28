@@ -33,6 +33,12 @@ namespace flint
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
         WGPUTextureFormat m_surfaceFormat;
+
+        // New depth texture fields
+        WGPUTexture m_depthTexture = nullptr;
+        WGPUTextureView m_depthTextureView = nullptr;
+        WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
+
         WGPUBuffer m_vertexBuffer = nullptr;
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
