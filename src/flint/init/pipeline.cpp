@@ -16,9 +16,18 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
+        WGPUTextureFormat depthTextureFormat, // New parameter
         WGPUBindGroupLayout *pBindGroupLayout)
     {
         std::cout << "Creating render pipeline..." << std::endl;
+
+        // Depth Stencil State
+        WGPUDepthStencilState depthStencilState = {};
+        depthStencilState.format = depthTextureFormat;
+        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
+        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        depthStencilState.stencilReadMask = 0;
+        depthStencilState.stencilWriteMask = 0;
 
         // Create bind group layout for uniforms first
         WGPUBindGroupLayoutEntry bindingLayout = {};
@@ -99,6 +108,9 @@ namespace flint::init
         pipelineDescriptor.multisample.count = 1;
         pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
+
+        // Set depth stencil state
+        pipelineDescriptor.depthStencil = &depthStencilState;
 
         pipelineDescriptor.layout = pipelineLayout;
 
