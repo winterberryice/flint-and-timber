@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "player.h"
 
 namespace flint
 {
@@ -38,8 +39,9 @@ namespace flint
         WGPURenderPipeline m_renderPipeline = nullptr;
 
         Camera m_camera;
-        CameraController m_cameraController;
         CameraUniform m_cameraUniform;
+
+        player::Player m_player;
 
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;

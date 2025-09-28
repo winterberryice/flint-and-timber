@@ -3,14 +3,19 @@
 namespace flint
 {
 
-    // Implementation of the constructor.
     Block::Block(BlockType block_type) : type(block_type) {}
 
-    // Implementation of the isSolid method.
     bool Block::isSolid() const
     {
-        // This simple check is the most direct translation of your `match` statement.
-        return type != BlockType::Air;
+        switch (type)
+        {
+        case BlockType::Grass:
+        case BlockType::Dirt:
+            return true;
+        case BlockType::Air:
+        default:
+            return false;
+        }
     }
 
 } // namespace flint

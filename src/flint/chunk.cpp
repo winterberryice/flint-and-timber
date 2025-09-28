@@ -31,6 +31,19 @@ namespace flint
                 }
             }
         }
+
+        // Add hardcoded pillars for testing physics
+        const size_t pillar_y_start = surface_level + 1;
+
+        // Two 1-block high pillars
+        setBlock(5, pillar_y_start, 5, BlockType::Dirt);
+        setBlock(5, pillar_y_start, 7, BlockType::Dirt);
+
+        // Two 2-block high pillars
+        setBlock(7, pillar_y_start, 5, BlockType::Dirt);
+        setBlock(7, pillar_y_start + 1, 5, BlockType::Dirt);
+        setBlock(7, pillar_y_start, 7, BlockType::Dirt);
+        setBlock(7, pillar_y_start + 1, 7, BlockType::Dirt);
     }
 
     const Block *Chunk::getBlock(size_t x, size_t y, size_t z) const
@@ -56,6 +69,27 @@ namespace flint
         {
             return false; // Equivalent to Rust's `Err(...)`
         }
+    }
+
+    bool Chunk::is_solid(int x, int y, int z) const
+    {
+        // Check if the coordinates are within the chunk boundaries.
+        if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_DEPTH)
+        {
+            return false; // Treat out-of-bounds as not solid.
+        }
+
+        // Use the existing getBlock to check the block type.
+        // We can safely cast to size_t because we've already checked for negative values.
+        const Block *block = getBlock(static_cast<size_t>(x), static_cast<size_t>(y), static_cast<size_t>(z));
+
+        // getBlock should not return nullptr for in-bounds coordinates, but check just in case.
+        if (block)
+        {
+            return block->isSolid();
+        }
+
+        return false;
     }
 
 } // namespace flint

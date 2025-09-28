@@ -11,11 +11,20 @@
 namespace flint
 {
     App::App()
+        : m_player(
+              // Initial position: center of the chunk, 5 blocks above the surface
+              {CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 5.0f, CHUNK_DEPTH / 2.0f},
+              // Initial orientation: looking forward along -Z
+              -90.0f, // yaw
+              0.0f,   // pitch
+              // Mouse sensitivity
+              0.1f)
     {
         std::cout << "Initializing app..." << std::endl;
         m_windowWidth = 800;
         m_windowHeight = 600;
         m_window = init::sdl(m_windowWidth, m_windowHeight);
+        SDL_SetRelativeMouseMode(SDL_TRUE);
 
         init::wgpu(
             m_windowWidth,
@@ -38,16 +47,17 @@ namespace flint
 
         std::cout << "Setting up 3D components..." << std::endl;
 
+        // The camera is now controlled by the player, so we initialize it with placeholder values.
+        // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
-            {CHUNK_WIDTH * 1.5f, CHUNK_HEIGHT * 0.7f, CHUNK_DEPTH * 1.5f}, // eye
-            {CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f, CHUNK_DEPTH / 2.0f}, // target
+            {0.0f, 0.0f, 0.0f},                                            // eye (will be overwritten)
+            {0.0f, 0.0f, -1.0f},                                           // target (will be overwritten)
             {0.0f, 1.0f, 0.0f},                                            // up
             (float)m_windowWidth / (float)m_windowHeight,                  // aspect
             45.0f,                                                         // fovy
             0.1f,                                                          // znear
             1000.0f                                                        // zfar
         );
-        m_cameraController = CameraController(15.0f, 0.003f);
 
         // Generate terrain and mesh
         std::cout << "Generating terrain..." << std::endl;
@@ -78,33 +88,63 @@ namespace flint
     {
         std::cout << "Running app..." << std::endl;
 
+        uint64_t last_tick = SDL_GetPerformanceCounter();
+
         SDL_Event e;
         while (m_running)
         {
+            // Calculate delta time
+            uint64_t current_tick = SDL_GetPerformanceCounter();
+            float dt = static_cast<float>(current_tick - last_tick) / static_cast<float>(SDL_GetPerformanceFrequency());
+            last_tick = current_tick;
+
             // Handle events
             while (SDL_PollEvent(&e))
             {
+                // Let the player handle keyboard input
+                m_player.handle_input(e);
+
                 if (e.type == SDL_EVENT_QUIT)
                 {
-                    std::cout << "Quit event received" << std::endl;
                     m_running = false;
                 }
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
                 {
-                    std::cout << "Escape key pressed" << std::endl;
                     m_running = false;
+                }
+                else if (e.type == SDL_EVENT_MOUSE_MOTION)
+                {
+                    m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
                 }
             }
 
-            // Render
+            // Update player physics and state
+            m_player.update(dt, m_chunk);
+
+            // Render the scene
             render();
         }
     }
 
     void App::render()
     {
-        float dt = 1.0f / 60.0f;
-        // m_cameraController.updateCamera(m_camera, dt); // static camera for now (no controller)
+        // Update camera from player state
+        glm::vec3 player_pos = m_player.get_position();
+        float player_yaw_deg = m_player.get_yaw();
+        float player_pitch_deg = m_player.get_pitch();
+
+        m_camera.eye = player_pos + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+
+        float yaw_rad = glm::radians(player_yaw_deg);
+        float pitch_rad = glm::radians(player_pitch_deg);
+
+        glm::vec3 front;
+        front.x = cos(yaw_rad) * cos(pitch_rad);
+        front.y = sin(pitch_rad);
+        front.z = sin(yaw_rad) * cos(pitch_rad);
+        m_camera.target = m_camera.eye + glm::normalize(front);
+
+        // Update the uniform buffer with the new camera view-projection matrix
         m_cameraUniform.updateViewProj(m_camera);
         wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 

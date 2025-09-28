@@ -27,11 +27,9 @@ namespace flint
                 {
                     for (int bz = min_bz; bz < max_bz; ++bz)
                     {
-
-                        auto is_solid = true; // TODO implement chunk.is_solid(bx, by, bz);
-                        if (is_solid)
+                        if (chunk.is_solid(bx, by, bz))
                         {
-                            glm::vec3 block_min_corner(bx, by, bz);
+                            glm::vec3 block_min_corner(static_cast<float>(bx), static_cast<float>(by), static_cast<float>(bz));
                             glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
                             nearby_blocks.emplace_back(block_min_corner, block_max_corner);
                         }

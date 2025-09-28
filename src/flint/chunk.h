@@ -31,6 +31,10 @@ namespace flint
         // It returns `true` on success and `false` on failure (out of bounds).
         bool setBlock(size_t x, size_t y, size_t z, BlockType type);
 
+        // Checks if a block at the given world coordinates is solid.
+        // This is a new method for physics checks.
+        bool is_solid(int x, int y, int z) const;
+
     private:
         // A 3D C-style array is much more efficient than a Vec<Vec<Vec<...>>>
         // for a fixed-size grid. It allocates all blocks in a single contiguous memory block.
