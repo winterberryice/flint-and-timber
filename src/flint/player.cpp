@@ -93,16 +93,17 @@ namespace flint
             glm::vec3 intended_horizontal_velocity(0.0f);
             float yaw_radians = glm::radians(yaw);
             glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
-            glm::vec3 horizontal_right = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
+            // In a right-handed Y-up system, forward x up = left. The variable is misnamed.
+            glm::vec3 horizontal_left = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
 
             if (movement_intention.forward)
                 intended_horizontal_velocity += horizontal_forward;
             if (movement_intention.backward)
                 intended_horizontal_velocity -= horizontal_forward;
             if (movement_intention.left)
-                intended_horizontal_velocity -= horizontal_right;
+                intended_horizontal_velocity += horizontal_left;
             if (movement_intention.right)
-                intended_horizontal_velocity += horizontal_right;
+                intended_horizontal_velocity -= horizontal_left;
 
             if (glm::length2(intended_horizontal_velocity) > 0.0f)
             {
