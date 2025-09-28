@@ -1,4 +1,4 @@
-#include "app.hpp"
+#include "app.h"
 #include <iostream>
 #include "init/sdl.h"
 #include "init/wgpu.h"

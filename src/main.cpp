@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "flint/app.hpp"
+#include "flint/app.h"
 
 int main()
 {
