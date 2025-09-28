@@ -24,7 +24,7 @@ namespace flint
         m_windowWidth = 800;
         m_windowHeight = 600;
         m_window = init::sdl(m_windowWidth, m_windowHeight);
-        SDL_SetRelativeMouseMode(SDL_TRUE);
+        SDL_SetWindowRelativeMouseMode(m_window, true);
 
         init::wgpu(
             m_windowWidth,
@@ -50,13 +50,13 @@ namespace flint
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
-            {0.0f, 0.0f, 0.0f},                                            // eye (will be overwritten)
-            {0.0f, 0.0f, -1.0f},                                           // target (will be overwritten)
-            {0.0f, 1.0f, 0.0f},                                            // up
-            (float)m_windowWidth / (float)m_windowHeight,                  // aspect
-            45.0f,                                                         // fovy
-            0.1f,                                                          // znear
-            1000.0f                                                        // zfar
+            {0.0f, 0.0f, 0.0f},                           // eye (will be overwritten)
+            {0.0f, 0.0f, -1.0f},                          // target (will be overwritten)
+            {0.0f, 1.0f, 0.0f},                           // up
+            (float)m_windowWidth / (float)m_windowHeight, // aspect
+            45.0f,                                        // fovy
+            0.1f,                                         // znear
+            1000.0f                                       // zfar
         );
 
         // Generate terrain and mesh
