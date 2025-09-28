@@ -194,12 +194,12 @@ namespace flint
             depthStencilAttachment.depthClearValue = 1.0f;
             depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
             depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
-            depthStencilAttachment.depthReadOnly = WGPUOptionalBool_False;
+            depthStencilAttachment.depthReadOnly = false;
             // Stencil operations are not used
             depthStencilAttachment.stencilClearValue = 0;
             depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
             depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
-            depthStencilAttachment.stencilReadOnly = WGPUOptionalBool_True;
+            depthStencilAttachment.stencilReadOnly = true;
 
             WGPURenderPassDescriptor renderPassDesc = {};
             renderPassDesc.nextInChain = nullptr;
