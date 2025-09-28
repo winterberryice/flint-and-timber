@@ -94,7 +94,7 @@ namespace flint::init
         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_None; // Disabled for diagnostics
 
         // NEW: Add depth/stencil state
         WGPUDepthStencilState depthStencilState = {};
