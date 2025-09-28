@@ -16,6 +16,7 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
+        WGPUTextureFormat depthFormat, // NEW
         WGPUBindGroupLayout *pBindGroupLayout)
     {
         std::cout << "Creating render pipeline..." << std::endl;
@@ -94,6 +95,17 @@ namespace flint::init
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
         pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
+
+        // NEW: Add depth/stencil state
+        WGPUDepthStencilState depthStencilState = {};
+        depthStencilState.format = depthFormat;
+        depthStencilState.depthWriteEnabled = true;
+        depthStencilState.depthCompare = WGPUCompareFunction_Less; // Standard depth test
+        // Stencil part is not used, so we can leave it as default
+        depthStencilState.stencilReadMask = 0;
+        depthStencilState.stencilWriteMask = 0;
+
+        pipelineDescriptor.depthStencil = &depthStencilState;
 
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
