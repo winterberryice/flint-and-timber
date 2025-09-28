@@ -99,7 +99,7 @@ namespace flint::init
         // NEW: Add depth/stencil state
         WGPUDepthStencilState depthStencilState = {};
         depthStencilState.format = depthFormat;
-        depthStencilState.depthWriteEnabled = true;
+        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
         depthStencilState.depthCompare = WGPUCompareFunction_Less; // Standard depth test
         // Stencil part is not used, so we can leave it as default
         depthStencilState.stencilReadMask = 0;
