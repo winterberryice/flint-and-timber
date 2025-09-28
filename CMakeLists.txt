@@ -63,6 +63,9 @@ add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})
 # Include src directory for headers
 target_include_directories(${TARGET_NAME} PRIVATE src)
 
+# NEW: Force GLM to use WebGPU's depth range [0, 1] instead of OpenGL's [-1, 1]
+target_compile_definitions(${TARGET_NAME} PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 # Link libraries
 target_link_libraries(${TARGET_NAME} PRIVATE 
     glm::glm
