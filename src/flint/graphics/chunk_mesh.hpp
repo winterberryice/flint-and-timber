@@ -3,6 +3,9 @@
 #include "webgpu/webgpu.h"
 #include "../chunk.h"
 #include <vector>
+#include <optional>
+#include <glm/glm.hpp>
+#include "../physics.h"
 
 namespace flint
 {
@@ -14,7 +17,7 @@ namespace flint
             ChunkMesh();
             ~ChunkMesh();
 
-            void generate(WGPUDevice device, const flint::Chunk &chunk);
+            void generate(WGPUDevice device, const flint::Chunk &chunk, const std::optional<physics::AABB> &debug_aabb = std::nullopt, const glm::vec4 &debug_color = {1.0f, 1.0f, 1.0f, 1.0f});
             void render(WGPURenderPassEncoder renderPass) const;
             void cleanup();
 

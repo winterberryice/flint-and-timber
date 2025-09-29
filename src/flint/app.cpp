@@ -62,9 +62,7 @@ namespace flint
         // Generate terrain and mesh
         std::cout << "Generating terrain..." << std::endl;
         m_chunk.generateTerrain();
-        std::cout << "Generating chunk mesh..." << std::endl;
-        m_chunkMesh.generate(m_device, m_chunk);
-        std::cout << "Chunk mesh generated." << std::endl;
+        // Mesh is now generated in the run loop.
 
         // Create uniform buffer for camera matrices
         m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
@@ -143,6 +141,9 @@ namespace flint
 
             // Update player physics and state
             m_player.update(dt, m_chunk);
+
+            // Regenerate the chunk mesh every frame to include the debug AABB
+            m_chunkMesh.generate(m_device, m_chunk, m_player.get_world_bounding_box(), {1.0f, 0.41f, 0.7f, 0.5f});
 
             // Render the scene
             render();

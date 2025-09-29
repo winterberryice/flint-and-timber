@@ -73,23 +73,15 @@ namespace flint
 
     bool Chunk::is_solid(int x, int y, int z) const
     {
-        // Check if the coordinates are within the chunk boundaries.
-        if (x < 0 || x >= CHUNK_WIDTH || y < 0 || y >= CHUNK_HEIGHT || z < 0 || z >= CHUNK_DEPTH)
+    // World coordinates outside the chunk are not solid.
+    if (x < 0 || y < 0 || z < 0 || x >= (int)CHUNK_WIDTH || y >= (int)CHUNK_HEIGHT || z >= (int)CHUNK_DEPTH)
         {
-            return false; // Treat out-of-bounds as not solid.
-        }
-
-        // Use the existing getBlock to check the block type.
-        // We can safely cast to size_t because we've already checked for negative values.
-        const Block *block = getBlock(static_cast<size_t>(x), static_cast<size_t>(y), static_cast<size_t>(z));
-
-        // getBlock should not return nullptr for in-bounds coordinates, but check just in case.
-        if (block)
-        {
-            return block->isSolid();
-        }
-
         return false;
+        }
+
+    // The coordinates are within the chunk boundaries, so we can directly access the array.
+    // The player collision logic passes integer coordinates that have already been floored.
+    return m_blocks[x][y][z].isSolid();
     }
 
 } // namespace flint

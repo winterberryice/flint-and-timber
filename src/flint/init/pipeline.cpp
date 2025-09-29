@@ -94,6 +94,16 @@ namespace flint::init
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
+        // Enable alpha blending for transparency
+        WGPUBlendState blendState = {};
+        blendState.color.operation = WGPUBlendOperation_Add;
+        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+        blendState.alpha.operation = WGPUBlendOperation_Add;
+        blendState.alpha.srcFactor = WGPUBlendFactor_One;
+        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
+        colorTarget.blend = &blendState;
+
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;
         pipelineDescriptor.fragment = &fragmentState;
