@@ -93,17 +93,16 @@ namespace flint
             glm::vec3 intended_horizontal_velocity(0.0f);
             float yaw_radians = glm::radians(yaw);
             glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
-            // In a right-handed Y-up system, forward x up = left. The variable is misnamed.
-            glm::vec3 horizontal_left = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
+            glm::vec3 horizontal_right = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
 
             if (movement_intention.forward)
                 intended_horizontal_velocity += horizontal_forward;
             if (movement_intention.backward)
                 intended_horizontal_velocity -= horizontal_forward;
             if (movement_intention.left)
-                intended_horizontal_velocity += horizontal_left;
+                intended_horizontal_velocity -= horizontal_right;
             if (movement_intention.right)
-                intended_horizontal_velocity -= horizontal_left;
+                intended_horizontal_velocity += horizontal_right;
 
             if (glm::length2(intended_horizontal_velocity) > 0.0f)
             {
@@ -145,6 +144,7 @@ namespace flint
             on_ground = false; // Reset before Y-axis collision check
 
             // --- Y-AXIS COLLISION ---
+            float original_y = position.y;
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
             auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -153,15 +153,8 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    if (desired_move.y > 0.0f)
-                    { // Moving up
-                        position.y = block_box.min.y - local_bounding_box.max.y - 0.0001f;
-                    }
-                    else
-                    { // Moving down
-                        position.y = block_box.max.y - local_bounding_box.min.y + 0.0001f;
-                        on_ground = true;
-                    }
+                    position.y = original_y; // Revert position
+                    on_ground = desired_move.y < 0.0f; // Set on_ground if we were moving down
                     velocity.y = 0.0f;
                     desired_move.y = 0.0f;
                     break;
@@ -169,6 +162,7 @@ namespace flint
             }
 
             // --- X-AXIS COLLISION ---
+            float original_x = position.x;
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
             auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -177,20 +171,15 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    if (desired_move.x > 0.0f)
-                    { // Moving right
-                        position.x = block_box.min.x - local_bounding_box.max.x - 0.0001f;
-                    }
-                    else
-                    { // Moving left
-                        position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
-                    }
+                    position.x = original_x; // Revert position
                     velocity.x = 0.0f;
+                    desired_move.x = 0.0f;
                     break;
                 }
             }
 
             // --- Z-AXIS COLLISION ---
+            float original_z = position.z;
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
             auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -199,15 +188,9 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    if (desired_move.z > 0.0f)
-                    { // Moving "forward" in world +Z
-                        position.z = block_box.min.z - local_bounding_box.max.z - 0.0001f;
-                    }
-                    else
-                    { // Moving "backward" in world +Z
-                        position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
-                    }
+                    position.z = original_z; // Revert position
                     velocity.z = 0.0f;
+                    desired_move.z = 0.0f;
                     break;
                 }
             }
