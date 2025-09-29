@@ -1,11 +1,9 @@
 #pragma once
 
-#include <string_view>
-
 namespace flint
 {
 
-    constexpr std::string_view WGSL_debugShaderSource = R"(
+    constexpr const char* WGSL_debugShaderSource = R"(
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 };

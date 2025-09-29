@@ -1,6 +1,6 @@
 #include "debug_mesh.hpp"
-#include "../init/buffer.h"
 #include <vector>
+#include <string.h> // For memcpy
 
 namespace flint
 {
@@ -41,8 +41,25 @@ namespace flint
 
             m_indexCount = static_cast<uint32_t>(indices.size());
 
-            m_vertexBuffer = init::create_vertex_buffer(device, "Debug Vertex Buffer", vertices.data(), vertices.size() * sizeof(float));
-            m_indexBuffer = init::create_index_buffer(device, "Debug Index Buffer", indices.data(), indices.size() * sizeof(uint16_t));
+            // Create vertex buffer
+            WGPUBufferDescriptor vertexBufferDesc = {};
+            vertexBufferDesc.label = "Debug Vertex Buffer";
+            vertexBufferDesc.usage = WGPUBufferUsage_Vertex;
+            vertexBufferDesc.size = vertices.size() * sizeof(float);
+            vertexBufferDesc.mappedAtCreation = true;
+            m_vertexBuffer = wgpuDeviceCreateBuffer(device, &vertexBufferDesc);
+            memcpy(wgpuBufferGetMappedRange(m_vertexBuffer, 0, WGPU_WHOLE_SIZE), vertices.data(), vertices.size() * sizeof(float));
+            wgpuBufferUnmap(m_vertexBuffer);
+
+            // Create index buffer
+            WGPUBufferDescriptor indexBufferDesc = {};
+            indexBufferDesc.label = "Debug Index Buffer";
+            indexBufferDesc.usage = WGPUBufferUsage_Index;
+            indexBufferDesc.size = indices.size() * sizeof(uint16_t);
+            indexBufferDesc.mappedAtCreation = true;
+            m_indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDesc);
+            memcpy(wgpuBufferGetMappedRange(m_indexBuffer, 0, WGPU_WHOLE_SIZE), indices.data(), indices.size() * sizeof(uint16_t));
+            wgpuBufferUnmap(m_indexBuffer);
         }
 
         void DebugMesh::cleanup()

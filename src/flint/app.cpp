@@ -142,63 +142,63 @@ namespace flint
         WGPUPipelineLayout debugPipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &debugPipelineLayoutDesc);
 
         // --- Debug Render Pipeline ---
-        WGPURenderPipelineDescriptor debugPipelineDesc = {};
-        debugPipelineDesc.layout = debugPipelineLayout;
-
-        // Vertex Shader
-        debugPipelineDesc.vertex.module = debugShaderModule;
-        debugPipelineDesc.vertex.entryPoint = "vs_main";
+        // The following block uses C99-style designated initializers for clarity and
+        // to correctly initialize all nested WebGPU descriptor structs.
 
         // Vertex buffer layout
-        WGPUVertexAttribute debugVertexAttrib = {};
-        debugVertexAttrib.format = WGPUVertexFormat_Float32x3; // vec3 position
-        debugVertexAttrib.offset = 0;
-        debugVertexAttrib.shaderLocation = 0;
+        WGPUVertexAttribute debugVertexAttrib = {
+            .format = WGPUVertexFormat_Float32x3, // vec3 position
+            .offset = 0,
+            .shaderLocation = 0,
+        };
+        WGPUVertexBufferLayout debugVertexBufferLayout = {
+            .arrayStride = 3 * sizeof(float),
+            .attributeCount = 1,
+            .attributes = &debugVertexAttrib,
+        };
 
-        WGPUVertexBufferLayout debugVertexBufferLayout = {};
-        debugVertexBufferLayout.arrayStride = 3 * sizeof(float);
-        debugVertexBufferLayout.attributeCount = 1;
-        debugVertexBufferLayout.attributes = &debugVertexAttrib;
-        debugPipelineDesc.vertex.bufferCount = 1;
-        debugPipelineDesc.vertex.buffers = &debugVertexBufferLayout;
+        // Blend state for transparency
+        WGPUBlendState blendState = {
+            .color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha},
+            .alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_Zero},
+        };
 
-        // Fragment Shader
-        WGPUFragmentState debugFragmentState = {};
-        debugFragmentState.module = debugShaderModule;
-        debugFragmentState.entryPoint = "fs_main";
-        debugPipelineDesc.fragment = &debugFragmentState;
+        // Color target state
+        WGPUColorTargetState debugColorTarget = {
+            .format = m_surfaceFormat,
+            .blend = &blendState,
+            .writeMask = WGPUColorWriteMask_All,
+        };
 
-        // Render format
-        WGPUColorTargetState debugColorTarget = {};
-        debugColorTarget.format = m_surfaceFormat;
-        debugColorTarget.writeMask = WGPUColorWriteMask_All;
+        // Fragment state
+        WGPUFragmentState debugFragmentState = {
+            .module = debugShaderModule,
+            .entryPoint = "fs_main",
+            .targetCount = 1,
+            .targets = &debugColorTarget,
+        };
 
-        // Enable alpha blending for transparency
-        WGPUBlendState blendState = {};
-        blendState.color.operation = WGPUBlendOperation_Add;
-        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
-        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        blendState.alpha.operation = WGPUBlendOperation_Add;
-        blendState.alpha.srcFactor = WGPUBlendFactor_One;
-        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
-        debugColorTarget.blend = &blendState;
-
-        debugFragmentState.targetCount = 1;
-        debugFragmentState.targets = &debugColorTarget;
-
-        // Depth/Stencil
-        WGPUDepthStencilState debugDepthStencilState = {};
-        debugDepthStencilState.format = m_depthTextureFormat;
-        debugDepthStencilState.depthWriteEnabled = true;
-        debugDepthStencilState.depthCompare = WGPUCompareFunction_Less;
-        debugPipelineDesc.depthStencil = &debugDepthStencilState;
-
-        // Primitive state
-        debugPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        debugPipelineDesc.primitive.cullMode = WGPUCullMode_None; // Show all faces for debug
-
-        // Other state
-        debugPipelineDesc.multisample.count = 1;
+        WGPURenderPipelineDescriptor debugPipelineDesc = {
+            .layout = debugPipelineLayout,
+            .vertex = {
+                .module = debugShaderModule,
+                .entryPoint = "vs_main",
+                .bufferCount = 1,
+                .buffers = &debugVertexBufferLayout,
+            },
+            .primitive = {
+                .topology = WGPUPrimitiveTopology_TriangleList,
+                .cullMode = WGPUCullMode_None,
+            },
+            .depthStencil =
+                &(WGPUDepthStencilState){
+                    .format = m_depthTextureFormat,
+                    .depthWriteEnabled = WGPU_TRUE,
+                    .depthCompare = WGPUCompareFunction_Less,
+                },
+            .multisample = {.count = 1},
+            .fragment = &debugFragmentState,
+        };
 
         m_debugRenderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &debugPipelineDesc);
         std::cout << "Debug pipeline created." << std::endl;
