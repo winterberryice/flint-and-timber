@@ -12,7 +12,7 @@ namespace flint
     struct Vertex
     {
         glm::vec3 position;
-        glm::vec3 color;
+        glm::vec4 color; // Changed to vec4 to support alpha for transparency
 
         // This static function describes the memory layout of a single vertex to the GPU pipeline.
         // It's the C++ equivalent of the `desc()` method.
@@ -36,7 +36,7 @@ namespace flint
                 // Corresponds to `@location(1)` in the WGSL vertex shader.
                 {
                     nullptr,
-                    /* .format = */ WGPUVertexFormat_Float32x3,
+                    /* .format = */ WGPUVertexFormat_Float32x4, // Changed to vec4
                     /* .offset = */ offsetof(Vertex, color),
                     /* .shaderLocation = */ 1,
                 }};

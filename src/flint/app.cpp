@@ -7,9 +7,6 @@
 #include "init/buffer.h"
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
-#include "shader_debug.wgsl.h"
-#include <glm/gtc/matrix_transform.hpp>
-#include "physics.h"
 
 namespace flint
 {
@@ -106,129 +103,6 @@ namespace flint
 
         m_bindGroup = init::create_bind_group(m_device, m_bindGroupLayout, m_uniformBuffer);
 
-        // =================================================================
-        // Setup Debug Bounding Box Renderer
-        // =================================================================
-        std::cout << "Setting up debug renderer..." << std::endl;
-        m_debugMesh.generate(m_device);
-
-        WGPUShaderModule debugShaderModule = init::create_shader_module(m_device, "Debug Shader", WGSL_debugShaderSource);
-
-        // --- Debug Bind Group Layout (for model matrix and color) ---
-        WGPUBindGroupLayoutEntry debugBglEntries[2] = {};
-        // Model Uniform
-        debugBglEntries[0].binding = 0;
-        debugBglEntries[0].visibility = WGPUShaderStage_Vertex;
-        debugBglEntries[0].buffer.type = WGPUBufferBindingType_Uniform;
-        // Color Uniform
-        debugBglEntries[1].binding = 1;
-        debugBglEntries[1].visibility = WGPUShaderStage_Fragment;
-        debugBglEntries[1].buffer.type = WGPUBufferBindingType_Uniform;
-
-        WGPUBindGroupLayoutDescriptor debugBglDesc = {};
-        debugBglDesc.entryCount = 2;
-        debugBglDesc.entries = debugBglEntries;
-        m_debugBindGroupLayout = wgpuDeviceCreateBindGroupLayout(m_device, &debugBglDesc);
-
-
-        // --- Debug Pipeline Layout ---
-        // The debug pipeline uses two bind groups:
-        // Group 0: Camera (re-uses the layout from the main pipeline)
-        // Group 1: Model/Color (the new layout we just created)
-        WGPUBindGroupLayout DbgPipeline_bgls[2] = {m_bindGroupLayout, m_debugBindGroupLayout};
-        WGPUPipelineLayoutDescriptor debugPipelineLayoutDesc = {};
-        debugPipelineLayoutDesc.bindGroupLayoutCount = 2;
-        debugPipelineLayoutDesc.bindGroupLayouts = DbgPipeline_bgls;
-        WGPUPipelineLayout debugPipelineLayout = wgpuDeviceCreatePipelineLayout(m_device, &debugPipelineLayoutDesc);
-
-        // --- Debug Render Pipeline ---
-        // The following block uses C99-style designated initializers for clarity and
-        // to correctly initialize all nested WebGPU descriptor structs.
-
-        // Vertex buffer layout
-        WGPUVertexAttribute debugVertexAttrib = {
-            .format = WGPUVertexFormat_Float32x3, // vec3 position
-            .offset = 0,
-            .shaderLocation = 0,
-        };
-        WGPUVertexBufferLayout debugVertexBufferLayout = {
-            .arrayStride = 3 * sizeof(float),
-            .attributeCount = 1,
-            .attributes = &debugVertexAttrib,
-        };
-
-        // Blend state for transparency
-        WGPUBlendState blendState = {
-            .color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha},
-            .alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_Zero},
-        };
-
-        // Color target state
-        WGPUColorTargetState debugColorTarget = {
-            .format = m_surfaceFormat,
-            .blend = &blendState,
-            .writeMask = WGPUColorWriteMask_All,
-        };
-
-        // Fragment state
-        WGPUFragmentState debugFragmentState = {
-            .module = debugShaderModule,
-            .entryPoint = "fs_main",
-            .targetCount = 1,
-            .targets = &debugColorTarget,
-        };
-
-        // Depth/Stencil State
-        WGPUDepthStencilState debugDepthStencilState = {
-            .format = m_depthTextureFormat,
-            .depthWriteEnabled = WGPUOptionalBool_True,
-            .depthCompare = WGPUCompareFunction_Less,
-        };
-
-        WGPURenderPipelineDescriptor debugPipelineDesc = {
-            .layout = debugPipelineLayout,
-            .vertex = {
-                .module = debugShaderModule,
-                .entryPoint = "vs_main",
-                .bufferCount = 1,
-                .buffers = &debugVertexBufferLayout,
-            },
-            .primitive = {
-                .topology = WGPUPrimitiveTopology_TriangleList,
-                .cullMode = WGPUCullMode_None,
-            },
-            .depthStencil = &debugDepthStencilState,
-            .multisample = {.count = 1},
-            .fragment = &debugFragmentState,
-        };
-
-        m_debugRenderPipeline = wgpuDeviceCreateRenderPipeline(m_device, &debugPipelineDesc);
-        std::cout << "Debug pipeline created." << std::endl;
-
-        // --- Create Uniform Buffers & Bind Group for Debug Renderer ---
-        m_debugModelUniformBuffer = init::create_uniform_buffer(m_device, "Debug Model Uniform Buffer", sizeof(glm::mat4));
-        m_debugColorUniformBuffer = init::create_uniform_buffer(m_device, "Debug Color Uniform Buffer", sizeof(glm::vec4));
-
-        WGPUBindGroupEntry debugBgEntries[2] = {};
-        // Model Uniform
-        debugBgEntries[0].binding = 0;
-        debugBgEntries[0].buffer = m_debugModelUniformBuffer;
-        debugBgEntries[0].size = sizeof(glm::mat4);
-        // Color Uniform
-        debugBgEntries[1].binding = 1;
-        debugBgEntries[1].buffer = m_debugColorUniformBuffer;
-        debugBgEntries[1].size = sizeof(glm::vec4);
-
-        WGPUBindGroupDescriptor debugBgDesc = {};
-        debugBgDesc.layout = m_debugBindGroupLayout;
-        debugBgDesc.entryCount = 2;
-        debugBgDesc.entries = debugBgEntries;
-        m_debugBindGroup = wgpuDeviceCreateBindGroup(m_device, &debugBgDesc);
-
-        // Cleanup temporary objects
-        wgpuPipelineLayoutRelease(debugPipelineLayout);
-        wgpuShaderModuleRelease(debugShaderModule);
-
         // ====
         m_running = true;
     }
@@ -269,6 +143,9 @@ namespace flint
 
             // Update player physics and state
             m_player.update(dt, m_chunk);
+
+            // After player moves, update the debug mesh to match the new AABB
+            m_debugMesh.generate(m_device, m_player.get_world_bounding_box(), {1.0f, 0.41f, 0.7f, 0.5f}); // Pink, semi-transparent
 
             // Render the scene
             render();
@@ -348,33 +225,8 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
-            // --- Draw Player Bounding Box ---
-            {
-                // 1. Get player's world AABB and calculate its properties
-                physics::AABB player_box = m_player.get_world_bounding_box();
-                glm::vec3 box_size = player_box.max - player_box.min;
-                glm::vec3 box_center = player_box.min + (box_size * 0.5f);
-
-                // 2. Create model matrix to scale and translate the unit debug cube
-                glm::mat4 model_matrix = glm::mat4(1.0f);
-                model_matrix = glm::translate(model_matrix, box_center);
-                model_matrix = glm::scale(model_matrix, box_size);
-
-                // 3. Define color (hot pink, semi-transparent)
-                glm::vec4 pink_color(1.0f, 0.41f, 0.7f, 0.5f);
-
-                // 4. Update uniform buffers
-                wgpuQueueWriteBuffer(m_queue, m_debugModelUniformBuffer, 0, &model_matrix, sizeof(glm::mat4));
-                wgpuQueueWriteBuffer(m_queue, m_debugColorUniformBuffer, 0, &pink_color, sizeof(glm::vec4));
-
-                // 5. Set pipeline and bind groups
-                wgpuRenderPassEncoderSetPipeline(renderPass, m_debugRenderPipeline);
-                wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);     // Group 0 for camera
-                wgpuRenderPassEncoderSetBindGroup(renderPass, 1, m_debugBindGroup, 0, nullptr); // Group 1 for model/color
-
-                // 6. Draw the debug mesh
-                m_debugMesh.render(renderPass);
-            }
+            // Draw the debug mesh
+            m_debugMesh.render(renderPass);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
@@ -403,13 +255,6 @@ namespace flint
 
         m_chunkMesh.cleanup();
         m_debugMesh.cleanup();
-
-        // Release debug resources
-        if (m_debugBindGroup) wgpuBindGroupRelease(m_debugBindGroup);
-        if (m_debugBindGroupLayout) wgpuBindGroupLayoutRelease(m_debugBindGroupLayout);
-        if (m_debugModelUniformBuffer) wgpuBufferRelease(m_debugModelUniformBuffer);
-        if (m_debugColorUniformBuffer) wgpuBufferRelease(m_debugColorUniformBuffer);
-        if (m_debugRenderPipeline) wgpuRenderPipelineRelease(m_debugRenderPipeline);
 
         if (m_depthTextureView)
             wgpuTextureViewRelease(m_depthTextureView);

@@ -52,14 +52,7 @@ namespace flint
 
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;
-
-        // Debugging resources
         graphics::DebugMesh m_debugMesh;
-        WGPURenderPipeline m_debugRenderPipeline = nullptr;
-        WGPUBuffer m_debugModelUniformBuffer = nullptr;
-        WGPUBuffer m_debugColorUniformBuffer = nullptr;
-        WGPUBindGroup m_debugBindGroup = nullptr;
-        WGPUBindGroupLayout m_debugBindGroupLayout = nullptr;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;

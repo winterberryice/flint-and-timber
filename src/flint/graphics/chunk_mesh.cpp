@@ -54,14 +54,14 @@ namespace flint
                         }
 
                         // Define colors based on block type
-                        glm::vec3 color;
+                        glm::vec4 color;
                         if (currentBlock->type == BlockType::Grass)
                         {
-                            color = {0.0f, 1.0f, 0.0f}; // Green
+                            color = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
                         }
                         else
                         { // Dirt
-                            color = {0.5f, 0.25f, 0.0f}; // Brown
+                            color = {0.5f, 0.25f, 0.0f, 1.0f}; // Brown
                         }
 
                         // Check neighbors

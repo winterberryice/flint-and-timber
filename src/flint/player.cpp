@@ -144,7 +144,6 @@ namespace flint
             on_ground = false; // Reset before Y-axis collision check
 
             // --- Y-AXIS COLLISION ---
-            float original_y = position.y;
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
             auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -153,8 +152,15 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    position.y = original_y; // Revert position
-                    on_ground = desired_move.y < 0.0f; // Set on_ground if we were moving down
+                    if (desired_move.y > 0.0f)
+                    { // Moving up
+                        position.y = block_box.min.y - local_bounding_box.max.y - 0.0001f;
+                    }
+                    else
+                    { // Moving down
+                        position.y = block_box.max.y - local_bounding_box.min.y + 0.0001f;
+                        on_ground = true;
+                    }
                     velocity.y = 0.0f;
                     desired_move.y = 0.0f;
                     break;
@@ -162,7 +168,6 @@ namespace flint
             }
 
             // --- X-AXIS COLLISION ---
-            float original_x = position.x;
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
             auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -171,15 +176,20 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    position.x = original_x; // Revert position
+                    if (desired_move.x > 0.0f)
+                    { // Moving right
+                        position.x = block_box.min.x - local_bounding_box.max.x - 0.0001f;
+                    }
+                    else
+                    { // Moving left
+                        position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
+                    }
                     velocity.x = 0.0f;
-                    desired_move.x = 0.0f;
                     break;
                 }
             }
 
             // --- Z-AXIS COLLISION ---
-            float original_z = position.z;
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
             auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
@@ -188,9 +198,15 @@ namespace flint
             {
                 if (player_world_box.intersects(block_box))
                 {
-                    position.z = original_z; // Revert position
+                    if (desired_move.z > 0.0f)
+                    { // Moving "forward" in world +Z
+                        position.z = block_box.min.z - local_bounding_box.max.z - 0.0001f;
+                    }
+                    else
+                    { // Moving "backward" in world +Z
+                        position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
+                    }
                     velocity.z = 0.0f;
-                    desired_move.z = 0.0f;
                     break;
                 }
             }
