@@ -7,7 +7,6 @@
 #include <glm/glm.hpp>
 
 #include "utils.h"
-#include "../vertex.h"
 
 namespace flint::init
 {
@@ -56,9 +55,24 @@ namespace flint::init
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
 
-        // Define vertex buffer layout using the static method from the Vertex struct.
-        // This keeps the vertex definition and its layout description in one place.
-        WGPUVertexBufferLayout vertexBufferLayout = Vertex::getLayout();
+        // Define vertex buffer layout for position + color
+        std::vector<WGPUVertexAttribute> vertexAttributes(2);
+
+        // Position attribute (location 0)
+        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
+        vertexAttributes[0].offset = 0;
+        vertexAttributes[0].shaderLocation = 0;
+
+        // Color attribute (location 1)
+        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
+        vertexAttributes[1].offset = 3 * sizeof(float);          // After position
+        vertexAttributes[1].shaderLocation = 1;
+
+        WGPUVertexBufferLayout vertexBufferLayout = {};
+        vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
+        vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+        vertexBufferLayout.attributeCount = vertexAttributes.size();
+        vertexBufferLayout.attributes = vertexAttributes.data();
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
@@ -79,6 +93,16 @@ namespace flint::init
         WGPUColorTargetState colorTarget = {};
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
+
+        // Enable alpha blending for transparency
+        WGPUBlendState blendState = {};
+        blendState.color.operation = WGPUBlendOperation_Add;
+        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+        blendState.alpha.operation = WGPUBlendOperation_Add;
+        blendState.alpha.srcFactor = WGPUBlendFactor_One;
+        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
+        colorTarget.blend = &blendState;
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;

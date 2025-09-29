@@ -32,7 +32,7 @@ namespace flint
             m_indexCount = 0;
         }
 
-        void ChunkMesh::generate(WGPUDevice device, const flint::Chunk &chunk)
+void ChunkMesh::generate(WGPUDevice device, const flint::Chunk &chunk, const std::optional<physics::AABB> &debug_aabb, const glm::vec4 &debug_color)
         {
             m_device = device;
             cleanup(); // Clean up existing buffers before generating new ones.
@@ -54,14 +54,14 @@ namespace flint
                         }
 
                         // Define colors based on block type
-                        glm::vec4 color;
+                glm::vec4 color;
                         if (currentBlock->type == BlockType::Grass)
                         {
-                            color = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
+                    color = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
                         }
                         else
                         { // Dirt
-                            color = {0.5f, 0.25f, 0.0f, 1.0f}; // Brown
+                    color = {0.5f, 0.25f, 0.0f, 1.0f}; // Brown
                         }
 
                         // Check neighbors
@@ -107,6 +107,37 @@ namespace flint
                     }
                 }
             }
+
+    // Add debug AABB geometry if provided
+    if (debug_aabb.has_value())
+    {
+        const auto &aabb = debug_aabb.value();
+        const flint::Vertex aabb_vertices[] = {
+            {{aabb.min.x, aabb.min.y, aabb.min.z}, debug_color},
+            {{aabb.max.x, aabb.min.y, aabb.min.z}, debug_color},
+            {{aabb.max.x, aabb.max.y, aabb.min.z}, debug_color},
+            {{aabb.min.x, aabb.max.y, aabb.min.z}, debug_color},
+            {{aabb.min.x, aabb.min.y, aabb.max.z}, debug_color},
+            {{aabb.max.x, aabb.min.y, aabb.max.z}, debug_color},
+            {{aabb.max.x, aabb.max.y, aabb.max.z}, debug_color},
+            {{aabb.min.x, aabb.max.y, aabb.max.z}, debug_color},
+        };
+        vertices.insert(vertices.end(), std::begin(aabb_vertices), std::end(aabb_vertices));
+
+        const uint16_t aabb_indices[] = {
+            0, 1, 2, 0, 2, 3, // Front
+            1, 5, 6, 1, 6, 2, // Right
+            5, 4, 7, 5, 7, 6, // Back
+            4, 0, 3, 4, 3, 7, // Left
+            3, 2, 6, 3, 6, 7, // Top
+            4, 5, 1, 4, 1, 0  // Bottom
+        };
+        for (const auto &index : aabb_indices)
+        {
+            indices.push_back(currentIndex + index);
+        }
+        currentIndex += 8;
+    }
 
             if (vertices.empty() || indices.empty())
             {
