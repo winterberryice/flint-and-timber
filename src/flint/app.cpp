@@ -193,7 +193,7 @@ namespace flint
             .depthStencil =
                 &(WGPUDepthStencilState){
                     .format = m_depthTextureFormat,
-                    .depthWriteEnabled = WGPU_TRUE,
+                    .depthWriteEnabled = WGPUOptionalBool_True,
                     .depthCompare = WGPUCompareFunction_Less,
                 },
             .multisample = {.count = 1},
