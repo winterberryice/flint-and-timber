@@ -178,6 +178,13 @@ namespace flint
             .targets = &debugColorTarget,
         };
 
+        // Depth/Stencil State
+        WGPUDepthStencilState debugDepthStencilState = {
+            .format = m_depthTextureFormat,
+            .depthWriteEnabled = WGPUOptionalBool_True,
+            .depthCompare = WGPUCompareFunction_Less,
+        };
+
         WGPURenderPipelineDescriptor debugPipelineDesc = {
             .layout = debugPipelineLayout,
             .vertex = {
@@ -190,12 +197,7 @@ namespace flint
                 .topology = WGPUPrimitiveTopology_TriangleList,
                 .cullMode = WGPUCullMode_None,
             },
-            .depthStencil =
-                &(WGPUDepthStencilState){
-                    .format = m_depthTextureFormat,
-                    .depthWriteEnabled = WGPUOptionalBool_True,
-                    .depthCompare = WGPUCompareFunction_Less,
-                },
+            .depthStencil = &debugDepthStencilState,
             .multisample = {.count = 1},
             .fragment = &debugFragmentState,
         };
