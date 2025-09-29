@@ -180,7 +180,7 @@ namespace flint
                     { // Moving right
                         position.x = block_box.min.x - local_bounding_box.max.x - 0.0001f;
                     }
-                    else
+                    else if (desired_move.x < 0.0f)
                     { // Moving left
                         position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
                     }
@@ -202,7 +202,7 @@ namespace flint
                     { // Moving "forward" in world +Z
                         position.z = block_box.min.z - local_bounding_box.max.z - 0.0001f;
                     }
-                    else
+                    else if (desired_move.z < 0.0f)
                     { // Moving "backward" in world +Z
                         position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
                     }
