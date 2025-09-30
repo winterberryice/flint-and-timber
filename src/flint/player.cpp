@@ -184,8 +184,10 @@ namespace flint
                     { // Moving left
                         position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
                     }
+                    // Stop all horizontal movement
                     velocity.x = 0.0f;
                     velocity.z = 0.0f;
+                    desired_move.z = 0.0f; // Prevent Z-slide in this frame
                     break;
                 }
             }
@@ -207,8 +209,10 @@ namespace flint
                     { // Moving "backward" in world +Z
                         position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
                     }
+                    // Stop all horizontal movement
                     velocity.x = 0.0f;
                     velocity.z = 0.0f;
+                    desired_move.x = 0.0f; // Prevent X-slide in this frame
                     break;
                 }
             }
