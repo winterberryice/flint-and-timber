@@ -185,6 +185,7 @@ namespace flint
                         position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
                     }
                     velocity.x = 0.0f;
+                    velocity.z = 0.0f;
                     break;
                 }
             }
@@ -206,6 +207,7 @@ namespace flint
                     { // Moving "backward" in world +Z
                         position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
                     }
+                    velocity.x = 0.0f;
                     velocity.z = 0.0f;
                     break;
                 }
