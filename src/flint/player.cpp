@@ -91,18 +91,16 @@ namespace flint
         {
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
-            float yaw_radians = glm::radians(yaw);
-            glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
-            glm::vec3 horizontal_right = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
 
+            // DEBUG: World-axis-aligned movement
             if (movement_intention.forward)
-                intended_horizontal_velocity += horizontal_forward;
+                intended_horizontal_velocity.z -= 1.0f; // North
             if (movement_intention.backward)
-                intended_horizontal_velocity -= horizontal_forward;
+                intended_horizontal_velocity.z += 1.0f; // South
             if (movement_intention.left)
-                intended_horizontal_velocity -= horizontal_right;
+                intended_horizontal_velocity.x -= 1.0f; // West
             if (movement_intention.right)
-                intended_horizontal_velocity += horizontal_right;
+                intended_horizontal_velocity.x += 1.0f; // East
 
             if (glm::length2(intended_horizontal_velocity) > 0.0f)
             {
