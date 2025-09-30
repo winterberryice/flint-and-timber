@@ -157,17 +157,14 @@ namespace flint
 
     void App::render()
     {
-        // --- DEBUG CAMERA: Fixed Isometric View ---
-        // Get player's center position
+        // --- DEBUG CAMERA: Top-Down "Ceiling" View ---
         glm::vec3 player_pos = m_player.get_position();
         glm::vec3 player_center = player_pos + glm::vec3(0.0f, physics::PLAYER_HEIGHT / 2.0f, 0.0f);
 
-        // Define a fixed offset for the camera
-        float distance = 10.0f; // Distance from player
-        glm::vec3 offset = glm::normalize(glm::vec3(1.0f, 0.75f, 1.0f)) * distance;
-
-        m_camera.eye = player_center + offset;
-        m_camera.target = player_center;
+        float distance = 15.0f; // Distance from player
+        m_camera.eye = player_center + glm::vec3(0.0f, distance, 0.0f); // Position camera directly above
+        m_camera.target = player_center;                               // Look at the player's center
+        m_camera.up = glm::vec3(0.0f, 0.0f, -1.0f);                     // Set 'up' to be forward in the world
 
         // Update the uniform buffer with the new camera view-projection matrix
         m_cameraUniform.updateViewProj(m_camera);
