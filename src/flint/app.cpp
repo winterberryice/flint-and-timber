@@ -103,9 +103,6 @@ namespace flint
 
         m_bindGroup = init::create_bind_group(m_device, m_bindGroupLayout, m_uniformBuffer);
 
-        // Create the debug box for the player
-        m_debugBox.create(m_device, m_player);
-
         // ====
         m_running = true;
     }
@@ -147,9 +144,6 @@ namespace flint
             // Update player physics and state
             m_player.update(dt, m_chunk);
 
-            // Update the debug box to the player's new position
-            m_debugBox.update(m_player);
-
             // Render the scene
             render();
         }
@@ -157,14 +151,21 @@ namespace flint
 
     void App::render()
     {
-        // --- DEBUG CAMERA: Top-Down "Ceiling" View ---
+        // Update camera from player state
         glm::vec3 player_pos = m_player.get_position();
-        glm::vec3 player_center = player_pos + glm::vec3(0.0f, physics::PLAYER_HEIGHT / 2.0f, 0.0f);
+        float player_yaw_deg = m_player.get_yaw();
+        float player_pitch_deg = m_player.get_pitch();
 
-        float distance = 15.0f; // Distance from player
-        m_camera.eye = player_center + glm::vec3(0.0f, distance, 0.0f); // Position camera directly above
-        m_camera.target = player_center;                               // Look at the player's center
-        m_camera.up = glm::vec3(0.0f, 0.0f, -1.0f);                     // Set 'up' to be forward in the world
+        m_camera.eye = player_pos + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+
+        float yaw_rad = glm::radians(player_yaw_deg);
+        float pitch_rad = glm::radians(player_pitch_deg);
+
+        glm::vec3 front;
+        front.x = cos(yaw_rad) * cos(pitch_rad);
+        front.y = sin(pitch_rad);
+        front.z = sin(yaw_rad) * cos(pitch_rad);
+        m_camera.target = m_camera.eye + glm::normalize(front);
 
         // Update the uniform buffer with the new camera view-projection matrix
         m_cameraUniform.updateViewProj(m_camera);
@@ -221,9 +222,6 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
-            // Draw the debug bounding box
-            m_debugBox.render(renderPass);
-
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -249,7 +247,6 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        m_debugBox.cleanup();
         m_chunkMesh.cleanup();
 
         if (m_depthTextureView)

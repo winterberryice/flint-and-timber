@@ -91,16 +91,18 @@ namespace flint
         {
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
+            float yaw_radians = glm::radians(yaw);
+            glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
+            glm::vec3 horizontal_right = glm::normalize(glm::cross(horizontal_forward, glm::vec3(0, 1, 0)));
 
-            // DEBUG: World-axis-aligned movement
             if (movement_intention.forward)
-                intended_horizontal_velocity.z -= 1.0f; // North
+                intended_horizontal_velocity += horizontal_forward;
             if (movement_intention.backward)
-                intended_horizontal_velocity.z += 1.0f; // South
+                intended_horizontal_velocity -= horizontal_forward;
             if (movement_intention.left)
-                intended_horizontal_velocity.x -= 1.0f; // West
+                intended_horizontal_velocity -= horizontal_right;
             if (movement_intention.right)
-                intended_horizontal_velocity.x += 1.0f; // East
+                intended_horizontal_velocity += horizontal_right;
 
             if (glm::length2(intended_horizontal_velocity) > 0.0f)
             {
@@ -182,10 +184,7 @@ namespace flint
                     { // Moving left
                         position.x = block_box.max.x - local_bounding_box.min.x + 0.0001f;
                     }
-                    // Stop all horizontal movement
                     velocity.x = 0.0f;
-                    velocity.z = 0.0f;
-                    desired_move.z = 0.0f; // Prevent Z-slide in this frame
                     break;
                 }
             }
@@ -207,10 +206,7 @@ namespace flint
                     { // Moving "backward" in world +Z
                         position.z = block_box.max.z - local_bounding_box.min.z + 0.0001f;
                     }
-                    // Stop all horizontal movement
-                    velocity.x = 0.0f;
                     velocity.z = 0.0f;
-                    desired_move.x = 0.0f; // Prevent X-slide in this frame
                     break;
                 }
             }
