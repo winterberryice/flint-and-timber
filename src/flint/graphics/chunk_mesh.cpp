@@ -56,22 +56,23 @@ namespace
         std::array<glm::vec2, 4> uvs;
         switch (face)
         {
-        case flint::CubeGeometry::Face::Front: // BL, TL, TR, BR
+        // The UV coordinates must match the vertex order for each face defined in cube_geometry.cpp
+        case flint::CubeGeometry::Face::Front: // Vertices: BL, TL, TR, BR
             uvs = {{{u0, v1}, {u0, v0}, {u1, v0}, {u1, v1}}};
             break;
-        case flint::CubeGeometry::Face::Back: // BL, BR, TR, TL
-            uvs = {{{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}}};
+        case flint::CubeGeometry::Face::Back: // Vertices: BL, BR, TR, TL -> Texture is mirrored
+            uvs = {{{u1, v1}, {u0, v1}, {u0, v0}, {u1, v0}}};
             break;
-        case flint::CubeGeometry::Face::Right: // BL, TL, TR, BR
+        case flint::CubeGeometry::Face::Right: // Vertices: BL, TL, TR, BR
             uvs = {{{u0, v1}, {u0, v0}, {u1, v0}, {u1, v1}}};
             break;
-        case flint::CubeGeometry::Face::Left: // BR, TR, TL, BL
+        case flint::CubeGeometry::Face::Left: // Vertices: BL, TL, TR, BR -> Texture is mirrored
             uvs = {{{u1, v1}, {u1, v0}, {u0, v0}, {u0, v1}}};
             break;
-        case flint::CubeGeometry::Face::Top: // BL, BR, TR, TL
+        case flint::CubeGeometry::Face::Top: // Vertices: BL, BR, TR, TL
             uvs = {{{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}}};
             break;
-        case flint::CubeGeometry::Face::Bottom: // TL, BL, BR, TR
+        case flint::CubeGeometry::Face::Bottom: // Vertices: TL, BL, BR, TR
             uvs = {{{u0, v0}, {u0, v1}, {u1, v1}, {u1, v0}}};
             break;
         }
