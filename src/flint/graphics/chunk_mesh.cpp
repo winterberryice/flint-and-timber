@@ -53,16 +53,30 @@ namespace
         float u1 = u0 + 1.0f / ATLAS_SIZE;
         float v1 = v0 + 1.0f / ATLAS_SIZE;
 
-        // The vertex order for a face is: bottom-left, top-left, top-right, bottom-right.
-        // UV mapping should be: (u0, v1), (u0, v0), (u1, v0), (u1, v1).
-        return {
-            .uvs = {{
-                {u0, v1}, // Bottom-left
-                {u0, v0}, // Top-left
-                {u1, v0}, // Top-right
-                {u1, v1}  // Bottom-right
-            }},
-            .color = color};
+        std::array<glm::vec2, 4> uvs;
+        switch (face)
+        {
+        case flint::CubeGeometry::Face::Front: // BL, TL, TR, BR
+            uvs = {{{u0, v1}, {u0, v0}, {u1, v0}, {u1, v1}}};
+            break;
+        case flint::CubeGeometry::Face::Back: // BL, BR, TR, TL
+            uvs = {{{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}}};
+            break;
+        case flint::CubeGeometry::Face::Right: // BL, TL, TR, BR
+            uvs = {{{u0, v1}, {u0, v0}, {u1, v0}, {u1, v1}}};
+            break;
+        case flint::CubeGeometry::Face::Left: // BR, TR, TL, BL
+            uvs = {{{u1, v1}, {u1, v0}, {u0, v0}, {u0, v1}}};
+            break;
+        case flint::CubeGeometry::Face::Top: // BL, BR, TR, TL
+            uvs = {{{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}}};
+            break;
+        case flint::CubeGeometry::Face::Bottom: // TL, BL, BR, TR
+            uvs = {{{u0, v0}, {u0, v1}, {u1, v1}, {u1, v0}}};
+            break;
+        }
+
+        return {.uvs = uvs, .color = color};
     }
 } // namespace
 
@@ -116,20 +130,11 @@ namespace flint
                             continue;
                         }
 
-                        const std::array<CubeGeometry::Face, 6> &faces = CubeGeometry::getAllFaces();
-                        const int neighborOffsets[6][3] = {
-                            {0, 0, 1},  // Back
-                            {0, 0, -1}, // Front
-                            {-1, 0, 0}, // Left
-                            {1, 0, 0},  // Right
-                            {0, -1, 0}, // Bottom
-                            {0, 1, 0}   // Top
-                        };
+                        const auto &faces = CubeGeometry::getAllFaces();
 
-                        // The order of faces in `getAllFaces` is Front, Back, Right, Left, Top, Bottom.
-                        // The neighbor offsets need to match this order to correctly check for transparent neighbors.
-                        // Correct order of neighbors:
-                        const int correctNeighborOffsets[6][3] = {
+                        // The neighbor offsets need to match the order of faces in `getAllFaces`:
+                        // Front, Back, Right, Left, Top, Bottom.
+                        const int neighborOffsets[6][3] = {
                             {0, 0, -1}, // Front
                             {0, 0, 1},  // Back
                             {1, 0, 0},  // Right
@@ -140,9 +145,9 @@ namespace flint
 
                         for (size_t i = 0; i < faces.size(); ++i)
                         {
-                            int nx = x + correctNeighborOffsets[i][0];
-                            int ny = y + correctNeighborOffsets[i][1];
-                            int nz = z + correctNeighborOffsets[i][2];
+                            int nx = x + neighborOffsets[i][0];
+                            int ny = y + neighborOffsets[i][1];
+                            int nz = z + neighborOffsets[i][2];
 
                             const Block *neighborBlock = chunk.getBlock(nx, ny, nz);
 
