@@ -18,34 +18,9 @@ namespace
     // This function determines the texture coordinates and color for a given block face.
     FaceTextureInfo get_face_texture_info(flint::BlockType block_type, flint::CubeGeometry::Face face)
     {
-        glm::ivec2 tile_coords;
-
-        // Default color is white (no tint).
-        glm::vec3 color = {1.0f, 1.0f, 1.0f};
-
-        switch (block_type)
-        {
-        case flint::BlockType::Grass:
-            if (face == flint::CubeGeometry::Face::Top)
-            {
-                tile_coords = {0, 0}; // Grass top
-                // Use the sentinel color to signal the shader to apply a tint.
-                color = {0.1f, 0.9f, 0.1f};
-            }
-            else if (face == flint::CubeGeometry::Face::Bottom)
-            {
-                tile_coords = {2, 0}; // Dirt
-            }
-            else
-            {
-                tile_coords = {1, 0}; // Grass side
-            }
-            break;
-        case flint::BlockType::Dirt:
-        default:
-            tile_coords = {2, 0}; // Dirt
-            break;
-        }
+        // DEBUGGING: Force all faces to use the 'top grass' texture (0, 0)
+        glm::ivec2 tile_coords = {0, 0};
+        glm::vec3 color = {1.0f, 1.0f, 1.0f}; // Use standard white color
 
         // Calculate UV coordinates from tile coordinates.
         float u0 = static_cast<float>(tile_coords.x) / ATLAS_SIZE;
