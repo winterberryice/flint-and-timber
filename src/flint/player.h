@@ -36,9 +36,8 @@ namespace flint
             float get_yaw() const;
             float get_pitch() const;
 
-            physics::AABB get_world_bounding_box() const;
-
         private:
+            physics::AABB get_world_bounding_box() const;
             glm::vec3 position; // Position of the player's feet
             glm::vec3 velocity;
 
