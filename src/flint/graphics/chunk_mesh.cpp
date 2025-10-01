@@ -6,8 +6,9 @@
 
 namespace
 {
-    // Texture atlas is 16x16 tiles
-    const float ATLAS_SIZE = 16.0f;
+    // The texture atlas is a 16x1 grid of tiles.
+    const float ATLAS_COLS = 16.0f;
+    const float ATLAS_ROWS = 1.0f;
 
     struct FaceTextureInfo
     {
@@ -18,15 +19,44 @@ namespace
     // This function determines the texture coordinates and color for a given block face.
     FaceTextureInfo get_face_texture_info(flint::BlockType block_type, flint::CubeGeometry::Face face)
     {
-        // DEBUGGING: Force all faces to use the 'top grass' texture (0, 0)
-        glm::ivec2 tile_coords = {0, 0};
-        glm::vec3 color = {1.0f, 1.0f, 1.0f}; // Use standard white color
+        glm::ivec2 tile_coords;
+
+        // Default color is white (no tint).
+        glm::vec3 color = {1.0f, 1.0f, 1.0f};
+
+        switch (block_type)
+        {
+        case flint::BlockType::Grass:
+            if (face == flint::CubeGeometry::Face::Top)
+            {
+                tile_coords = {0, 0}; // Grass top
+                // Use the sentinel color to signal the shader to apply a tint.
+                color = {0.1f, 0.9f, 0.1f};
+            }
+            else if (face == flint::CubeGeometry::Face::Bottom)
+            {
+                tile_coords = {2, 0}; // Dirt
+            }
+            else
+            {
+                tile_coords = {1, 0}; // Grass side
+            }
+            break;
+        case flint::BlockType::Dirt:
+        default:
+            tile_coords = {2, 0}; // Dirt
+            break;
+        }
+
+        // Calculate the size of a single texture tile in UV space.
+        float tile_width = 1.0f / ATLAS_COLS;
+        float tile_height = 1.0f / ATLAS_ROWS;
 
         // Calculate UV coordinates from tile coordinates.
-        float u0 = static_cast<float>(tile_coords.x) / ATLAS_SIZE;
-        float v0 = static_cast<float>(tile_coords.y) / ATLAS_SIZE;
-        float u1 = u0 + 1.0f / ATLAS_SIZE;
-        float v1 = v0 + 1.0f / ATLAS_SIZE;
+        float u0 = static_cast<float>(tile_coords.x) * tile_width;
+        float v0 = static_cast<float>(tile_coords.y) * tile_height;
+        float u1 = u0 + tile_width;
+        float v1 = v0 + tile_height;
 
         std::array<glm::vec2, 4> uvs;
         switch (face)
