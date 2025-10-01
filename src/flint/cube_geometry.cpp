@@ -10,42 +10,43 @@ namespace flint
         namespace
         {
             // We use std::array for the raw data as it's a fixed-size, compile-time structure.
+            // The cube is defined in the [0, 1] range, with its origin at the minimum corner.
             constexpr std::array<Vertex, 24> CUBE_VERTICES_DATA = {{
-                // Front face (Z = -0.5)
-                {.position = {-0.5f, -0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-                {.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-                {.position = {0.5f, 0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-                {.position = {0.5f, -0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
+                // Front face (Z = 0.0)
+                {.position = {0.0f, 0.0f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
+                {.position = {0.0f, 1.0f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
+                {.position = {1.0f, 1.0f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
+                {.position = {1.0f, 0.0f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
 
-                // Back face (Z = 0.5)
-                {.position = {-0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-                {.position = {0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-                {.position = {0.5f, 0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-                {.position = {-0.5f, 0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
+                // Back face (Z = 1.0)
+                {.position = {0.0f, 0.0f, 1.0f}, .color = {0.0f, 1.0f, 0.0f}},
+                {.position = {1.0f, 0.0f, 1.0f}, .color = {0.0f, 1.0f, 0.0f}},
+                {.position = {1.0f, 1.0f, 1.0f}, .color = {0.0f, 1.0f, 0.0f}},
+                {.position = {0.0f, 1.0f, 1.0f}, .color = {0.0f, 1.0f, 0.0f}},
 
-                // Right face (X = 0.5)
-                {.position = {0.5f, -0.5f, -0.5f}, .color = {0.0f, 0.0f, 1.0f}},
-                {.position = {0.5f, 0.5f, -0.5f}, .color = {0.0f, 0.0f, 1.0f}},
-                {.position = {0.5f, 0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
-                {.position = {0.5f, -0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
+                // Right face (X = 1.0)
+                {.position = {1.0f, 0.0f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}},
+                {.position = {1.0f, 1.0f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}},
+                {.position = {1.0f, 1.0f, 1.0f}, .color = {0.0f, 0.0f, 1.0f}},
+                {.position = {1.0f, 0.0f, 1.0f}, .color = {0.0f, 0.0f, 1.0f}},
 
-                // Left face (X = -0.5)
-                {.position = {-0.5f, -0.5f, 0.5f}, .color = {1.0f, 1.0f, 0.0f}},
-                {.position = {-0.5f, 0.5f, 0.5f}, .color = {1.0f, 1.0f, 0.0f}},
-                {.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}},
-                {.position = {-0.5f, -0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}},
+                // Left face (X = 0.0)
+                {.position = {0.0f, 0.0f, 1.0f}, .color = {1.0f, 1.0f, 0.0f}},
+                {.position = {0.0f, 1.0f, 1.0f}, .color = {1.0f, 1.0f, 0.0f}},
+                {.position = {0.0f, 1.0f, 0.0f}, .color = {1.0f, 1.0f, 0.0f}},
+                {.position = {0.0f, 0.0f, 0.0f}, .color = {1.0f, 1.0f, 0.0f}},
 
-                // Top face (Y = 0.5)
-                {.position = {-0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}},
-                {.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}},
-                {.position = {0.5f, 0.5f, -0.5f}, .color = {1.0f, 0.0f, 1.0f}},
-                {.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 0.0f, 1.0f}},
+                // Top face (Y = 1.0)
+                {.position = {0.0f, 1.0f, 1.0f}, .color = {1.0f, 0.0f, 1.0f}},
+                {.position = {1.0f, 1.0f, 1.0f}, .color = {1.0f, 0.0f, 1.0f}},
+                {.position = {1.0f, 1.0f, 0.0f}, .color = {1.0f, 0.0f, 1.0f}},
+                {.position = {0.0f, 1.0f, 0.0f}, .color = {1.0f, 0.0f, 1.0f}},
 
-                // Bottom face (Y = -0.5)
-                {.position = {-0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 1.0f}},
-                {.position = {-0.5f, -0.5f, -0.5f}, .color = {0.0f, 1.0f, 1.0f}},
-                {.position = {0.5f, -0.5f, -0.5f}, .color = {0.0f, 1.0f, 1.0f}},
-                {.position = {0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 1.0f}},
+                // Bottom face (Y = 0.0)
+                {.position = {0.0f, 0.0f, 1.0f}, .color = {0.0f, 1.0f, 1.0f}},
+                {.position = {0.0f, 0.0f, 0.0f}, .color = {0.0f, 1.0f, 1.0f}},
+                {.position = {1.0f, 0.0f, 0.0f}, .color = {0.0f, 1.0f, 1.0f}},
+                {.position = {1.0f, 0.0f, 1.0f}, .color = {0.0f, 1.0f, 1.0f}},
             }};
 
             constexpr std::array<uint16_t, 36> CUBE_INDICES_DATA = {{
