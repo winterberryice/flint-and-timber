@@ -8,6 +8,8 @@
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
 
+#include "atlas_bytes.hpp"
+
 namespace flint
 {
     App::App()
@@ -37,6 +39,12 @@ namespace flint
             m_device,
             m_queue //
         );
+
+        if (!m_atlas.loadFromMemory(m_device, m_queue, assets_textures_block_atlas_png, assets_textures_block_atlas_png_len))
+        {
+            std::cerr << "Failed to load texture atlas!" << std::endl;
+            // For now, we'll just print an error. In a real app, you might want to exit.
+        }
 
         std::cout << "Creating shaders..." << std::endl;
 
@@ -101,7 +109,12 @@ namespace flint
             m_depthTextureFormat,
             &m_bindGroupLayout);
 
-        m_bindGroup = init::create_bind_group(m_device, m_bindGroupLayout, m_uniformBuffer);
+        m_bindGroup = init::create_bind_group(
+            m_device,
+            m_bindGroupLayout,
+            m_uniformBuffer,
+            m_atlas.getView(),
+            m_atlas.getSampler());
 
         // ====
         m_running = true;
@@ -247,6 +260,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_atlas.cleanup();
         m_chunkMesh.cleanup();
 
         if (m_depthTextureView)

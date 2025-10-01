@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 
+#include "../vertex.h"
 #include "utils.h"
 
 namespace flint::init
@@ -29,16 +30,29 @@ namespace flint::init
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
 
-        // Create bind group layout for uniforms first
-        WGPUBindGroupLayoutEntry bindingLayout = {};
-        bindingLayout.binding = 0;
-        bindingLayout.visibility = WGPUShaderStage_Vertex;
-        bindingLayout.buffer.type = WGPUBufferBindingType_Uniform;
-        bindingLayout.buffer.minBindingSize = sizeof(glm::mat4);
+        // Create bind group layout for uniforms, texture, and sampler
+        std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries(3);
+
+        // Binding 0: Uniform Buffer (Vertex)
+        bindingLayoutEntries[0].binding = 0;
+        bindingLayoutEntries[0].visibility = WGPUShaderStage_Vertex;
+        bindingLayoutEntries[0].buffer.type = WGPUBufferBindingType_Uniform;
+        bindingLayoutEntries[0].buffer.minBindingSize = sizeof(glm::mat4);
+
+        // Binding 1: Texture View (Fragment)
+        bindingLayoutEntries[1].binding = 1;
+        bindingLayoutEntries[1].visibility = WGPUShaderStage_Fragment;
+        bindingLayoutEntries[1].texture.sampleType = WGPUTextureSampleType_Float;
+        bindingLayoutEntries[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+
+        // Binding 2: Sampler (Fragment)
+        bindingLayoutEntries[2].binding = 2;
+        bindingLayoutEntries[2].visibility = WGPUShaderStage_Fragment;
+        bindingLayoutEntries[2].sampler.type = WGPUSamplerBindingType_Filtering;
 
         WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-        bindGroupLayoutDesc.entryCount = 1;
-        bindGroupLayoutDesc.entries = &bindingLayout;
+        bindGroupLayoutDesc.entryCount = bindingLayoutEntries.size();
+        bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
 
         WGPUBindGroupLayout bindGroupLayout = wgpuDeviceCreateBindGroupLayout(device, &bindGroupLayoutDesc);
         if (!bindGroupLayout)
@@ -55,24 +69,8 @@ namespace flint::init
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
 
-        // Define vertex buffer layout for position + color
-        std::vector<WGPUVertexAttribute> vertexAttributes(2);
-
-        // Position attribute (location 0)
-        vertexAttributes[0].format = WGPUVertexFormat_Float32x3; // vec3f position
-        vertexAttributes[0].offset = 0;
-        vertexAttributes[0].shaderLocation = 0;
-
-        // Color attribute (location 1)
-        vertexAttributes[1].format = WGPUVertexFormat_Float32x3; // vec3f color
-        vertexAttributes[1].offset = 3 * sizeof(float);          // After position
-        vertexAttributes[1].shaderLocation = 1;
-
-        WGPUVertexBufferLayout vertexBufferLayout = {};
-        vertexBufferLayout.arrayStride = 6 * sizeof(float); // 3 floats position + 3 floats color
-        vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-        vertexBufferLayout.attributeCount = vertexAttributes.size();
-        vertexBufferLayout.attributes = vertexAttributes.data();
+        // Get vertex layout from the Vertex struct
+        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
@@ -131,18 +129,30 @@ namespace flint::init
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer)
+        WGPUBuffer uniformBuffer,
+        WGPUTextureView textureView,
+        WGPUSampler sampler)
     {
-        WGPUBindGroupEntry binding = {};
-        binding.binding = 0;
-        binding.buffer = uniformBuffer;
-        binding.offset = 0;
-        binding.size = sizeof(glm::mat4);
+        std::vector<WGPUBindGroupEntry> bindings(3);
+
+        // Binding 0: Uniform Buffer
+        bindings[0].binding = 0;
+        bindings[0].buffer = uniformBuffer;
+        bindings[0].offset = 0;
+        bindings[0].size = sizeof(glm::mat4);
+
+        // Binding 1: Texture View
+        bindings[1].binding = 1;
+        bindings[1].textureView = textureView;
+
+        // Binding 2: Sampler
+        bindings[2].binding = 2;
+        bindings[2].sampler = sampler;
 
         WGPUBindGroupDescriptor bindGroupDesc = {};
         bindGroupDesc.layout = bindGroupLayout;
-        bindGroupDesc.entryCount = 1;
-        bindGroupDesc.entries = &binding;
+        bindGroupDesc.entryCount = bindings.size();
+        bindGroupDesc.entries = bindings.data();
 
         WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
         if (!bindGroup)

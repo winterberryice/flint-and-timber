@@ -17,6 +17,8 @@ namespace flint::init
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer);
+        WGPUBuffer uniformBuffer,
+        WGPUTextureView textureView,
+        WGPUSampler sampler);
 
 } // namespace flint::init

@@ -2,12 +2,12 @@
 
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
+#include <sdl3webgpu.h>
 
-#include "camera.h"
-#include "chunk.h"
-#include "graphics/chunk_mesh.hpp"
+#include "graphics/mesh.hpp"
 #include "graphics/texture.hpp"
-#include "player.h"
+#include "chunk.hpp"
+#include "player.hpp"
 
 namespace flint
 {
@@ -16,9 +16,9 @@ namespace flint
     {
     public:
         App();
-        ~App();
-
-        void run();
+        bool Initialize(int width = 800, int height = 600);
+        void Run();
+        void Terminate();
 
     private:
         void render();
@@ -34,29 +34,24 @@ namespace flint
         WGPUQueue m_queue = nullptr;
         WGPUSurface m_surface = nullptr;
         WGPUTextureFormat m_surfaceFormat;
-
-        // New depth texture fields
-        WGPUTexture m_depthTexture = nullptr;
-        WGPUTextureView m_depthTextureView = nullptr;
-        WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
-
         WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUShaderModule m_vertexShader = nullptr;
-        WGPUShaderModule m_fragmentShader = nullptr;
+        WGPUShaderModule m_shaderModule = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
 
-        Camera m_camera;
-        CameraUniform m_cameraUniform;
-
-        player::Player m_player;
+        // New texture atlas
+        graphics::Texture m_blockAtlas;
 
         Chunk m_chunk;
-        graphics::ChunkMesh m_chunkMesh;
-        graphics::Texture m_atlas;
+        player::Player m_player;
 
         WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+
+        // Bind groups and layouts
+        WGPUBindGroup m_cameraBindGroup = nullptr;
+        WGPUBindGroupLayout m_cameraBindGroupLayout = nullptr;
+        WGPUBindGroup m_textureBindGroup = nullptr;
+        WGPUBindGroupLayout m_textureBindGroupLayout = nullptr;
+
 
         // App state
         bool m_running = false;
