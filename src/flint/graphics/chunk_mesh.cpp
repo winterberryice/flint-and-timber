@@ -2,6 +2,69 @@
 #include "../cube_geometry.h"
 #include "../vertex.h"
 #include <iostream>
+#include <array>
+
+namespace
+{
+    // Texture atlas is 16x16 tiles
+    const float ATLAS_SIZE = 16.0f;
+
+    struct FaceTextureInfo
+    {
+        std::array<glm::vec2, 4> uvs;
+        glm::vec3 color;
+    };
+
+    // This function determines the texture coordinates and color for a given block face.
+    FaceTextureInfo get_face_texture_info(flint::BlockType block_type, flint::CubeGeometry::Face face)
+    {
+        glm::ivec2 tile_coords;
+
+        // Default color is white (no tint).
+        glm::vec3 color = {1.0f, 1.0f, 1.0f};
+
+        switch (block_type)
+        {
+        case flint::BlockType::Grass:
+            if (face == flint::CubeGeometry::Face::Top)
+            {
+                tile_coords = {0, 0}; // Grass top
+                // Use the sentinel color to signal the shader to apply a tint.
+                color = {0.1f, 0.9f, 0.1f};
+            }
+            else if (face == flint::CubeGeometry::Face::Bottom)
+            {
+                tile_coords = {2, 0}; // Dirt
+            }
+            else
+            {
+                tile_coords = {1, 0}; // Grass side
+            }
+            break;
+        case flint::BlockType::Dirt:
+        default:
+            tile_coords = {2, 0}; // Dirt
+            break;
+        }
+
+        // Calculate UV coordinates from tile coordinates.
+        float u0 = static_cast<float>(tile_coords.x) / ATLAS_SIZE;
+        float v0 = static_cast<float>(tile_coords.y) / ATLAS_SIZE;
+        float u1 = u0 + 1.0f / ATLAS_SIZE;
+        float v1 = v0 + 1.0f / ATLAS_SIZE;
+
+        // The vertex order for a face is: bottom-left, top-left, top-right, bottom-right.
+        // UV mapping should be: (u0, v1), (u0, v0), (u1, v0), (u1, v1).
+        return {
+            .uvs = {{
+                {u0, v1}, // Bottom-left
+                {u0, v0}, // Top-left
+                {u1, v0}, // Top-right
+                {u1, v1}  // Bottom-right
+            }},
+            .color = color};
+    }
+} // namespace
 
 namespace flint
 {
@@ -53,20 +116,20 @@ namespace flint
                             continue;
                         }
 
-                        // Define colors based on block type
-                        glm::vec3 color;
-                        if (currentBlock->type == BlockType::Grass)
-                        {
-                            color = {0.0f, 1.0f, 0.0f}; // Green
-                        }
-                        else
-                        { // Dirt
-                            color = {0.5f, 0.25f, 0.0f}; // Brown
-                        }
-
-                        // Check neighbors
                         const std::array<CubeGeometry::Face, 6> &faces = CubeGeometry::getAllFaces();
                         const int neighborOffsets[6][3] = {
+                            {0, 0, 1},  // Back
+                            {0, 0, -1}, // Front
+                            {-1, 0, 0}, // Left
+                            {1, 0, 0},  // Right
+                            {0, -1, 0}, // Bottom
+                            {0, 1, 0}   // Top
+                        };
+
+                        // The order of faces in `getAllFaces` is Front, Back, Right, Left, Top, Bottom.
+                        // The neighbor offsets need to match this order to correctly check for transparent neighbors.
+                        // Correct order of neighbors:
+                        const int correctNeighborOffsets[6][3] = {
                             {0, 0, -1}, // Front
                             {0, 0, 1},  // Back
                             {1, 0, 0},  // Right
@@ -77,23 +140,28 @@ namespace flint
 
                         for (size_t i = 0; i < faces.size(); ++i)
                         {
-                            int nx = x + neighborOffsets[i][0];
-                            int ny = y + neighborOffsets[i][1];
-                            int nz = z + neighborOffsets[i][2];
+                            int nx = x + correctNeighborOffsets[i][0];
+                            int ny = y + correctNeighborOffsets[i][1];
+                            int nz = z + correctNeighborOffsets[i][2];
 
                             const Block *neighborBlock = chunk.getBlock(nx, ny, nz);
 
                             if (!neighborBlock || !neighborBlock->isSolid())
                             {
-                                // Add face to the mesh
+                                // This face is visible, add it to the mesh.
+                                auto face_info = get_face_texture_info(currentBlock->type, faces[i]);
                                 std::vector<flint::Vertex> faceVertices = CubeGeometry::getFaceVertices(faces[i]);
                                 const std::vector<uint16_t> &faceIndices = CubeGeometry::getLocalFaceIndices();
 
-                                for (const auto &vertex : faceVertices)
+                                for (size_t j = 0; j < faceVertices.size(); ++j)
                                 {
                                     vertices.push_back({
-                                        {vertex.position.x + x, vertex.position.y + y, vertex.position.z + z},
-                                        color,
+                                        // Offset the vertex position by the block's position in the chunk.
+                                        .position = faceVertices[j].position + glm::vec3(x, y, z),
+                                        // The color is now used for lighting/tinting.
+                                        .color = face_info.color,
+                                        // Assign the UV coordinates for this vertex.
+                                        .uv = face_info.uvs[j],
                                     });
                                 }
 
@@ -101,7 +169,7 @@ namespace flint
                                 {
                                     indices.push_back(currentIndex + index);
                                 }
-                                currentIndex += 4; // Each face has 4 vertices
+                                currentIndex += 4; // Each face has 4 vertices.
                             }
                         }
                     }
