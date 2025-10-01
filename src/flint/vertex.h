@@ -20,21 +20,21 @@ namespace flint
             static WGPUVertexAttribute attributes[] = {
                 // Attribute 0: Position
                 {
-                    nullptr,
+                    .nextInChain = nullptr,
                     .format = WGPUVertexFormat_Float32x3,
                     .offset = offsetof(Vertex, position),
                     .shaderLocation = 0,
                 },
                 // Attribute 1: Color
                 {
-                    nullptr,
+                    .nextInChain = nullptr,
                     .format = WGPUVertexFormat_Float32x3,
                     .offset = offsetof(Vertex, color),
                     .shaderLocation = 1,
                 },
                 // Attribute 2: UV
                 {
-                    nullptr,
+                    .nextInChain = nullptr,
                     .format = WGPUVertexFormat_Float32x2,
                     .offset = offsetof(Vertex, uv),
                     .shaderLocation = 2,

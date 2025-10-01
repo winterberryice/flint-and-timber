@@ -8,7 +8,7 @@
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
 
-#include "generated/atlas_bytes.hpp"
+#include "atlas_bytes.hpp"
 
 namespace flint
 {
@@ -40,7 +40,7 @@ namespace flint
             m_queue //
         );
 
-        if (!m_atlas.loadFromMemory(m_device, m_queue, atlas_png, atlas_png_len))
+        if (!m_atlas.loadFromMemory(m_device, m_queue, assets_textures_block_atlas_png, assets_textures_block_atlas_png_len))
         {
             std::cerr << "Failed to load texture atlas!" << std::endl;
             // For now, we'll just print an error. In a real app, you might want to exit.
