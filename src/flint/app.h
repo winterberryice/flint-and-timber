@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "graphics/texture.h"
 #include "player.h"
 
 namespace flint
@@ -53,8 +54,13 @@ namespace flint
         graphics::ChunkMesh m_chunkMesh;
 
         WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+        WGPUBindGroup m_uniformBindGroup = nullptr;       // Renamed for clarity
+        WGPUBindGroupLayout m_uniformBindGroupLayout = nullptr; // Renamed for clarity
+
+        // Texture-related resources
+        graphics::Texture m_textureAtlas;
+        WGPUBindGroup m_textureBindGroup = nullptr;
+        WGPUBindGroupLayout m_textureBindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;

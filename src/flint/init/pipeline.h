@@ -5,18 +5,15 @@
 namespace flint::init
 {
 
+#include <vector>
+
     WGPURenderPipeline create_render_pipeline(
         WGPUDevice device,
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
         WGPUTextureFormat depthTextureFormat, // New parameter for depth texture
-        WGPUBindGroupLayout *pBindGroupLayout // Output parameter
-    );
+    const std::vector<WGPUBindGroupLayout> &bindGroupLayouts);
 
-    WGPUBindGroup create_bind_group(
-        WGPUDevice device,
-        WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer);
 
 } // namespace flint::init
