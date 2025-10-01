@@ -13,6 +13,7 @@ namespace flint
     {
         glm::vec3 position;
         glm::vec3 color;
+        glm::vec2 tex_coords; // UV coordinates
 
         // This static function describes the memory layout of a single vertex to the GPU pipeline.
         // It's the C++ equivalent of the `desc()` method.
@@ -39,6 +40,14 @@ namespace flint
                     /* .format = */ WGPUVertexFormat_Float32x3,
                     /* .offset = */ offsetof(Vertex, color),
                     /* .shaderLocation = */ 1,
+                },
+                // Attribute 2: Tex Coords (UV)
+                // Corresponds to `@location(2)` in the WGSL vertex shader.
+                {
+                    nullptr,
+                    /* .format = */ WGPUVertexFormat_Float32x2,
+                    /* .offset = */ offsetof(Vertex, tex_coords),
+                    /* .shaderLocation = */ 2,
                 }};
 
             WGPUVertexBufferLayout layout{};
