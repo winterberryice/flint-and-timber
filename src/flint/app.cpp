@@ -230,10 +230,10 @@ namespace flint
         wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
         m_chunkMesh.render(renderPass);
 
-        // Draw the selection highlight
-        if (m_selection_renderer) {
-            m_selection_renderer->draw(renderPass, m_queue, m_world, m_selected_block);
-        }
+        // Draw the selection highlight (Temporarily disabled for debugging)
+        // if (m_selection_renderer) {
+        //     m_selection_renderer->draw(renderPass, m_queue, m_world, m_selected_block);
+        // }
 
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
