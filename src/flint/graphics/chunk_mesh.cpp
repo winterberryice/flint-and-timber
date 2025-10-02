@@ -57,6 +57,9 @@ namespace
             break;
         case flint::BlockType::OakLeaves:
             tile_coords = {6, 0}; // Oak leaves
+            // Use the sentinel color to signal the shader to apply a tint,
+            // the same way we do for grass.
+            color = {0.1f, 0.9f, 0.1f};
             break;
         default:
             tile_coords = {2, 0}; // Dirt
