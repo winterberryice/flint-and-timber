@@ -5,7 +5,7 @@
 
 #include "camera.h"
 #include "graphics/chunk_mesh.hpp"
-#include "graphics/selection_renderer.hpp"
+// #include "graphics/selection_renderer.hpp"
 #include "graphics/texture.hpp"
 #include "player.h"
 #include "raycast.h"
@@ -61,7 +61,7 @@ namespace flint
 
         // Selection highlight
         std::optional<RaycastResult> m_selected_block;
-        std::unique_ptr<graphics::SelectionRenderer> m_selection_renderer;
+        // std::unique_ptr<graphics::SelectionRenderer> m_selection_renderer;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
