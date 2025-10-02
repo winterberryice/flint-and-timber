@@ -43,6 +43,21 @@ namespace
             }
             break;
         case flint::BlockType::Dirt:
+            tile_coords = {2, 0}; // Dirt
+            break;
+        case flint::BlockType::OakLog:
+            if (face == flint::CubeGeometry::Face::Top || face == flint::CubeGeometry::Face::Bottom)
+            {
+                tile_coords = {5, 0}; // Oak log top/bottom
+            }
+            else
+            {
+                tile_coords = {4, 0}; // Oak log side
+            }
+            break;
+        case flint::BlockType::OakLeaves:
+            tile_coords = {6, 0}; // Oak leaves
+            break;
         default:
             tile_coords = {2, 0}; // Dirt
             break;
@@ -131,7 +146,7 @@ namespace flint
                     for (size_t z = 0; z < CHUNK_DEPTH; ++z)
                     {
                         const Block *currentBlock = chunk.getBlock(x, y, z);
-                        if (!currentBlock || !currentBlock->isSolid())
+                        if (!currentBlock || currentBlock->type == BlockType::Air)
                         {
                             continue;
                         }

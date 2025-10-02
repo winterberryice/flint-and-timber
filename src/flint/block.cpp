@@ -11,8 +11,10 @@ namespace flint
         {
         case BlockType::Grass:
         case BlockType::Dirt:
+        case BlockType::OakLog:
             return true;
         case BlockType::Air:
+        case BlockType::OakLeaves:
         default:
             return false;
         }

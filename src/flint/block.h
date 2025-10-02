@@ -8,7 +8,9 @@ namespace flint
     {
         Air,
         Dirt,
-        Grass
+    Grass,
+    OakLog,
+    OakLeaves
     };
 
     // This is the C++ equivalent of your Rust `pub struct Block`.
