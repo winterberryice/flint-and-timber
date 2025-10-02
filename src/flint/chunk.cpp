@@ -46,8 +46,8 @@ namespace flint
         setBlock(7, pillar_y_start + 1, 7, BlockType::Dirt);
 
         // Add a hardcoded tree
-        const size_t tree_x = 8;
-        const size_t tree_z = 8;
+        const size_t tree_x = 4;
+        const size_t tree_z = 4;
         const size_t trunk_height = 5;
         const size_t trunk_y_start = surface_level + 1;
 
