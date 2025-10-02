@@ -4,10 +4,14 @@
 #include <webgpu/webgpu.h>
 
 #include "camera.h"
-#include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "graphics/selection_renderer.hpp"
 #include "graphics/texture.hpp"
 #include "player.h"
+#include "raycast.h"
+#include "world.h"
+#include <memory>
+#include <optional>
 
 namespace flint
 {
@@ -21,6 +25,7 @@ namespace flint
         void run();
 
     private:
+        void update();
         void render();
 
     private:
@@ -50,9 +55,13 @@ namespace flint
 
         player::Player m_player;
 
-        Chunk m_chunk;
+        World m_world; // World holds the chunk(s)
         graphics::ChunkMesh m_chunkMesh;
         graphics::Texture m_atlas;
+
+        // Selection highlight
+        std::optional<RaycastResult> m_selected_block;
+        std::unique_ptr<graphics::SelectionRenderer> m_selection_renderer;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
