@@ -21,4 +21,8 @@ const Block* World::get_block_at_world(const glm::ivec3& position) const {
     return nullptr;
 }
 
+const Chunk& World::get_chunk() const {
+    return chunk;
+}
+
 } // namespace flint

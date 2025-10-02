@@ -1,11 +1,15 @@
 #pragma once
 
-#include "world.h"
-#include "player.h"
 #include <glm/glm.hpp>
 #include <optional>
 
 namespace flint {
+
+// Forward declarations to break circular dependencies
+class World;
+namespace player {
+    class Player;
+}
 
 enum class BlockFace {
     PosX, // +X
@@ -21,8 +25,9 @@ struct RaycastResult {
     BlockFace face;
 };
 
+// Function signature uses forward-declared types
 std::optional<RaycastResult> cast_ray(
-    const Player& player,
+    const player::Player& player,
     const World& world,
     float max_distance);
 

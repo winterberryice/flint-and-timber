@@ -198,7 +198,7 @@ namespace flint
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
             if (surfaceTexture.texture) wgpuTextureRelease(surfaceTexture.texture);
             return;
         }

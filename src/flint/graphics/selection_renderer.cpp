@@ -2,8 +2,10 @@
 #include "../selection_shader.wgsl.h"
 #include "../cube_geometry.h"
 #include "../vertex.h"
+#include "../init/utils.h"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 
 namespace flint::graphics {
 
@@ -30,7 +32,6 @@ CubeGeometry::Face to_cube_geometry_face(BlockFace face) {
         case BlockFace::PosZ: return CubeGeometry::Face::Back;
         case BlockFace::NegZ: return CubeGeometry::Face::Front;
     }
-    // Add a default case to satisfy all control paths, though it shouldn't be reached
     return CubeGeometry::Face::Front;
 }
 
@@ -52,10 +53,9 @@ SelectionRenderer::~SelectionRenderer() {
 }
 
 void SelectionRenderer::create_buffers() {
-    // We create a single vertex buffer with all vertices for a cube.
     const auto& vertices = CubeGeometry::getVertices();
     WGPUBufferDescriptor buffer_desc{};
-    buffer_desc.label = "Selection Vertex Buffer";
+    buffer_desc.label = init::makeStringView("Selection Vertex Buffer");
     buffer_desc.usage = WGPUBufferUsage_Vertex;
     buffer_desc.size = vertices.size() * sizeof(Vertex);
     buffer_desc.mappedAtCreation = true;
@@ -63,11 +63,10 @@ void SelectionRenderer::create_buffers() {
     memcpy(wgpuBufferGetMappedRange(vertex_buffer, 0, buffer_desc.size), vertices.data(), buffer_desc.size);
     wgpuBufferUnmap(vertex_buffer);
 
-    // And a single index buffer.
     const auto& indices = CubeGeometry::getIndices();
     index_count = indices.size();
     WGPUBufferDescriptor index_buffer_desc{};
-    index_buffer_desc.label = "Selection Index Buffer";
+    index_buffer_desc.label = init::makeStringView("Selection Index Buffer");
     index_buffer_desc.usage = WGPUBufferUsage_Index;
     index_buffer_desc.size = indices.size() * sizeof(uint16_t);
     index_buffer_desc.mappedAtCreation = true;
@@ -78,13 +77,13 @@ void SelectionRenderer::create_buffers() {
 
 
 void SelectionRenderer::create_pipeline() {
-    WGPUShaderModuleWGSLDescriptor wgsl_desc{};
-    wgsl_desc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-    wgsl_desc.code = shaders::selection_shader_wgsl;
+    WGPUShaderSourceWGSL wgsl_desc{};
+    wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+    wgsl_desc.code = init::makeStringView(shaders::selection_shader_wgsl);
 
     WGPUShaderModuleDescriptor shader_desc{};
     shader_desc.nextInChain = &wgsl_desc.chain;
-    shader_desc.label = "Selection Shader";
+    shader_desc.label = init::makeStringView("Selection Shader");
     WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
 
     WGPUBindGroupLayoutEntry model_bgl_entry{};
@@ -93,7 +92,7 @@ void SelectionRenderer::create_pipeline() {
     model_bgl_entry.buffer.type = WGPUBufferBindingType_Uniform;
 
     WGPUBindGroupLayoutDescriptor model_bgl_desc{};
-    model_bgl_desc.label = "Selection Model BGL";
+    model_bgl_desc.label = init::makeStringView("Selection Model BGL");
     model_bgl_desc.entryCount = 1;
     model_bgl_desc.entries = &model_bgl_entry;
     model_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &model_bgl_desc);
@@ -101,14 +100,14 @@ void SelectionRenderer::create_pipeline() {
     std::vector<WGPUBindGroupLayout> bind_group_layouts = {camera_bind_group_layout, model_bind_group_layout};
 
     WGPUPipelineLayoutDescriptor layout_desc{};
-    layout_desc.label = "Selection Pipeline Layout";
+    layout_desc.label = init::makeStringView("Selection Pipeline Layout");
     layout_desc.bindGroupLayoutCount = bind_group_layouts.size();
     layout_desc.bindGroupLayouts = bind_group_layouts.data();
     WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &layout_desc);
 
     WGPUVertexState vertex_state{};
     vertex_state.module = shader_module;
-    vertex_state.entryPoint = "vs_main";
+    vertex_state.entryPoint = init::makeStringView("vs_main");
     WGPUVertexBufferLayout vertex_buffer_layout = Vertex::getLayout();
     vertex_state.bufferCount = 1;
     vertex_state.buffers = &vertex_buffer_layout;
@@ -116,7 +115,6 @@ void SelectionRenderer::create_pipeline() {
     WGPUColorTargetState color_target{};
     color_target.format = surface_format;
     color_target.writeMask = WGPUColorWriteMask_All;
-    // Enable alpha blending
     WGPUBlendState blend_state{};
     blend_state.color.operation = WGPUBlendOperation_Add;
     blend_state.color.srcFactor = WGPUBlendFactor_SrcAlpha;
@@ -126,29 +124,27 @@ void SelectionRenderer::create_pipeline() {
     blend_state.alpha.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
     color_target.blend = &blend_state;
 
-
     WGPUFragmentState fragment_state{};
     fragment_state.module = shader_module;
-    fragment_state.entryPoint = "fs_main";
+    fragment_state.entryPoint = init::makeStringView("fs_main");
     fragment_state.targetCount = 1;
     fragment_state.targets = &color_target;
 
     WGPUDepthStencilState depth_stencil_state{};
     depth_stencil_state.format = WGPUTextureFormat_Depth24Plus;
-    depth_stencil_state.depthWriteEnabled = false; // Don't write to depth buffer
+    depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
     depth_stencil_state.depthCompare = WGPUCompareFunction_LessEqual;
-    // Add depth bias to prevent z-fighting
-    depth_stencil_state.bias.constant = -2;
-    depth_stencil_state.bias.slopeScale = -2.0f;
+    depth_stencil_state.depthBias = -2;
+    depth_stencil_state.depthBiasSlopeScale = -2.0f;
 
     WGPURenderPipelineDescriptor pipeline_desc{};
-    pipeline_desc.label = "Selection Render Pipeline";
+    pipeline_desc.label = init::makeStringView("Selection Render Pipeline");
     pipeline_desc.layout = pipeline_layout;
     pipeline_desc.vertex = vertex_state;
     pipeline_desc.fragment = &fragment_state;
     pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
     pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
-    pipeline_desc.primitive.cullMode = WGPUCullMode_None; // We do our own culling
+    pipeline_desc.primitive.cullMode = WGPUCullMode_None;
     pipeline_desc.depthStencil = &depth_stencil_state;
     pipeline_desc.multisample.count = 1;
 
@@ -160,7 +156,7 @@ void SelectionRenderer::create_pipeline() {
 
 void SelectionRenderer::create_bind_group() {
     WGPUBufferDescriptor uniform_buffer_desc{};
-    uniform_buffer_desc.label = "Selection Model Uniform Buffer";
+    uniform_buffer_desc.label = init::makeStringView("Selection Model Uniform Buffer");
     uniform_buffer_desc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
     uniform_buffer_desc.size = sizeof(glm::mat4);
     model_uniform_buffer = wgpuDeviceCreateBuffer(device, &uniform_buffer_desc);
@@ -171,7 +167,7 @@ void SelectionRenderer::create_bind_group() {
     bg_entry.size = sizeof(glm::mat4);
 
     WGPUBindGroupDescriptor bg_desc{};
-    bg_desc.label = "Selection Model Bind Group";
+    bg_desc.label = init::makeStringView("Selection Model Bind Group");
     bg_desc.layout = model_bind_group_layout;
     bg_desc.entryCount = 1;
     bg_desc.entries = &bg_entry;
@@ -197,7 +193,6 @@ void SelectionRenderer::draw(
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, vertex_buffer, 0, WGPU_WHOLE_SIZE);
     wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
 
-    // Culling logic: draw only non-obstructed faces
     const BlockFace all_faces[] = {
         BlockFace::PosX, BlockFace::NegX,
         BlockFace::PosY, BlockFace::NegY,
@@ -209,9 +204,6 @@ void SelectionRenderer::draw(
         const Block* neighbor_block = world.get_block_at_world(neighbor_pos);
 
         if (!neighbor_block || !neighbor_block->isSolid()) {
-            // This face is visible, so draw it.
-            // Each face is a quad (2 triangles = 6 indices).
-            // We can calculate the offset into the index buffer.
             uint32_t index_offset = static_cast<uint32_t>(to_cube_geometry_face(face)) * 6;
             wgpuRenderPassEncoderDrawIndexed(render_pass, 6, 1, index_offset, 0, 0);
         }
