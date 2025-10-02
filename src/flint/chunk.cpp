@@ -44,6 +44,37 @@ namespace flint
         setBlock(7, pillar_y_start + 1, 5, BlockType::Dirt);
         setBlock(7, pillar_y_start, 7, BlockType::Dirt);
         setBlock(7, pillar_y_start + 1, 7, BlockType::Dirt);
+
+        // Add a hardcoded tree
+        const size_t tree_x = 4;
+        const size_t tree_z = 4;
+        const size_t trunk_height = 5;
+        const size_t trunk_y_start = surface_level + 1;
+
+        // Trunk
+        for (size_t i = 0; i < trunk_height; ++i)
+        {
+            setBlock(tree_x, trunk_y_start + i, tree_z, BlockType::OakLog);
+        }
+
+        // Canopy
+        const size_t canopy_y_start = trunk_y_start + trunk_height;
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            for (int dy = -1; dy <= 1; ++dy)
+            {
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    if (dx * dx + dy * dy + dz * dz <= 5)
+                    {
+                        // Avoid replacing the top of the trunk
+                        if (dx == 0 && dz == 0 && dy <= 0) continue;
+
+                        setBlock(tree_x + dx, canopy_y_start + dy, tree_z + dz, BlockType::OakLeaves);
+                    }
+                }
+            }
+        }
     }
 
     const Block *Chunk::getBlock(size_t x, size_t y, size_t z) const

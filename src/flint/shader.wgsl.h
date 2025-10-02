@@ -50,6 +50,12 @@ const TINT_SENTINEL = vec3<f32>(0.1, 0.9, 0.1);
 fn fs_main(in: FragmentInput) -> @location(0) vec4<f32> {
     let texture_color = textureSample(t_atlas, s_atlas, in.uv);
 
+    // Alpha test for transparent textures (e.g., leaves).
+    // If the alpha value is below a threshold, discard the fragment.
+    if (texture_color.a < 0.1) {
+        discard;
+    }
+
     // If the vertex color is the sentinel value, tint the texture.
     // Otherwise, use the texture color directly.
     if (all(in.color == TINT_SENTINEL)) {
