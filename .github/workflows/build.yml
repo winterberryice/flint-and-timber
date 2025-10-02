@@ -18,6 +18,8 @@ jobs:
       with:
         path: build/release
         key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
 
     - name: Install dependencies
       run: >
@@ -50,6 +52,8 @@ jobs:
       with:
         path: build/release
         key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
 
     - name: Set up MSBuild
       uses: microsoft/setup-msbuild@v1.3
@@ -87,6 +91,8 @@ jobs:
           build/release-arm64
           build/release-x86_64
         key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
 
     - name: Build for Apple Silicon (ARM64)
       run: |
