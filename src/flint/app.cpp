@@ -116,7 +116,9 @@ namespace flint
             m_atlas.getView(),
             m_atlas.getSampler());
 
-        // ====
+        // Initialize selection renderer
+        m_selection_renderer = std::make_unique<graphics::SelectionRenderer>(m_device, m_surfaceFormat, m_bindGroupLayout);
+
         m_running = true;
     }
 
@@ -262,6 +264,8 @@ namespace flint
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
+
+        m_selection_renderer.reset();
 
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
