@@ -133,7 +133,7 @@ void SelectionRenderer::create_pipeline() {
     WGPUDepthStencilState depth_stencil_state{};
     depth_stencil_state.format = WGPUTextureFormat_Depth24Plus;
     depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
-    depth_stencil_state.depthCompare = WGPUCompareFunction_LessEqual;
+    depth_stencil_state.depthCompare = WGPUCompareFunction_Always; // Force drawing for debugging
     // depth_stencil_state.depthBias = -2; // Temporarily disabled for debugging
     // depth_stencil_state.depthBiasSlopeScale = -2.0f; // Temporarily disabled for debugging
 
