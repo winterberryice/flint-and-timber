@@ -141,7 +141,7 @@ namespace flint::init
         depthStencilState.depthCompare = WGPUCompareFunction_Less;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
-        depthStencilState.depthBias = -1; // Negative bias pulls the geometry closer to the camera
+        depthStencilState.depthBias = -100; // A more aggressive bias to prevent Z-fighting
 
         // Create pipeline layout using the existing bind group layout
         WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};

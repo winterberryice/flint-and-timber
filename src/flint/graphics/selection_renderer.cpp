@@ -78,45 +78,13 @@ namespace flint::graphics
 
     void SelectionRenderer::update_mesh(const RaycastResult &result, const Chunk &chunk)
     {
-        if (m_lastResult.has_value() &&
-            m_lastResult->block_position == result.block_position &&
-            m_lastResult->face == result.face)
+        // Avoid rebuilding the mesh if the selection hasn't changed.
+        if (m_lastResult.has_value() && m_lastResult->block_position == result.block_position)
         {
             return;
         }
-
-        // First, check if the entire face is occluded. If so, don't draw anything.
-        glm::ivec3 face_neighbor_pos = result.block_position;
-        switch (result.face)
-        {
-        case BlockFace::Top:
-            face_neighbor_pos.y += 1;
-            break;
-        case BlockFace::Bottom:
-            face_neighbor_pos.y -= 1;
-            break;
-        case BlockFace::Left:
-            face_neighbor_pos.x -= 1;
-            break;
-        case BlockFace::Right:
-            face_neighbor_pos.x += 1;
-            break;
-        case BlockFace::Front:
-            face_neighbor_pos.z -= 1;
-            break;
-        case BlockFace::Back:
-            face_neighbor_pos.z += 1;
-            break;
-        }
-
-        if (chunk.is_solid(face_neighbor_pos.x, face_neighbor_pos.y, face_neighbor_pos.z))
-        {
-            clear_mesh();
-            m_lastResult = result; // Update to prevent re-checking
-            return;
-        }
-
         m_lastResult = result;
+
         m_vertices.clear();
         m_indices.clear();
 
@@ -134,69 +102,104 @@ namespace flint::graphics
         glm::vec3 v011 = p + glm::vec3(0, 1, 1);
         glm::vec3 v111 = p + glm::vec3(1, 1, 1);
 
-        // Generate quads for the border, with culling for each edge.
-        switch (result.face)
+        const BlockFace all_faces[] = {
+            BlockFace::Front, BlockFace::Back, BlockFace::Left,
+            BlockFace::Right, BlockFace::Top, BlockFace::Bottom};
+
+        for (const auto &face : all_faces)
         {
-        case BlockFace::Front: // -Z face
-            if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
-                add_quad(m_vertices, m_indices, v000, v100, v100 + glm::vec3(0, T, 0), v000 + glm::vec3(0, T, 0)); // Bottom
-            if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
-                add_quad(m_vertices, m_indices, v010 - glm::vec3(0, T, 0), v110 - glm::vec3(0, T, 0), v110, v010); // Top
-            if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v000, v010, v010 + glm::vec3(T, 0, 0), v000 + glm::vec3(T, 0, 0)); // Left
-            if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v100 - glm::vec3(T, 0, 0), v110 - glm::vec3(T, 0, 0), v110, v100); // Right
-            break;
-        case BlockFace::Back: // +Z face
-            if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
-                add_quad(m_vertices, m_indices, v001, v101, v101 + glm::vec3(0, T, 0), v001 + glm::vec3(0, T, 0)); // Bottom
-            if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
-                add_quad(m_vertices, m_indices, v011 - glm::vec3(0, T, 0), v111 - glm::vec3(0, T, 0), v111, v011); // Top
-            if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v001, v011, v011 + glm::vec3(T, 0, 0), v001 + glm::vec3(T, 0, 0)); // Left
-            if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v101 - glm::vec3(T, 0, 0), v111 - glm::vec3(T, 0, 0), v111, v101); // Right
-            break;
-        case BlockFace::Right: // +X face
-            if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
-                add_quad(m_vertices, m_indices, v100, v101, v101 + glm::vec3(0, T, 0), v100 + glm::vec3(0, T, 0)); // Bottom
-            if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
-                add_quad(m_vertices, m_indices, v110 - glm::vec3(0, T, 0), v111 - glm::vec3(0, T, 0), v111, v110); // Top
-            if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
-                add_quad(m_vertices, m_indices, v100, v110, v110 + glm::vec3(0, 0, T), v100 + glm::vec3(0, 0, T)); // Front
-            if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
-                add_quad(m_vertices, m_indices, v101, v111, v111 - glm::vec3(0, 0, T), v101 - glm::vec3(0, 0, T)); // Back
-            break;
-        case BlockFace::Left: // -X face
-            if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
-                add_quad(m_vertices, m_indices, v000, v001, v001 + glm::vec3(0, T, 0), v000 + glm::vec3(0, T, 0)); // Bottom
-            if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
-                add_quad(m_vertices, m_indices, v010 - glm::vec3(0, T, 0), v011 - glm::vec3(0, T, 0), v011, v010); // Top
-            if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
-                add_quad(m_vertices, m_indices, v000, v010, v010 + glm::vec3(0, 0, T), v000 + glm::vec3(0, 0, T)); // Front
-            if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
-                add_quad(m_vertices, m_indices, v001, v011, v011 - glm::vec3(0, 0, T), v001 - glm::vec3(0, 0, T)); // Back
-            break;
-        case BlockFace::Top: // +Y face
-            if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
-                add_quad(m_vertices, m_indices, v010, v110, v110 + glm::vec3(0, 0, T), v010 + glm::vec3(0, 0, T)); // Front
-            if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
-                add_quad(m_vertices, m_indices, v011, v111, v111 - glm::vec3(0, 0, T), v011 - glm::vec3(0, 0, T)); // Back
-            if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v010, v011, v011 + glm::vec3(T, 0, 0), v010 + glm::vec3(T, 0, 0)); // Left
-            if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v110, v111, v111 - glm::vec3(T, 0, 0), v110 - glm::vec3(T, 0, 0)); // Right
-            break;
-        case BlockFace::Bottom: // -Y face
-            if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
-                add_quad(m_vertices, m_indices, v000, v100, v100 + glm::vec3(0, 0, T), v000 + glm::vec3(0, 0, T)); // Front
-            if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
-                add_quad(m_vertices, m_indices, v001, v101, v101 - glm::vec3(0, 0, T), v001 - glm::vec3(0, 0, T)); // Back
-            if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v000, v001, v001 + glm::vec3(T, 0, 0), v000 + glm::vec3(T, 0, 0)); // Left
-            if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
-                add_quad(m_vertices, m_indices, v100, v101, v101 - glm::vec3(T, 0, 0), v100 - glm::vec3(T, 0, 0)); // Right
-            break;
+            glm::ivec3 neighbor_pos = bp;
+            bool face_is_visible = false;
+
+            switch (face)
+            {
+            case BlockFace::Front:
+                neighbor_pos.z -= 1;
+                break;
+            case BlockFace::Back:
+                neighbor_pos.z += 1;
+                break;
+            case BlockFace::Left:
+                neighbor_pos.x -= 1;
+                break;
+            case BlockFace::Right:
+                neighbor_pos.x += 1;
+                break;
+            case BlockFace::Top:
+                neighbor_pos.y += 1;
+                break;
+            case BlockFace::Bottom:
+                neighbor_pos.y -= 1;
+                break;
+            }
+
+            if (!chunk.is_solid(neighbor_pos.x, neighbor_pos.y, neighbor_pos.z))
+            {
+                // This face is visible, so generate its border quads
+                switch (face)
+                {
+                case BlockFace::Front: // -Z face
+                    if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
+                        add_quad(m_vertices, m_indices, v000, v100, v100 + glm::vec3(0, T, 0), v000 + glm::vec3(0, T, 0)); // Bottom
+                    if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
+                        add_quad(m_vertices, m_indices, v010 - glm::vec3(0, T, 0), v110 - glm::vec3(0, T, 0), v110, v010); // Top
+                    if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v000, v010, v010 + glm::vec3(T, 0, 0), v000 + glm::vec3(T, 0, 0)); // Left
+                    if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v100 - glm::vec3(T, 0, 0), v110 - glm::vec3(T, 0, 0), v110, v100); // Right
+                    break;
+                case BlockFace::Back: // +Z face
+                    if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
+                        add_quad(m_vertices, m_indices, v001, v101, v101 + glm::vec3(0, T, 0), v001 + glm::vec3(0, T, 0)); // Bottom
+                    if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
+                        add_quad(m_vertices, m_indices, v011 - glm::vec3(0, T, 0), v111 - glm::vec3(0, T, 0), v111, v011); // Top
+                    if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v001, v011, v011 + glm::vec3(T, 0, 0), v001 + glm::vec3(T, 0, 0)); // Left
+                    if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v101 - glm::vec3(T, 0, 0), v111 - glm::vec3(T, 0, 0), v111, v101); // Right
+                    break;
+                case BlockFace::Right: // +X face
+                    if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
+                        add_quad(m_vertices, m_indices, v100, v101, v101 + glm::vec3(0, T, 0), v100 + glm::vec3(0, T, 0)); // Bottom
+                    if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
+                        add_quad(m_vertices, m_indices, v110 - glm::vec3(0, T, 0), v111 - glm::vec3(0, T, 0), v111, v110); // Top
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
+                        add_quad(m_vertices, m_indices, v100, v110, v110 + glm::vec3(0, 0, T), v100 + glm::vec3(0, 0, T)); // Front
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
+                        add_quad(m_vertices, m_indices, v101, v111, v111 - glm::vec3(0, 0, T), v101 - glm::vec3(0, 0, T)); // Back
+                    break;
+                case BlockFace::Left: // -X face
+                    if (!chunk.is_solid(bp.x, bp.y - 1, bp.z))
+                        add_quad(m_vertices, m_indices, v000, v001, v001 + glm::vec3(0, T, 0), v000 + glm::vec3(0, T, 0)); // Bottom
+                    if (!chunk.is_solid(bp.x, bp.y + 1, bp.z))
+                        add_quad(m_vertices, m_indices, v010 - glm::vec3(0, T, 0), v011 - glm::vec3(0, T, 0), v011, v010); // Top
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
+                        add_quad(m_vertices, m_indices, v000, v010, v010 + glm::vec3(0, 0, T), v000 + glm::vec3(0, 0, T)); // Front
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
+                        add_quad(m_vertices, m_indices, v001, v011, v011 - glm::vec3(0, 0, T), v001 - glm::vec3(0, 0, T)); // Back
+                    break;
+                case BlockFace::Top: // +Y face
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
+                        add_quad(m_vertices, m_indices, v010, v110, v110 + glm::vec3(0, 0, T), v010 + glm::vec3(0, 0, T)); // Front
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
+                        add_quad(m_vertices, m_indices, v011, v111, v111 - glm::vec3(0, 0, T), v011 - glm::vec3(0, 0, T)); // Back
+                    if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v010, v011, v011 + glm::vec3(T, 0, 0), v010 + glm::vec3(T, 0, 0)); // Left
+                    if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v110, v111, v111 - glm::vec3(T, 0, 0), v110 - glm::vec3(T, 0, 0)); // Right
+                    break;
+                case BlockFace::Bottom: // -Y face
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z - 1))
+                        add_quad(m_vertices, m_indices, v000, v100, v100 + glm::vec3(0, 0, T), v000 + glm::vec3(0, 0, T)); // Front
+                    if (!chunk.is_solid(bp.x, bp.y, bp.z + 1))
+                        add_quad(m_vertices, m_indices, v001, v101, v101 - glm::vec3(0, 0, T), v001 - glm::vec3(0, 0, T)); // Back
+                    if (!chunk.is_solid(bp.x - 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v000, v001, v001 + glm::vec3(T, 0, 0), v000 + glm::vec3(T, 0, 0)); // Left
+                    if (!chunk.is_solid(bp.x + 1, bp.y, bp.z))
+                        add_quad(m_vertices, m_indices, v100, v101, v101 - glm::vec3(T, 0, 0), v100 - glm::vec3(T, 0, 0)); // Right
+                    break;
+                }
+            }
         }
 
         create_buffers();
