@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "graphics/selection_renderer.hpp"
 #include "graphics/texture.hpp"
 #include "player.h"
 
@@ -53,6 +54,7 @@ namespace flint
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;
         graphics::Texture m_atlas;
+        graphics::SelectionRenderer m_selectionRenderer;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;

@@ -74,6 +74,8 @@ namespace flint
         m_chunkMesh.generate(m_device, m_chunk);
         std::cout << "Chunk mesh generated." << std::endl;
 
+        m_selectionRenderer.create_buffers(m_device);
+
         // Create uniform buffer for camera matrices
         m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
@@ -157,6 +159,9 @@ namespace flint
             // Update player physics and state
             m_player.update(dt, m_chunk);
 
+            // THIS IS FOR TESTING, will be replaced by raycasting
+            m_selectionRenderer.update(std::optional<glm::ivec3>({8, 1, 8}));
+
             // Render the scene
             render();
         }
@@ -235,6 +240,8 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
+            m_selectionRenderer.draw(renderPass);
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -260,6 +267,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_selectionRenderer.cleanup();
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
 
