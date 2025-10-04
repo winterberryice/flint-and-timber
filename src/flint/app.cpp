@@ -240,6 +240,11 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
+            // Draw the selection highlight
+            if (m_selection_renderer) {
+                m_selection_renderer->draw(renderPass, m_queue, m_chunk, m_selected_block);
+            }
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
