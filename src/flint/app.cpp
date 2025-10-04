@@ -157,6 +157,9 @@ namespace flint
             // Update player physics and state
             m_player.update(dt, m_chunk);
 
+            // Perform raycast
+            m_selected_block = cast_ray(m_player, m_chunk, 5.0f); // 5.0f is the max distance
+
             // Render the scene
             render();
         }

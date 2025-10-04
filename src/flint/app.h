@@ -8,6 +8,8 @@
 #include "graphics/chunk_mesh.hpp"
 #include "graphics/texture.hpp"
 #include "player.h"
+#include "raycast.h"
+#include <optional>
 
 namespace flint
 {
@@ -53,6 +55,8 @@ namespace flint
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;
         graphics::Texture m_atlas;
+
+        std::optional<RaycastResult> m_selected_block;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
