@@ -112,6 +112,14 @@ namespace flint
             m_depthTextureFormat,
             &m_bindGroupLayout);
 
+        m_selectionPipeline = init::create_selection_pipeline(
+            m_device,
+            m_vertexShader,
+            m_fragmentShader,
+            m_surfaceFormat,
+            m_depthTextureFormat,
+            m_bindGroupLayout);
+
         m_bindGroup = init::create_bind_group(
             m_device,
             m_bindGroupLayout,
@@ -243,6 +251,9 @@ namespace flint
             if (selected_block.has_value())
             {
                 m_selectionRenderer.update_mesh(selected_block.value(), m_chunk);
+
+                // Switch to the selection pipeline to prevent Z-fighting
+                wgpuRenderPassEncoderSetPipeline(renderPass, m_selectionPipeline);
                 m_selectionRenderer.render(renderPass);
             }
             else
@@ -290,6 +301,11 @@ namespace flint
             wgpuBindGroupRelease(m_bindGroup);
         if (m_bindGroupLayout)
             wgpuBindGroupLayoutRelease(m_bindGroupLayout);
+        if (m_selectionPipeline)
+        {
+            wgpuRenderPipelineRelease(m_selectionPipeline);
+            m_selectionPipeline = nullptr;
+        }
         if (m_renderPipeline)
         {
             wgpuRenderPipelineRelease(m_renderPipeline);

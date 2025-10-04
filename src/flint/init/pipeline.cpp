@@ -126,6 +126,84 @@ namespace flint::init
         return renderPipeline;
     }
 
+    WGPURenderPipeline create_selection_pipeline(
+        WGPUDevice device,
+        WGPUShaderModule vertexShader,
+        WGPUShaderModule fragmentShader,
+        WGPUTextureFormat surfaceFormat,
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout bindGroupLayout)
+    {
+        // Depth Stencil State with depth bias
+        WGPUDepthStencilState depthStencilState = {};
+        depthStencilState.format = depthTextureFormat;
+        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
+        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        depthStencilState.stencilReadMask = 0;
+        depthStencilState.stencilWriteMask = 0;
+        depthStencilState.depthBias = -1; // Negative bias pulls the geometry closer to the camera
+
+        // Create pipeline layout using the existing bind group layout
+        WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+        pipelineLayoutDesc.bindGroupLayoutCount = 1;
+        pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
+        WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
+
+        // Get vertex layout from the Vertex struct
+        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
+
+        // Create render pipeline descriptor
+        WGPURenderPipelineDescriptor pipelineDescriptor = {};
+        pipelineDescriptor.label = makeStringView("Selection Render Pipeline");
+
+        // Vertex state
+        pipelineDescriptor.vertex.module = vertexShader;
+        pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
+        pipelineDescriptor.vertex.bufferCount = 1;
+        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
+
+        // Fragment state
+        WGPUFragmentState fragmentState = {};
+        fragmentState.module = fragmentShader;
+        fragmentState.entryPoint = makeStringView("fs_main");
+
+        // Color target
+        WGPUColorTargetState colorTarget = {};
+        colorTarget.format = surfaceFormat;
+        colorTarget.writeMask = WGPUColorWriteMask_All;
+
+        fragmentState.targetCount = 1;
+        fragmentState.targets = &colorTarget;
+        pipelineDescriptor.fragment = &fragmentState;
+
+        // Primitive state
+        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+        pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_None; // No culling for the outline
+
+        // Multisample state
+        pipelineDescriptor.multisample.count = 1;
+        pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
+        pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
+
+        // Set depth stencil state
+        pipelineDescriptor.depthStencil = &depthStencilState;
+
+        pipelineDescriptor.layout = pipelineLayout;
+
+        WGPURenderPipeline renderPipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDescriptor);
+
+        wgpuPipelineLayoutRelease(pipelineLayout);
+
+        if (!renderPipeline)
+        {
+            throw std::runtime_error("Failed to create selection render pipeline!");
+        }
+
+        return renderPipeline;
+    }
+
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,

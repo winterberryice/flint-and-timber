@@ -14,6 +14,14 @@ namespace flint::init
         WGPUBindGroupLayout *pBindGroupLayout // Output parameter
     );
 
+    WGPURenderPipeline create_selection_pipeline(
+        WGPUDevice device,
+        WGPUShaderModule vertexShader,
+        WGPUShaderModule fragmentShader,
+        WGPUTextureFormat surfaceFormat,
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout bindGroupLayout);
+
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,

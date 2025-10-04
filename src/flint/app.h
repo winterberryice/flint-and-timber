@@ -45,6 +45,7 @@ namespace flint
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
         WGPURenderPipeline m_renderPipeline = nullptr;
+        WGPURenderPipeline m_selectionPipeline = nullptr;
 
         Camera m_camera;
         CameraUniform m_cameraUniform;
