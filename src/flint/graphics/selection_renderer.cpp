@@ -134,8 +134,8 @@ void SelectionRenderer::create_pipeline() {
     depth_stencil_state.format = WGPUTextureFormat_Depth24Plus;
     depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
     depth_stencil_state.depthCompare = WGPUCompareFunction_LessEqual;
-    depth_stencil_state.depthBias = -2;
-    depth_stencil_state.depthBiasSlopeScale = -2.0f;
+    // depth_stencil_state.depthBias = -2; // Temporarily disabled for debugging
+    // depth_stencil_state.depthBiasSlopeScale = -2.0f; // Temporarily disabled for debugging
 
     WGPURenderPipelineDescriptor pipeline_desc{};
     pipeline_desc.label = init::makeStringView("Selection Render Pipeline");
