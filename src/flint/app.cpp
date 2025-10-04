@@ -43,6 +43,7 @@ namespace flint
         if (!m_atlas.loadFromMemory(m_device, m_queue, assets_textures_block_atlas_png, assets_textures_block_atlas_png_len))
         {
             std::cerr << "Failed to load texture atlas!" << std::endl;
+            // For now, we'll just print an error. In a real app, you might want to exit.
         }
 
         std::cout << "Creating shaders..." << std::endl;
@@ -54,6 +55,8 @@ namespace flint
 
         std::cout << "Setting up 3D components..." << std::endl;
 
+        // The camera is now controlled by the player, so we initialize it with placeholder values.
+        // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
             {0.0f, 0.0f, 0.0f},                           // eye (will be overwritten)
             {0.0f, 0.0f, -1.0f},                          // target (will be overwritten)
@@ -113,6 +116,7 @@ namespace flint
             m_atlas.getView(),
             m_atlas.getSampler());
 
+        // ====
         m_running = true;
     }
 
@@ -133,6 +137,7 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
+                // Let the player handle keyboard input
                 m_player.handle_input(e);
 
                 if (e.type == SDL_EVENT_QUIT)
@@ -183,50 +188,71 @@ namespace flint
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
+        if (surfaceTexture.status == WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
         {
-            if (surfaceTexture.texture) wgpuTextureRelease(surfaceTexture.texture);
-            return;
+            WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
+
+            WGPUCommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.nextInChain = nullptr;
+            encoderDesc.label = {nullptr, 0};
+
+            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+
+            WGPURenderPassColorAttachment colorAttachment = {};
+            colorAttachment.view = textureView;
+            colorAttachment.resolveTarget = nullptr;
+            colorAttachment.loadOp = WGPULoadOp_Clear;
+            colorAttachment.storeOp = WGPUStoreOp_Store;
+            colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
+            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+            WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
+            depthStencilAttachment.view = m_depthTextureView;
+            depthStencilAttachment.depthClearValue = 1.0f;
+            depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
+            depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
+            depthStencilAttachment.depthReadOnly = false;
+            depthStencilAttachment.stencilClearValue = 0;
+            depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
+            depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
+            depthStencilAttachment.stencilReadOnly = true;
+
+            WGPURenderPassDescriptor renderPassDesc = {};
+            renderPassDesc.nextInChain = nullptr;
+            renderPassDesc.label = {nullptr, 0};
+            renderPassDesc.colorAttachmentCount = 1;
+            renderPassDesc.colorAttachments = &colorAttachment;
+            renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
+
+            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+
+            // NEW: 3D Cube rendering instead of triangle
+            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
+
+            // Bind the uniform buffer (camera matrix)
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
+
+            // Draw the chunk
+            m_chunkMesh.render(renderPass);
+
+            wgpuRenderPassEncoderEnd(renderPass);
+
+            WGPUCommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.nextInChain = nullptr;
+            cmdBufferDesc.label = {nullptr, 0};
+
+            WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
+            wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
+
+            wgpuSurfacePresent(m_surface);
+
+            // Cleanup
+            wgpuCommandBufferRelease(cmdBuffer);
+            wgpuRenderPassEncoderRelease(renderPass);
+            wgpuCommandEncoderRelease(encoder);
+            wgpuTextureViewRelease(textureView);
         }
 
-        WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
-        WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, nullptr);
-
-        WGPURenderPassColorAttachment colorAttachment = {};
-        colorAttachment.view = textureView;
-        colorAttachment.loadOp = WGPULoadOp_Clear;
-        colorAttachment.storeOp = WGPUStoreOp_Store;
-        colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f};
-
-        WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
-        depthStencilAttachment.view = m_depthTextureView;
-        depthStencilAttachment.depthClearValue = 1.0f;
-        depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
-        depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
-
-        WGPURenderPassDescriptor renderPassDesc = {};
-        renderPassDesc.colorAttachmentCount = 1;
-        renderPassDesc.colorAttachments = &colorAttachment;
-        renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
-
-        WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-
-        wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
-        wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
-        m_chunkMesh.render(renderPass);
-
-        wgpuRenderPassEncoderEnd(renderPass);
-        wgpuRenderPassEncoderRelease(renderPass);
-
-        WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, nullptr);
-        wgpuCommandEncoderRelease(encoder);
-
-        wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
-        wgpuCommandBufferRelease(cmdBuffer);
-
-        wgpuSurfacePresent(m_surface);
-
-        wgpuTextureViewRelease(textureView);
         wgpuTextureRelease(surfaceTexture.texture);
     }
 
@@ -237,21 +263,60 @@ namespace flint
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
 
-        if (m_depthTextureView) wgpuTextureViewRelease(m_depthTextureView);
-        if (m_depthTexture) wgpuTextureRelease(m_depthTexture);
-        if (m_uniformBuffer) wgpuBufferRelease(m_uniformBuffer);
-        if (m_bindGroup) wgpuBindGroupRelease(m_bindGroup);
-        if (m_bindGroupLayout) wgpuBindGroupLayoutRelease(m_bindGroupLayout);
-        if (m_renderPipeline) wgpuRenderPipelineRelease(m_renderPipeline);
-        if (m_vertexShader) wgpuShaderModuleRelease(m_vertexShader);
-        if (m_fragmentShader) wgpuShaderModuleRelease(m_fragmentShader);
-        if (m_vertexBuffer) wgpuBufferRelease(m_vertexBuffer);
-        if (m_surface) wgpuSurfaceRelease(m_surface);
-        if (m_queue) wgpuQueueRelease(m_queue);
-        if (m_device) wgpuDeviceRelease(m_device);
-        if (m_adapter) wgpuAdapterRelease(m_adapter);
-        if (m_instance) wgpuInstanceRelease(m_instance);
-        if (m_window) SDL_DestroyWindow(m_window);
+        if (m_depthTextureView)
+            wgpuTextureViewRelease(m_depthTextureView);
+        if (m_depthTexture)
+            wgpuTextureRelease(m_depthTexture);
+
+        if (m_uniformBuffer)
+            wgpuBufferRelease(m_uniformBuffer);
+        if (m_bindGroup)
+            wgpuBindGroupRelease(m_bindGroup);
+        if (m_bindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
+        if (m_renderPipeline)
+        {
+            wgpuRenderPipelineRelease(m_renderPipeline);
+            m_renderPipeline = nullptr;
+        }
+        if (m_vertexShader)
+        {
+            wgpuShaderModuleRelease(m_vertexShader);
+            m_vertexShader = nullptr;
+        }
+        if (m_fragmentShader)
+        {
+            wgpuShaderModuleRelease(m_fragmentShader);
+            m_fragmentShader = nullptr;
+        }
+        if (m_vertexBuffer)
+        {
+            wgpuBufferRelease(m_vertexBuffer);
+        }
+        if (m_surface)
+        {
+            wgpuSurfaceRelease(m_surface);
+        }
+        if (m_queue)
+        {
+            wgpuQueueRelease(m_queue);
+        }
+        if (m_device)
+        {
+            wgpuDeviceRelease(m_device);
+        }
+        if (m_adapter)
+        {
+            wgpuAdapterRelease(m_adapter);
+        }
+        if (m_instance)
+        {
+            wgpuInstanceRelease(m_instance);
+        }
+        if (m_window)
+        {
+            SDL_DestroyWindow(m_window);
+        }
 
         SDL_Quit();
 
