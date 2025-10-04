@@ -116,7 +116,9 @@ namespace flint
             m_atlas.getView(),
             m_atlas.getSampler());
 
-        // ====
+        // Initialize selection renderer
+        m_selection_renderer = std::make_unique<graphics::SelectionRenderer>(m_device, m_surfaceFormat, m_bindGroupLayout);
+
         m_running = true;
     }
 
@@ -156,6 +158,9 @@ namespace flint
 
             // Update player physics and state
             m_player.update(dt, m_chunk);
+
+            // Perform raycast
+            m_selected_block = cast_ray(m_player, m_chunk, 5.0f); // 5.0f is the max distance
 
             // Render the scene
             render();
@@ -235,6 +240,11 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
+            // Draw the selection highlight
+            if (m_selection_renderer) {
+                m_selection_renderer->draw(renderPass, m_queue, m_bindGroup, m_chunk, m_selected_block);
+            }
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -259,6 +269,8 @@ namespace flint
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
+
+        m_selection_renderer.reset();
 
         m_atlas.cleanup();
         m_chunkMesh.cleanup();

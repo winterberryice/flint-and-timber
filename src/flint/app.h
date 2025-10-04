@@ -6,8 +6,12 @@
 #include "camera.h"
 #include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "graphics/selection_renderer.hpp"
 #include "graphics/texture.hpp"
 #include "player.h"
+#include "raycast.h"
+#include <optional>
+#include <memory>
 
 namespace flint
 {
@@ -53,6 +57,9 @@ namespace flint
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;
         graphics::Texture m_atlas;
+
+        std::optional<RaycastResult> m_selected_block;
+        std::unique_ptr<graphics::SelectionRenderer> m_selection_renderer;
 
         WGPUBuffer m_uniformBuffer = nullptr;
         WGPUBindGroup m_bindGroup = nullptr;
