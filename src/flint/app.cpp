@@ -1,13 +1,12 @@
 #include "app.h"
+#include <iostream>
+#include "init/sdl.h"
+#include "init/wgpu.h"
+#include "init/utils.h"
+#include "init/shader.h"
 #include "init/buffer.h"
 #include "init/pipeline.h"
-#include "init/sdl.h"
-#include "init/shader.h"
-#include "init/utils.h"
-#include "init/wgpu.h"
 #include "shader.wgsl.h"
-#include <iostream>
-#include <memory>
 
 #include "atlas_bytes.hpp"
 
@@ -67,9 +66,9 @@ namespace flint
 
         // Generate terrain and mesh
         std::cout << "Generating terrain..." << std::endl;
-        m_world.generate();
+        m_chunk.generateTerrain();
         std::cout << "Generating chunk mesh..." << std::endl;
-        m_chunkMesh.generate(m_device, m_world.get_chunk());
+        m_chunkMesh.generate(m_device, m_chunk);
         std::cout << "Chunk mesh generated." << std::endl;
 
         // Create uniform buffer for camera matrices
@@ -114,9 +113,6 @@ namespace flint
             m_atlas.getView(),
             m_atlas.getSampler());
 
-        // Initialize selection renderer
-        // m_selection_renderer = std::make_unique<graphics::SelectionRenderer>(m_device, m_surfaceFormat, m_bindGroupLayout);
-
         m_running = true;
     }
 
@@ -153,36 +149,25 @@ namespace flint
                 }
             }
 
-            // Update game logic
-            update();
+            // Update player physics and state
+            m_player.update(dt, m_chunk);
 
             // Render the scene
             render();
         }
     }
 
-    void App::update()
-    {
-        // Calculate delta time (a more accurate approach would pass dt from the run loop)
-        static uint64_t last_tick = SDL_GetPerformanceCounter();
-        uint64_t current_tick = SDL_GetPerformanceCounter();
-        float dt = static_cast<float>(current_tick - last_tick) / static_cast<float>(SDL_GetPerformanceFrequency());
-        last_tick = current_tick;
-
-        // Update player physics and state
-        m_player.update(dt, m_world);
-
-        // Update selected block via raycasting
-        m_selected_block = cast_ray(m_player, m_world, 5.0f); // 5 block reach
-    }
-
     void App::render()
     {
         // Update camera from player state
-        m_camera.eye = m_player.get_position() + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+        glm::vec3 player_pos = m_player.get_position();
+        float player_yaw_deg = m_player.get_yaw();
+        float player_pitch_deg = m_player.get_pitch();
 
-        float yaw_rad = glm::radians(m_player.get_yaw());
-        float pitch_rad = glm::radians(m_player.get_pitch());
+        m_camera.eye = player_pos + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+
+        float yaw_rad = glm::radians(player_yaw_deg);
+        float pitch_rad = glm::radians(player_pitch_deg);
 
         glm::vec3 front;
         front.x = cos(yaw_rad) * cos(pitch_rad);
@@ -198,7 +183,8 @@ namespace flint
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
 
-        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
+        {
             if (surfaceTexture.texture) wgpuTextureRelease(surfaceTexture.texture);
             return;
         }
@@ -225,15 +211,9 @@ namespace flint
 
         WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
-        // Draw the main chunk
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
         wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
         m_chunkMesh.render(renderPass);
-
-        // Draw the selection highlight (Temporarily disabled for debugging)
-        // if (m_selection_renderer) {
-        //     m_selection_renderer->draw(renderPass, m_queue, m_world, m_selected_block);
-        // }
 
         wgpuRenderPassEncoderEnd(renderPass);
         wgpuRenderPassEncoderRelease(renderPass);
@@ -245,6 +225,7 @@ namespace flint
         wgpuCommandBufferRelease(cmdBuffer);
 
         wgpuSurfacePresent(m_surface);
+
         wgpuTextureViewRelease(textureView);
         wgpuTextureRelease(surfaceTexture.texture);
     }
@@ -252,8 +233,6 @@ namespace flint
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
-
-        // m_selection_renderer.reset(); // Release unique_ptr
 
         m_atlas.cleanup();
         m_chunkMesh.cleanup();

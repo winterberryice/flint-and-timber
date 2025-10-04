@@ -1,5 +1,5 @@
 #include "player.h"
-#include "world.h"
+#include "chunk.h"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -9,7 +9,7 @@ namespace flint
     namespace player
     {
         // Helper function to get AABBs of solid blocks near the player
-        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::World &world)
+        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::Chunk &chunk)
         {
             std::vector<physics::AABB> nearby_blocks;
 
@@ -27,8 +27,7 @@ namespace flint
                 {
                     for (int bz = min_bz; bz < max_bz; ++bz)
                     {
-                        const Block* block = world.get_block_at_world({bx, by, bz});
-                        if (block && block->isSolid())
+                        if (chunk.is_solid(bx, by, bz))
                         {
                             glm::vec3 block_min_corner(static_cast<float>(bx), static_cast<float>(by), static_cast<float>(bz));
                             glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
@@ -88,7 +87,7 @@ namespace flint
             pitch = std::clamp(pitch, -89.0f, 89.0f);
         }
 
-        void Player::update(float dt, const flint::World &world)
+        void Player::update(float dt, const flint::Chunk &chunk)
         {
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
@@ -147,7 +146,7 @@ namespace flint
             // --- Y-AXIS COLLISION ---
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
-            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, world);
+            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
 
             for (const auto &block_box : nearby_y_blocks)
             {
@@ -171,7 +170,7 @@ namespace flint
             // --- X-AXIS COLLISION ---
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
-            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, world);
+            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
 
             for (const auto &block_box : nearby_x_blocks)
             {
@@ -193,7 +192,7 @@ namespace flint
             // --- Z-AXIS COLLISION ---
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
-            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, world);
+            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
 
             for (const auto &block_box : nearby_z_blocks)
             {
