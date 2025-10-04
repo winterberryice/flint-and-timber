@@ -162,6 +162,12 @@ namespace flint
             // Perform raycast
             m_selected_block = cast_ray(m_player, m_chunk, 5.0f); // 5.0f is the max distance
 
+            // Debug print for raycast
+            if (m_selected_block) {
+                const auto& pos = m_selected_block->block_pos;
+                std::cout << "Selected block: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
+            }
+
             // Render the scene
             render();
         }
