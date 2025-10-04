@@ -18,6 +18,7 @@ public:
     void draw(
         WGPURenderPassEncoder render_pass,
         WGPUQueue queue,
+        const WGPUBindGroup& camera_bind_group,
         const Chunk& chunk,
         const std::optional<RaycastResult>& selection);
 

@@ -162,12 +162,6 @@ namespace flint
             // Perform raycast
             m_selected_block = cast_ray(m_player, m_chunk, 5.0f); // 5.0f is the max distance
 
-            // Debug print for raycast
-            if (m_selected_block) {
-                const auto& pos = m_selected_block->block_pos;
-                std::cout << "Selected block: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
-            }
-
             // Render the scene
             render();
         }
@@ -248,7 +242,7 @@ namespace flint
 
             // Draw the selection highlight
             if (m_selection_renderer) {
-                m_selection_renderer->draw(renderPass, m_queue, m_chunk, m_selected_block);
+                m_selection_renderer->draw(renderPass, m_queue, m_bindGroup, m_chunk, m_selected_block);
             }
 
             wgpuRenderPassEncoderEnd(renderPass);

@@ -177,6 +177,7 @@ void SelectionRenderer::create_bind_group() {
 void SelectionRenderer::draw(
     WGPURenderPassEncoder render_pass,
     WGPUQueue queue,
+    const WGPUBindGroup& camera_bind_group,
     const Chunk& chunk,
     const std::optional<RaycastResult>& selection) {
 
@@ -189,6 +190,7 @@ void SelectionRenderer::draw(
     wgpuQueueWriteBuffer(queue, model_uniform_buffer, 0, glm::value_ptr(model_matrix), sizeof(glm::mat4));
 
     wgpuRenderPassEncoderSetPipeline(render_pass, render_pipeline);
+    wgpuRenderPassEncoderSetBindGroup(render_pass, 0, camera_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetBindGroup(render_pass, 1, model_bind_group, 0, nullptr);
     wgpuRenderPassEncoderSetVertexBuffer(render_pass, 0, vertex_buffer, 0, WGPU_WHOLE_SIZE);
     wgpuRenderPassEncoderSetIndexBuffer(render_pass, index_buffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
