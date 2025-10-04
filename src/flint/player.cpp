@@ -1,5 +1,6 @@
 #include "player.h"
 #include "chunk.h"
+#include "camera.h"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -87,9 +88,12 @@ namespace flint
             pitch = std::clamp(pitch, -89.0f, 89.0f);
         }
 
-        void Player::update(float dt, const flint::Chunk &chunk)
+        void Player::update(float dt, const flint::Chunk &chunk, const flint::Camera &camera)
         {
-            // 1. Apply Inputs & Intentions
+            // 1. Raycast for block selection
+            selected_block = perform_raycast(camera, chunk, 5.0f); // 5.0f is the max distance
+
+            // 2. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
             float yaw_radians = glm::radians(yaw);
             glm::vec3 horizontal_forward = glm::normalize(glm::vec3(cos(yaw_radians), 0.0f, sin(yaw_radians)));
@@ -215,6 +219,7 @@ namespace flint
         glm::vec3 Player::get_position() const { return position; }
         float Player::get_yaw() const { return yaw; }
         float Player::get_pitch() const { return pitch; }
+        std::optional<RaycastResult> Player::get_selected_block() const { return selected_block; }
 
         physics::AABB Player::get_world_bounding_box() const
         {

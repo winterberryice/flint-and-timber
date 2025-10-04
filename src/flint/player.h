@@ -4,12 +4,15 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 #include <SDL3/SDL_events.h>
+#include <optional>
 
 #include "physics.h"
+#include "raycast.h" // Include the new raycasting header
 
 namespace flint
 {
-    class Chunk; // Forward declaration
+    class Chunk;  // Forward declaration
+    class Camera; // Forward declaration
 
     namespace player
     {
@@ -30,11 +33,12 @@ namespace flint
 
             void handle_input(const SDL_Event &event);
             void process_mouse_movement(float delta_x, float delta_y);
-            void update(float dt, const flint::Chunk &chunk);
+            void update(float dt, const flint::Chunk &chunk, const flint::Camera &camera);
 
             glm::vec3 get_position() const;
             float get_yaw() const;
             float get_pitch() const;
+            std::optional<RaycastResult> get_selected_block() const;
 
         private:
             physics::AABB get_world_bounding_box() const;
@@ -52,6 +56,9 @@ namespace flint
             float mouse_sensitivity;
 
             PlayerMovementIntention movement_intention;
+
+            // The block the player is currently looking at
+            std::optional<RaycastResult> selected_block;
         };
     }
 }

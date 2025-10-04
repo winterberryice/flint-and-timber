@@ -74,6 +74,9 @@ namespace flint
         m_chunkMesh.generate(m_device, m_chunk);
         std::cout << "Chunk mesh generated." << std::endl;
 
+        // Initialize the selection renderer
+        m_selectionRenderer.init(m_device);
+
         // Create uniform buffer for camera matrices
         m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
@@ -155,7 +158,7 @@ namespace flint
             }
 
             // Update player physics and state
-            m_player.update(dt, m_chunk);
+            m_player.update(dt, m_chunk, m_camera);
 
             // Render the scene
             render();
@@ -235,6 +238,18 @@ namespace flint
             // Draw the chunk
             m_chunkMesh.render(renderPass);
 
+            // Update and draw the selection outline
+            auto selected_block = m_player.get_selected_block();
+            if (selected_block.has_value())
+            {
+                m_selectionRenderer.update_mesh(selected_block.value(), m_chunk);
+                m_selectionRenderer.render(renderPass);
+            }
+            else
+            {
+                m_selectionRenderer.clear_mesh();
+            }
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -262,6 +277,7 @@ namespace flint
 
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
+        m_selectionRenderer.cleanup();
 
         if (m_depthTextureView)
             wgpuTextureViewRelease(m_depthTextureView);
