@@ -27,13 +27,21 @@ namespace flint::graphics
             vertices.push_back({{min.x, max.y, max.z}, {}, {}});
 
             // Add 36 indices (12 triangles) for the cuboid.
+            // The vertices must be wound in a counter-clockwise order to be considered
+            // front-facing by the default rasterizer settings (cull_mode = "back").
             std::vector<uint32_t> cube_indices = {
-                0, 1, 2, 0, 2, 3, // Bottom
-                4, 5, 6, 4, 6, 7, // Top
-                0, 4, 7, 0, 7, 3, // Left
-                1, 2, 6, 1, 6, 5, // Right
-                0, 1, 5, 0, 5, 4, // Back
-                3, 7, 6, 3, 6, 2  // Front
+                // Bottom face (-Y)
+                0, 3, 2, 0, 2, 1,
+                // Top face (+Y)
+                4, 5, 6, 4, 6, 7,
+                // Left face (-X)
+                0, 4, 7, 0, 7, 3,
+                // Right face (+X)
+                1, 5, 6, 1, 6, 2,
+                // Back face (-Z)
+                0, 1, 5, 0, 5, 4,
+                // Front face (+Z)
+                3, 2, 6, 3, 6, 7
             };
 
             for (uint32_t index : cube_indices)
