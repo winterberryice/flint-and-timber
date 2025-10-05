@@ -21,4 +21,9 @@ namespace flint::init
         WGPUTextureView textureView,
         WGPUSampler sampler);
 
+    WGPURenderPassEncoder begin_render_pass(
+        WGPUCommandEncoder encoder,
+        WGPUTextureView textureView,
+        WGPUTextureView depthTextureView);
+
 } // namespace flint::init

@@ -5,8 +5,8 @@
 
 #include "camera.h"
 #include "chunk.h"
-#include "graphics/chunk_mesh.hpp"
-#include "graphics/texture.hpp"
+#include "camera.h"
+#include "graphics/world_renderer.h"
 #include "player.h"
 
 namespace flint
@@ -22,6 +22,7 @@ namespace flint
 
     private:
         void render();
+        void update_camera();
 
     private:
         // SDL resources
@@ -41,22 +42,11 @@ namespace flint
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
 
         WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUShaderModule m_vertexShader = nullptr;
-        WGPUShaderModule m_fragmentShader = nullptr;
-        WGPURenderPipeline m_renderPipeline = nullptr;
+
+        graphics::WorldRenderer m_worldRenderer;
 
         Camera m_camera;
-        CameraUniform m_cameraUniform;
-
         player::Player m_player;
-
-        Chunk m_chunk;
-        graphics::ChunkMesh m_chunkMesh;
-        graphics::Texture m_atlas;
-
-        WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;
