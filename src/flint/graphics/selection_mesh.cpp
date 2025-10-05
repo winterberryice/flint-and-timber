@@ -2,7 +2,6 @@
 
 #include "../init/buffer.h"
 #include "../cube_geometry.h"
-#include "../vertex.h"
 
 #include <vector>
 #include <iostream>
@@ -15,7 +14,7 @@ namespace flint::graphics
 
     void SelectionMesh::generate(WGPUDevice device, const glm::vec3 &position)
     {
-        std::vector<Vertex> vertices;
+        std::vector<SelectionVertex> vertices;
         std::vector<uint32_t> indices;
 
         // Get cube geometry
@@ -24,7 +23,7 @@ namespace flint::graphics
 
         for (const auto &vert : cube_vertices)
         {
-            vertices.push_back({vert.position + position, vert.color, vert.uv});
+            vertices.push_back({.position = vert.position + position});
         }
 
         indices.reserve(cube_indices_16.size());
@@ -40,7 +39,7 @@ namespace flint::graphics
         if (m_indexBuffer)
             wgpuBufferRelease(m_indexBuffer);
 
-        m_vertexBuffer = init::create_vertex_buffer(device, "Selection Vertex Buffer", vertices.data(), vertices.size() * sizeof(Vertex));
+        m_vertexBuffer = init::create_vertex_buffer(device, "Selection Vertex Buffer", vertices.data(), vertices.size() * sizeof(SelectionVertex));
         m_indexBuffer = init::create_index_buffer(device, "Selection Index Buffer", indices.data(), indices.size() * sizeof(uint32_t));
     }
 

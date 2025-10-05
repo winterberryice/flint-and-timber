@@ -5,6 +5,7 @@
 #include "../init/buffer.h"
 #include "../init/shader.h"
 #include "../selection_shader.wgsl.h"
+#include "../selection_vertex.h"
 #include "../chunk.h"
 
 namespace flint::graphics
@@ -26,6 +27,7 @@ namespace flint::graphics
         m_uniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
         // Create render pipeline
+        WGPUVertexBufferLayout vertexBufferLayout = flint::SelectionVertex::getLayout();
         m_renderPipeline.init(
             device,
             m_vertexShader,
@@ -34,7 +36,9 @@ namespace flint::graphics
             depthTextureFormat,
             m_uniformBuffer,
             nullptr, // No texture view
-            nullptr  // No sampler
+            nullptr,  // No sampler
+            &vertexBufferLayout,
+            false
         );
 
         std::cout << "Selection renderer initialized." << std::endl;

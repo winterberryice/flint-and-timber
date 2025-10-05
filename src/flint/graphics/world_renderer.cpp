@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "../vertex.h"
 #include "atlas_bytes.hpp"
 #include "../init/buffer.h"
 #include "../init/shader.h"
@@ -33,6 +34,7 @@ namespace flint::graphics
         m_uniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
         // Create render pipeline
+        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
         m_renderPipeline.init(
             device,
             m_vertexShader,
@@ -41,7 +43,9 @@ namespace flint::graphics
             depthTextureFormat,
             m_uniformBuffer,
             m_atlas.getView(),
-            m_atlas.getSampler());
+            m_atlas.getSampler(),
+            &vertexBufferLayout,
+            true);
 
         std::cout << "World renderer initialized." << std::endl;
     }

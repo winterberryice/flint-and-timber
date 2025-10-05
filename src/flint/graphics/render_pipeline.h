@@ -19,7 +19,9 @@ namespace flint::graphics
             WGPUTextureFormat depthTextureFormat,
             WGPUBuffer uniformBuffer,
             WGPUTextureView textureView,
-            WGPUSampler sampler);
+            WGPUSampler sampler,
+            const WGPUVertexBufferLayout *vertexBufferLayout,
+            bool withTexture);
 
         void cleanup();
 

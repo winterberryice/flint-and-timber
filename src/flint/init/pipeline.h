@@ -10,9 +10,10 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat, // New parameter for depth texture
-        WGPUBindGroupLayout *pBindGroupLayout // Output parameter
-    );
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout *pBindGroupLayout,
+        const WGPUVertexBufferLayout *vertexBufferLayout,
+        bool withTexture);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,

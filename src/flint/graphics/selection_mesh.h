@@ -3,6 +3,8 @@
 #include <webgpu/webgpu.h>
 #include <glm/glm.hpp>
 
+#include "../selection_vertex.h"
+
 namespace flint::graphics
 {
     class SelectionMesh

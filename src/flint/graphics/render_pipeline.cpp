@@ -17,7 +17,9 @@ namespace flint::graphics
         WGPUTextureFormat depthTextureFormat,
         WGPUBuffer uniformBuffer,
         WGPUTextureView textureView,
-        WGPUSampler sampler)
+        WGPUSampler sampler,
+        const WGPUVertexBufferLayout *vertexBufferLayout,
+        bool withTexture)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -25,7 +27,9 @@ namespace flint::graphics
             fragmentShader,
             surfaceFormat,
             depthTextureFormat,
-            &m_bindGroupLayout);
+            &m_bindGroupLayout,
+            vertexBufferLayout,
+            withTexture);
 
         m_bindGroup = flint::init::create_bind_group(
             device,

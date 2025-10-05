@@ -6,7 +6,6 @@
 
 #include <glm/glm.hpp>
 
-#include "../vertex.h"
 #include "utils.h"
 
 namespace flint::init
@@ -17,8 +16,10 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat, // New parameter
-        WGPUBindGroupLayout *pBindGroupLayout)
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout *pBindGroupLayout,
+        const WGPUVertexBufferLayout *vertexBufferLayout,
+        bool withTexture)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -31,24 +32,31 @@ namespace flint::init
         depthStencilState.stencilWriteMask = 0;
 
         // Create bind group layout for uniforms, texture, and sampler
-        std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries(3);
+        std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries;
+        bindingLayoutEntries.reserve(3); // Max 3 bindings
 
-        // Binding 0: Uniform Buffer (Vertex)
-        bindingLayoutEntries[0].binding = 0;
-        bindingLayoutEntries[0].visibility = WGPUShaderStage_Vertex;
-        bindingLayoutEntries[0].buffer.type = WGPUBufferBindingType_Uniform;
-        bindingLayoutEntries[0].buffer.minBindingSize = sizeof(glm::mat4);
+        // Binding 0: Uniform Buffer (Vertex) - Always present
+        bindingLayoutEntries.push_back({
+            .binding = 0,
+            .visibility = WGPUShaderStage_Vertex,
+            .buffer = {.type = WGPUBufferBindingType_Uniform, .minBindingSize = sizeof(glm::mat4)},
+        });
 
-        // Binding 1: Texture View (Fragment)
-        bindingLayoutEntries[1].binding = 1;
-        bindingLayoutEntries[1].visibility = WGPUShaderStage_Fragment;
-        bindingLayoutEntries[1].texture.sampleType = WGPUTextureSampleType_Float;
-        bindingLayoutEntries[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+        if (withTexture)
+        {
+            // Binding 1: Texture View (Fragment)
+            bindingLayoutEntries.push_back({.binding = 1,
+                                            .visibility = WGPUShaderStage_Fragment,
+                                            .texture = {
+                                                .sampleType = WGPUTextureSampleType_Float,
+                                                .viewDimension = WGPUTextureViewDimension_2D,
+                                            }});
 
-        // Binding 2: Sampler (Fragment)
-        bindingLayoutEntries[2].binding = 2;
-        bindingLayoutEntries[2].visibility = WGPUShaderStage_Fragment;
-        bindingLayoutEntries[2].sampler.type = WGPUSamplerBindingType_Filtering;
+            // Binding 2: Sampler (Fragment)
+            bindingLayoutEntries.push_back({.binding = 2,
+                                            .visibility = WGPUShaderStage_Fragment,
+                                            .sampler = {.type = WGPUSamplerBindingType_Filtering}});
+        }
 
         WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
         bindGroupLayoutDesc.entryCount = bindingLayoutEntries.size();
@@ -69,18 +77,15 @@ namespace flint::init
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
 
-        // Get vertex layout from the Vertex struct
-        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
-
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
+        pipelineDescriptor.label = makeStringView("Render Pipeline");
 
         // Vertex state
         pipelineDescriptor.vertex.module = vertexShader;
         pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
         pipelineDescriptor.vertex.bufferCount = 1;
-        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
+        pipelineDescriptor.vertex.buffers = vertexBufferLayout; // Use provided layout
 
         // Fragment state
         WGPUFragmentState fragmentState = {};
@@ -133,21 +138,23 @@ namespace flint::init
         WGPUTextureView textureView,
         WGPUSampler sampler)
     {
-        std::vector<WGPUBindGroupEntry> bindings(3);
+        std::vector<WGPUBindGroupEntry> bindings;
+        bindings.reserve(3);
 
         // Binding 0: Uniform Buffer
-        bindings[0].binding = 0;
-        bindings[0].buffer = uniformBuffer;
-        bindings[0].offset = 0;
-        bindings[0].size = sizeof(glm::mat4);
+        bindings.push_back({.binding = 0, .buffer = uniformBuffer, .offset = 0, .size = sizeof(glm::mat4)});
 
-        // Binding 1: Texture View
-        bindings[1].binding = 1;
-        bindings[1].textureView = textureView;
+        // Binding 1: Texture View (if provided)
+        if (textureView)
+        {
+            bindings.push_back({.binding = 1, .textureView = textureView});
+        }
 
-        // Binding 2: Sampler
-        bindings[2].binding = 2;
-        bindings[2].sampler = sampler;
+        // Binding 2: Sampler (if provided)
+        if (sampler)
+        {
+            bindings.push_back({.binding = 2, .sampler = sampler});
+        }
 
         WGPUBindGroupDescriptor bindGroupDesc = {};
         bindGroupDesc.layout = bindGroupLayout;
