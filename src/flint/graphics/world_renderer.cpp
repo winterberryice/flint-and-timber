@@ -43,7 +43,8 @@ namespace flint::graphics
             m_atlas.getView(),
             m_atlas.getSampler(),
             true, // Use texture
-            true  // Enable depth writing
+            true, // Enable depth writing
+            WGPUCompareFunction_Less // Use standard Less for depth comparison
         );
 
         std::cout << "World renderer initialized." << std::endl;

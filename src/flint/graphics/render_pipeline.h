@@ -21,7 +21,8 @@ namespace flint::graphics
             WGPUTextureView textureView,
             WGPUSampler sampler,
             bool useTexture,
-            bool depthWriteEnabled);
+            bool depthWriteEnabled,
+            WGPUCompareFunction depthCompare);
 
         void cleanup();
 

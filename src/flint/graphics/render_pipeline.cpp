@@ -19,7 +19,8 @@ namespace flint::graphics
         WGPUTextureView textureView,
         WGPUSampler sampler,
         bool useTexture,
-        bool depthWriteEnabled)
+        bool depthWriteEnabled,
+        WGPUCompareFunction depthCompare)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -29,7 +30,8 @@ namespace flint::graphics
             depthTextureFormat,
             &m_bindGroupLayout,
             useTexture,
-            depthWriteEnabled);
+            depthWriteEnabled,
+            depthCompare);
 
         m_bindGroup = flint::init::create_bind_group(
             device,

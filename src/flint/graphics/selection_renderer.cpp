@@ -36,7 +36,8 @@ namespace flint::graphics
             nullptr, // No texture view
             nullptr, // No sampler
             false,   // Do not use texture
-            false    // Do not write to depth buffer
+            false,   // Do not write to depth buffer
+            WGPUCompareFunction_LessEqual // Use LessEqual for depth comparison
         );
 
         std::cout << "Selection renderer initialized." << std::endl;
