@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "../../atlas_bytes.hpp"
+#include "atlas_bytes.hpp"
 #include "../init/buffer.h"
 #include "../init/shader.h"
 #include "../shader.wgsl.h"

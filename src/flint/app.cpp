@@ -6,6 +6,7 @@
 #include "init/shader.h"
 #include "init/buffer.h"
 #include "init/pipeline.h"
+#include "init/texture.h"
 #include "shader.wgsl.h"
 
 #include "atlas_bytes.hpp"
@@ -55,27 +56,13 @@ namespace flint
             1000.0f                                       // zfar
         );
 
-        // Create depth texture
-        WGPUTextureDescriptor depthTextureDesc = {};
-        depthTextureDesc.dimension = WGPUTextureDimension_2D;
-        depthTextureDesc.format = m_depthTextureFormat;
-        depthTextureDesc.mipLevelCount = 1;
-        depthTextureDesc.sampleCount = 1;
-        depthTextureDesc.size = {static_cast<uint32_t>(m_windowWidth), static_cast<uint32_t>(m_windowHeight), 1};
-        depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
-        depthTextureDesc.viewFormatCount = 1;
-        depthTextureDesc.viewFormats = &m_depthTextureFormat;
-        m_depthTexture = wgpuDeviceCreateTexture(m_device, &depthTextureDesc);
-
-        WGPUTextureViewDescriptor depthTextureViewDesc = {};
-        depthTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
-        depthTextureViewDesc.baseArrayLayer = 0;
-        depthTextureViewDesc.arrayLayerCount = 1;
-        depthTextureViewDesc.baseMipLevel = 0;
-        depthTextureViewDesc.mipLevelCount = 1;
-        depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
-        depthTextureViewDesc.format = m_depthTextureFormat;
-        m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
+        init::create_depth_texture(
+            m_device,
+            m_windowWidth,
+            m_windowHeight,
+            m_depthTextureFormat,
+            &m_depthTexture,
+            &m_depthTextureView);
 
         // ====
         m_running = true;
