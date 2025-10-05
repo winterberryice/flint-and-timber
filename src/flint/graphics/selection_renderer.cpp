@@ -33,10 +33,10 @@ namespace flint::graphics
             surfaceFormat,
             depthTextureFormat,
             m_uniformBuffer,
-            nullptr, // No texture view
-            nullptr, // No sampler
-            false,   // Do not use texture
-            false,   // Do not write to depth buffer
+            nullptr,                      // No texture view
+            nullptr,                      // No sampler
+            false,                        // Do not use texture
+            false,                        // Do not write to depth buffer
             WGPUCompareFunction_LessEqual // Use LessEqual for depth comparison
         );
 
@@ -46,7 +46,7 @@ namespace flint::graphics
     void SelectionRenderer::generateSelectionBox(WGPUDevice device)
     {
         // Hardcoded position for the cube for now, raised slightly for visibility
-        glm::vec3 position(7.0f, 19.0f, 7.0f);
+        glm::vec3 position(8.0f, 16.0f, 8.0f);
         m_selectionMesh.generate(device, position);
     }
 
