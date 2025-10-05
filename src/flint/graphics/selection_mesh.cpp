@@ -29,14 +29,10 @@ namespace flint::graphics
             {1.0f, 1.0f, 1.0f},
             {0.0f, 1.0f, 1.0f}};
 
-        // Scale and offset the vertices to prevent Z-fighting
-        const float scale = 1.01f;
-        const float offset = -0.005f;
         for (const auto &pos : cube_positions)
         {
-            glm::vec3 scaled_pos = pos * scale + glm::vec3(offset, offset, offset);
             // Color and UVs are not used for the selection box, but the vertex layout requires them.
-            vertices.push_back({scaled_pos, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}});
+            vertices.push_back({pos, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}});
         }
 
         // 12 edges of the cube, 2 indices per edge

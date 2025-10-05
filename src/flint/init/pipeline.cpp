@@ -23,7 +23,9 @@ namespace flint::init
         bool useTexture,
         bool useModelMatrix,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        int32_t depthBias,
+        float depthBiasSlopeScale)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -34,6 +36,8 @@ namespace flint::init
         depthStencilState.depthCompare = depthCompare;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
+        depthStencilState.depthBias = depthBias;
+        depthStencilState.depthBiasSlopeScale = depthBiasSlopeScale;
 
         // Create bind group layout
         std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries;
