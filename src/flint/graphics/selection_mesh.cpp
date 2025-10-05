@@ -59,26 +59,27 @@ namespace flint::graphics
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        const float t = 0.02f; // Half the thickness of the lines
+        const float t = 0.015f; // Half the thickness of the lines
 
-        // Create 12 cuboids for the edges of a unit cube.
-        // Edges along X
-        add_cuboid(vertices, indices, {0.0f, 0.0f, 0.0f}, {1.0f, 2 * t, 2 * t});
-        add_cuboid(vertices, indices, {0.0f, 1.0f - 2 * t, 0.0f}, {1.0f, 1.0f, 2 * t});
-        add_cuboid(vertices, indices, {0.0f, 0.0f, 1.0f - 2 * t}, {1.0f, 2 * t, 1.0f});
-        add_cuboid(vertices, indices, {0.0f, 1.0f - 2 * t, 1.0f - 2 * t}, {1.0f, 1.0f, 1.0f});
+        // A unit cube is from (0,0,0) to (1,1,1). The 12 cuboids are centered on its edges.
 
-        // Edges along Y
-        add_cuboid(vertices, indices, {0.0f, 0.0f, 0.0f}, {2 * t, 1.0f, 2 * t});
-        add_cuboid(vertices, indices, {1.0f - 2 * t, 0.0f, 0.0f}, {1.0f, 1.0f, 2 * t});
-        add_cuboid(vertices, indices, {0.0f, 0.0f, 1.0f - 2 * t}, {2 * t, 1.0f, 1.0f});
-        add_cuboid(vertices, indices, {1.0f - 2 * t, 0.0f, 1.0f - 2 * t}, {1.0f, 1.0f, 1.0f});
+        // 4 edges along the X axis
+        add_cuboid(vertices, indices, {0.0f, -t, -t}, {1.0f, t, t});
+        add_cuboid(vertices, indices, {0.0f, 1.0f - t, -t}, {1.0f, 1.0f + t, t});
+        add_cuboid(vertices, indices, {0.0f, -t, 1.0f - t}, {1.0f, t, 1.0f + t});
+        add_cuboid(vertices, indices, {0.0f, 1.0f - t, 1.0f - t}, {1.0f, 1.0f + t, 1.0f + t});
 
-        // Edges along Z
-        add_cuboid(vertices, indices, {0.0f, 0.0f, 0.0f}, {2 * t, 2 * t, 1.0f});
-        add_cuboid(vertices, indices, {1.0f - 2 * t, 0.0f, 0.0f}, {1.0f, 2 * t, 1.0f});
-        add_cuboid(vertices, indices, {0.0f, 1.0f - 2 * t, 0.0f}, {2 * t, 1.0f, 1.0f});
-        add_cuboid(vertices, indices, {1.0f - 2 * t, 1.0f - 2 * t, 0.0f}, {1.0f, 1.0f, 1.0f});
+        // 4 edges along the Y axis
+        add_cuboid(vertices, indices, {-t, 0.0f, -t}, {t, 1.0f, t});
+        add_cuboid(vertices, indices, {1.0f - t, 0.0f, -t}, {1.0f + t, 1.0f, t});
+        add_cuboid(vertices, indices, {-t, 0.0f, 1.0f - t}, {t, 1.0f, 1.0f + t});
+        add_cuboid(vertices, indices, {1.0f - t, 0.0f, 1.0f - t}, {1.0f + t, 1.0f, 1.0f + t});
+
+        // 4 edges along the Z axis
+        add_cuboid(vertices, indices, {-t, -t, 0.0f}, {t, t, 1.0f});
+        add_cuboid(vertices, indices, {1.0f - t, -t, 0.0f}, {1.0f + t, t, 1.0f});
+        add_cuboid(vertices, indices, {-t, 1.0f - t, 0.0f}, {t, 1.0f + t, 1.0f});
+        add_cuboid(vertices, indices, {1.0f - t, 1.0f - t, 0.0f}, {1.0f + t, 1.0f + t, 1.0f});
 
         m_indexCount = static_cast<uint32_t>(indices.size());
 
