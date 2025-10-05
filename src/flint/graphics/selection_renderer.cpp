@@ -1,11 +1,11 @@
 #include "selection_renderer.h"
 
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "../init/buffer.h"
 #include "../init/shader.h"
 #include "../selection_shader.wgsl.h"
-#include "../chunk.h"
 
 namespace flint::graphics
 {
@@ -22,8 +22,9 @@ namespace flint::graphics
         m_vertexShader = init::create_shader_module(device, "Selection Vertex Shader", SELECTION_WGSL_vertexShaderSource.data());
         m_fragmentShader = init::create_shader_module(device, "Selection Fragment Shader", SELECTION_WGSL_fragmentShaderSource.data());
 
-        // Create uniform buffer for camera matrices
-        m_uniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
+        // Create uniform buffers
+        m_cameraUniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
+        m_modelUniformBuffer = init::create_uniform_buffer(device, "Model Uniform Buffer", sizeof(ModelUniform));
 
         // Create render pipeline
         m_renderPipeline.init(
@@ -32,29 +33,40 @@ namespace flint::graphics
             m_fragmentShader,
             surfaceFormat,
             depthTextureFormat,
-            m_uniformBuffer,
-            nullptr,                      // No texture view
-            nullptr,                      // No sampler
-            false,                        // Do not use texture
-            false,                        // Do not write to depth buffer
-            WGPUCompareFunction_LessEqual // Use LessEqual for depth comparison
-        );
+            m_cameraUniformBuffer,
+            m_modelUniformBuffer,
+            nullptr, // No texture view
+            nullptr, // No sampler
+            false,   // Do not use texture
+            true,    // Use model matrix
+            false,   // Do not write to depth buffer
+            WGPUCompareFunction_LessEqual);
 
         std::cout << "Selection renderer initialized." << std::endl;
     }
 
-    void SelectionRenderer::generateSelectionBox(WGPUDevice device)
+    void SelectionRenderer::create_mesh(WGPUDevice device)
     {
-        // Hardcoded position for the cube for now, raised slightly for visibility
-        glm::vec3 position(8.0f, 16.0f, 8.0f);
-        m_selectionMesh.generate(device, position);
+        m_selectionMesh.generate(device);
     }
 
-    void SelectionRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera)
+    void SelectionRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block_pos)
     {
-        // Update the uniform buffer with the new camera view-projection matrix
+        is_visible = selected_block_pos.has_value();
+
+        if (!is_visible)
+        {
+            return;
+        }
+
+        // Update camera uniform buffer
         m_cameraUniform.updateViewProj(camera);
-        wgpuQueueWriteBuffer(queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
+        wgpuQueueWriteBuffer(queue, m_cameraUniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
+
+        // Update model uniform buffer
+        glm::vec3 pos = selected_block_pos.value();
+        m_modelUniform.model = glm::translate(glm::mat4(1.0f), pos);
+        wgpuQueueWriteBuffer(queue, m_modelUniformBuffer, 0, &m_modelUniform, sizeof(ModelUniform));
 
         // Set pipeline and bind group
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
@@ -71,10 +83,15 @@ namespace flint::graphics
         m_renderPipeline.cleanup();
         m_selectionMesh.cleanup();
 
-        if (m_uniformBuffer)
+        if (m_cameraUniformBuffer)
         {
-            wgpuBufferRelease(m_uniformBuffer);
-            m_uniformBuffer = nullptr;
+            wgpuBufferRelease(m_cameraUniformBuffer);
+            m_cameraUniformBuffer = nullptr;
+        }
+        if (m_modelUniformBuffer)
+        {
+            wgpuBufferRelease(m_modelUniformBuffer);
+            m_modelUniformBuffer = nullptr;
         }
         if (m_vertexShader)
         {

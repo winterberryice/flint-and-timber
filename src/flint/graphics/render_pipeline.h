@@ -17,10 +17,12 @@ namespace flint::graphics
             WGPUShaderModule fragmentShader,
             WGPUTextureFormat surfaceFormat,
             WGPUTextureFormat depthTextureFormat,
-            WGPUBuffer uniformBuffer,
+            WGPUBuffer cameraUniformBuffer,
+            WGPUBuffer modelUniformBuffer,
             WGPUTextureView textureView,
             WGPUSampler sampler,
             bool useTexture,
+            bool useModel,
             bool depthWriteEnabled,
             WGPUCompareFunction depthCompare);
 
