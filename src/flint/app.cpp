@@ -7,6 +7,8 @@
 #include "init/buffer.h"
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
+#include "outline_shader.wgsl.h"
+#include "outline_geometry.h"
 
 #include "atlas_bytes.hpp"
 
@@ -50,6 +52,7 @@ namespace flint
 
         m_vertexShader = init::create_shader_module(m_device, "Vertex Shader", WGSL_vertexShaderSource);
         m_fragmentShader = init::create_shader_module(m_device, "Fragment Shader", WGSL_fragmentShaderSource);
+        m_outlineShader = init::create_shader_module(m_device, "Outline Shader", WGSL_outline_shader_source);
 
         std::cout << "Shaders created successfully" << std::endl;
 
@@ -77,6 +80,10 @@ namespace flint
         // Create uniform buffer for camera matrices
         m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
 
+        // Create vertex and index buffers for the outline cube
+        m_outlineVertexBuffer = init::create_vertex_buffer(m_device, "Outline Vertex Buffer", outline_vertices.data(), outline_vertices.size() * sizeof(Vertex));
+        m_outlineIndexBuffer = init::create_index_buffer(m_device, "Outline Index Buffer", outline_indices.data(), outline_indices.size() * sizeof(uint16_t));
+
         std::cout << "3D components ready!" << std::endl;
 
         // Create depth texture
@@ -101,6 +108,7 @@ namespace flint
         depthTextureViewDesc.format = m_depthTextureFormat;
         m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
 
+        // Create the main render pipeline
         m_renderPipeline = init::create_render_pipeline(
             m_device,
             m_vertexShader,
@@ -115,6 +123,20 @@ namespace flint
             m_uniformBuffer,
             m_atlas.getView(),
             m_atlas.getSampler());
+
+        // Create the outline render pipeline
+        m_outlinePipeline = init::create_line_render_pipeline(
+            m_device,
+            m_outlineShader, // Use the outline shader
+            m_outlineShader, // Use the outline shader
+            m_surfaceFormat,
+            m_depthTextureFormat,
+            &m_outlineBindGroupLayout);
+
+        m_outlineBindGroup = init::create_outline_bind_group(
+            m_device,
+            m_outlineBindGroupLayout,
+            m_uniformBuffer);
 
         // ====
         m_running = true;
@@ -180,8 +202,12 @@ namespace flint
         front.z = sin(yaw_rad) * cos(pitch_rad);
         m_camera.target = m_camera.eye + glm::normalize(front);
 
+        // Create a model matrix for the outline cube.
+        // For the proof-of-concept, we'll place it at a hardcoded location.
+        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 2.0f, 5.0f));
+
         // Update the uniform buffer with the new camera view-projection matrix
-        m_cameraUniform.updateViewProj(m_camera);
+        m_cameraUniform.updateViewProj(m_camera, modelMatrix); // Pass model matrix
         wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 
         // Get surface texture
@@ -226,14 +252,23 @@ namespace flint
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
-            // NEW: 3D Cube rendering instead of triangle
+            // === Draw the World Chunk ===
+            m_cameraUniform.updateViewProj(m_camera, glm::mat4(1.0f)); // Use identity matrix for the world
+            wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
+
             wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
-
-            // Bind the uniform buffer (camera matrix)
             wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
-
-            // Draw the chunk
             m_chunkMesh.render(renderPass);
+
+            // === Draw the Outline Cube ===
+            m_cameraUniform.updateViewProj(m_camera, modelMatrix); // Use the specific model matrix for the cube
+            wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
+
+            wgpuRenderPassEncoderSetPipeline(renderPass, m_outlinePipeline);
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_outlineBindGroup, 0, nullptr);
+            wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_outlineVertexBuffer, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderSetIndexBuffer(renderPass, m_outlineIndexBuffer, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
+            wgpuRenderPassEncoderDrawIndexed(renderPass, outline_indices.size(), 1, 0, 0, 0);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
@@ -262,6 +297,20 @@ namespace flint
 
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
+
+        // Release outline resources
+        if (m_outlineIndexBuffer)
+            wgpuBufferRelease(m_outlineIndexBuffer);
+        if (m_outlineVertexBuffer)
+            wgpuBufferRelease(m_outlineVertexBuffer);
+        if (m_outlineBindGroup)
+            wgpuBindGroupRelease(m_outlineBindGroup);
+        if (m_outlineBindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_outlineBindGroupLayout);
+        if (m_outlinePipeline)
+            wgpuRenderPipelineRelease(m_outlinePipeline);
+        if (m_outlineShader)
+            wgpuShaderModuleRelease(m_outlineShader);
 
         if (m_depthTextureView)
             wgpuTextureViewRelease(m_depthTextureView);

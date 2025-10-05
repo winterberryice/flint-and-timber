@@ -37,9 +37,9 @@ namespace flint
         view_proj = glm::mat4(1.0f);
     }
 
-    void CameraUniform::updateViewProj(const Camera &camera)
+    void CameraUniform::updateViewProj(const Camera &camera, const glm::mat4 &model)
     {
-        view_proj = camera.buildViewProjectionMatrix();
+        view_proj = camera.buildViewProjectionMatrix() * model;
     }
 
     // --- CameraMovement Implementation ---

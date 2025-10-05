@@ -41,7 +41,8 @@ namespace flint
 
         CameraUniform();
 
-        void updateViewProj(const Camera &camera);
+        // The model matrix is passed in to create the final MVP matrix.
+        void updateViewProj(const Camera &camera, const glm::mat4 &model);
     };
 
     // Equivalent to `CameraMovement`.

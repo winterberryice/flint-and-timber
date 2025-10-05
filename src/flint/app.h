@@ -58,6 +58,14 @@ namespace flint
         WGPUBindGroup m_bindGroup = nullptr;
         WGPUBindGroupLayout m_bindGroupLayout = nullptr;
 
+        // Resources for drawing the block outline
+        WGPUShaderModule m_outlineShader = nullptr;
+        WGPURenderPipeline m_outlinePipeline = nullptr;
+        WGPUBindGroupLayout m_outlineBindGroupLayout = nullptr;
+        WGPUBindGroup m_outlineBindGroup = nullptr;
+        WGPUBuffer m_outlineVertexBuffer = nullptr;
+        WGPUBuffer m_outlineIndexBuffer = nullptr;
+
         // App state
         bool m_running = false;
         int m_windowWidth = 800;
