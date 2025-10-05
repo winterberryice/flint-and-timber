@@ -1,10 +1,8 @@
 #pragma once
 
-#include <string_view>
-
 namespace flint
 {
-    constexpr std::string_view WGSL_selection_vertexShaderSource = R"(
+    constexpr const char* WGSL_selection_vertexShaderSource = R"(
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 }
@@ -30,7 +28,7 @@ fn vs_main(
 }
 )";
 
-    constexpr std::string_view WGSL_selection_fragmentShaderSource = R"(
+    constexpr const char* WGSL_selection_fragmentShaderSource = R"(
 @fragment
 fn fs_main() -> @location(0) vec4<f32> {
     return vec4<f32>(1.0, 1.0, 1.0, 1.0); // White
