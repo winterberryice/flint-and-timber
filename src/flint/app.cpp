@@ -183,10 +183,6 @@ namespace flint
         if (m_depthTexture)
             wgpuTextureRelease(m_depthTexture);
 
-        if (m_vertexBuffer)
-        {
-            wgpuBufferRelease(m_vertexBuffer);
-        }
         if (m_surface)
         {
             wgpuSurfaceRelease(m_surface);

@@ -36,12 +36,13 @@ namespace flint
         WGPUSurface m_surface = nullptr;
         WGPUTextureFormat m_surfaceFormat;
 
-        // New depth texture fields
+        // Depth texture for the main render pass.
+        // This is owned by the App class because its lifecycle is tied to the
+        // application window's size and the main render loop. It is passed to
+        // the WorldRenderer, which uses it as the depth attachment.
         WGPUTexture m_depthTexture = nullptr;
         WGPUTextureView m_depthTextureView = nullptr;
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
-
-        WGPUBuffer m_vertexBuffer = nullptr;
 
         graphics::WorldRenderer m_worldRenderer;
 
