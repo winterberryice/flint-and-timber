@@ -164,4 +164,117 @@ namespace flint::init
         return bindGroup;
     }
 
+    WGPURenderPipeline create_selection_pipeline(
+        WGPUDevice device,
+        WGPUShaderModule vertexShader,
+        WGPUShaderModule fragmentShader,
+        WGPUTextureFormat surfaceFormat,
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout *pBindGroupLayout)
+    {
+        std::cout << "Creating selection pipeline..." << std::endl;
+
+        // Depth Stencil State with Depth Bias
+        WGPUDepthStencilState depthStencilState = {};
+        depthStencilState.format = depthTextureFormat;
+        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
+        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        depthStencilState.stencilReadMask = 0;
+        depthStencilState.stencilWriteMask = 0;
+        depthStencilState.depthBias = -1; // Pull fragments closer to the camera
+
+        // Create bind group layout for uniforms only
+        WGPUBindGroupLayoutEntry bindingLayoutEntry = {};
+        bindingLayoutEntry.binding = 0;
+        bindingLayoutEntry.visibility = WGPUShaderStage_Vertex;
+        bindingLayoutEntry.buffer.type = WGPUBufferBindingType_Uniform;
+        bindingLayoutEntry.buffer.minBindingSize = sizeof(glm::mat4);
+
+        WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
+        bindGroupLayoutDesc.entryCount = 1;
+        bindGroupLayoutDesc.entries = &bindingLayoutEntry;
+
+        WGPUBindGroupLayout bindGroupLayout = wgpuDeviceCreateBindGroupLayout(device, &bindGroupLayoutDesc);
+        if (!bindGroupLayout)
+        {
+            throw std::runtime_error("Failed to create selection bind group layout!");
+        }
+        *pBindGroupLayout = bindGroupLayout;
+
+        // Create pipeline layout
+        WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+        pipelineLayoutDesc.bindGroupLayoutCount = 1;
+        pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
+        WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
+
+        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
+
+        // Create render pipeline descriptor
+        WGPURenderPipelineDescriptor pipelineDescriptor = {};
+        pipelineDescriptor.label = makeStringView("Selection Render Pipeline");
+
+        pipelineDescriptor.vertex.module = vertexShader;
+        pipelineDescriptor.vertex.entryPoint = makeStringView("vs_main");
+        pipelineDescriptor.vertex.bufferCount = 1;
+        pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
+
+        WGPUFragmentState fragmentState = {};
+        fragmentState.module = fragmentShader;
+        fragmentState.entryPoint = makeStringView("fs_main");
+
+        WGPUColorTargetState colorTarget = {};
+        colorTarget.format = surfaceFormat;
+        colorTarget.writeMask = WGPUColorWriteMask_All;
+
+        fragmentState.targetCount = 1;
+        fragmentState.targets = &colorTarget;
+        pipelineDescriptor.fragment = &fragmentState;
+
+        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDescriptor.primitive.cullMode = WGPUCullMode_None; // No culling for the outline
+
+        pipelineDescriptor.multisample.count = 1;
+        pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
+        pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
+
+        pipelineDescriptor.depthStencil = &depthStencilState;
+        pipelineDescriptor.layout = pipelineLayout;
+
+        WGPURenderPipeline renderPipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDescriptor);
+        wgpuPipelineLayoutRelease(pipelineLayout);
+
+        if (!renderPipeline)
+        {
+            throw std::runtime_error("Failed to create selection render pipeline!");
+        }
+
+        std::cout << "Selection pipeline created successfully" << std::endl;
+        return renderPipeline;
+    }
+
+    WGPUBindGroup create_selection_bind_group(
+        WGPUDevice device,
+        WGPUBindGroupLayout bindGroupLayout,
+        WGPUBuffer uniformBuffer)
+    {
+        WGPUBindGroupEntry binding = {};
+        binding.binding = 0;
+        binding.buffer = uniformBuffer;
+        binding.offset = 0;
+        binding.size = sizeof(glm::mat4);
+
+        WGPUBindGroupDescriptor bindGroupDesc = {};
+        bindGroupDesc.layout = bindGroupLayout;
+        bindGroupDesc.entryCount = 1;
+        bindGroupDesc.entries = &binding;
+
+        WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
+        if (!bindGroup)
+        {
+            throw std::runtime_error("Failed to create selection bind group!");
+        }
+
+        return bindGroup;
+    }
+
 } // namespace flint::init

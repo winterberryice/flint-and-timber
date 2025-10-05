@@ -57,8 +57,17 @@ namespace flint
         graphics::SelectionRenderer m_selectionRenderer;
 
         WGPUBuffer m_uniformBuffer = nullptr;
+
+        // Main render pipeline resources
         WGPUBindGroup m_bindGroup = nullptr;
         WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+
+        // Selection render pipeline resources
+        WGPUShaderModule m_selectionVertexShader = nullptr;
+        WGPUShaderModule m_selectionFragmentShader = nullptr;
+        WGPURenderPipeline m_selectionRenderPipeline = nullptr;
+        WGPUBindGroup m_selectionBindGroup = nullptr;
+        WGPUBindGroupLayout m_selectionBindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;
