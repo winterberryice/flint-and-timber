@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "chunk.h"
 #include "graphics/chunk_mesh.hpp"
+#include "graphics/render_pipeline.h"
 #include "graphics/texture.hpp"
 #include "player.h"
 
@@ -43,7 +44,8 @@ namespace flint
         WGPUBuffer m_vertexBuffer = nullptr;
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
-        WGPURenderPipeline m_renderPipeline = nullptr;
+
+        graphics::RenderPipeline m_renderPipeline;
 
         Camera m_camera;
         CameraUniform m_cameraUniform;
@@ -55,8 +57,6 @@ namespace flint
         graphics::Texture m_atlas;
 
         WGPUBuffer m_uniformBuffer = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;

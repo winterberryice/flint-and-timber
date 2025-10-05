@@ -1,0 +1,35 @@
+#pragma once
+
+#include <webgpu/webgpu.h>
+
+namespace flint::graphics
+{
+
+    class RenderPipeline
+    {
+    public:
+        RenderPipeline();
+        ~RenderPipeline();
+
+        void init(
+            WGPUDevice device,
+            WGPUShaderModule vertexShader,
+            WGPUShaderModule fragmentShader,
+            WGPUTextureFormat surfaceFormat,
+            WGPUTextureFormat depthTextureFormat,
+            WGPUBuffer uniformBuffer,
+            WGPUTextureView textureView,
+            WGPUSampler sampler);
+
+        void cleanup();
+
+        WGPURenderPipeline getPipeline() const;
+        WGPUBindGroup getBindGroup() const;
+
+    private:
+        WGPURenderPipeline m_pipeline = nullptr;
+        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+        WGPUBindGroup m_bindGroup = nullptr;
+    };
+
+} // namespace flint::graphics

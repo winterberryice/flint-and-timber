@@ -101,17 +101,12 @@ namespace flint
         depthTextureViewDesc.format = m_depthTextureFormat;
         m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
 
-        m_renderPipeline = init::create_render_pipeline(
+        m_renderPipeline.init(
             m_device,
             m_vertexShader,
             m_fragmentShader,
             m_surfaceFormat,
             m_depthTextureFormat,
-            &m_bindGroupLayout);
-
-        m_bindGroup = init::create_bind_group(
-            m_device,
-            m_bindGroupLayout,
             m_uniformBuffer,
             m_atlas.getView(),
             m_atlas.getSampler());
@@ -227,10 +222,10 @@ namespace flint
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
             // NEW: 3D Cube rendering instead of triangle
-            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline);
+            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
 
             // Bind the uniform buffer (camera matrix)
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_bindGroup, 0, nullptr);
+            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_renderPipeline.getBindGroup(), 0, nullptr);
 
             // Draw the chunk
             m_chunkMesh.render(renderPass);
@@ -260,6 +255,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_renderPipeline.cleanup();
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
 
@@ -270,15 +266,6 @@ namespace flint
 
         if (m_uniformBuffer)
             wgpuBufferRelease(m_uniformBuffer);
-        if (m_bindGroup)
-            wgpuBindGroupRelease(m_bindGroup);
-        if (m_bindGroupLayout)
-            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
-        if (m_renderPipeline)
-        {
-            wgpuRenderPipelineRelease(m_renderPipeline);
-            m_renderPipeline = nullptr;
-        }
         if (m_vertexShader)
         {
             wgpuShaderModuleRelease(m_vertexShader);
