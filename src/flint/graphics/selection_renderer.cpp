@@ -41,7 +41,7 @@ namespace flint::graphics
             true,    // Use model matrix
             false,   // Do not write to depth buffer
             WGPUCompareFunction_LessEqual,
-            WGPUPrimitiveTopology_LineList);
+            WGPUPrimitiveTopology_TriangleList);
 
         std::cout << "Selection renderer initialized." << std::endl;
     }
