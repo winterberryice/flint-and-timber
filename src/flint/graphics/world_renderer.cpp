@@ -42,7 +42,9 @@ namespace flint::graphics
             m_uniformBuffer,
             m_atlas.getView(),
             m_atlas.getSampler(),
-            true); // Use texture
+            true, // Use texture
+            true  // Enable depth writing
+        );
 
         std::cout << "World renderer initialized." << std::endl;
     }
