@@ -6,6 +6,7 @@
 #include "../init/shader.h"
 #include "../selection_shader.wgsl.h"
 #include "../cube_geometry.h"
+#include "../chunk.h"
 
 namespace flint::graphics
 {
@@ -47,21 +48,22 @@ namespace flint::graphics
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        // Hardcoded position for the cube for now
-        glm::vec3 position(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f, CHUNK_DEPTH / 2.0f);
+        // Hardcoded position for the cube for now, raised slightly for visibility
+        glm::vec3 position(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 10.0f, CHUNK_DEPTH / 2.0f);
 
         // Get cube geometry
-        auto cube_vertices = flint::get_cube_vertices();
-        auto cube_indices = flint::get_cube_indices();
+        const auto &cube_vertices = flint::CubeGeometry::getVertices();
+        const auto &cube_indices_16 = flint::CubeGeometry::getIndices();
 
         for (const auto &vert : cube_vertices)
         {
-            vertices.push_back({vert.position + position, vert.normal, vert.uv});
+            vertices.push_back({vert.position + position, vert.color, vert.uv});
         }
 
-        for (const auto &index : cube_indices)
+        indices.reserve(cube_indices_16.size());
+        for (uint16_t index : cube_indices_16)
         {
-            indices.push_back(index);
+            indices.push_back(static_cast<uint32_t>(index));
         }
 
         m_indexCount = static_cast<uint32_t>(indices.size());
