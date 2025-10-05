@@ -41,7 +41,8 @@ namespace flint::graphics
             true,    // Use model matrix
             false,   // Do not write to depth buffer
             WGPUCompareFunction_LessEqual,
-            WGPUPrimitiveTopology_TriangleList);
+            WGPUPrimitiveTopology_TriangleList,
+            false); // No blending for the opaque highlight
 
         std::cout << "Selection renderer initialized." << std::endl;
     }
@@ -51,42 +52,56 @@ namespace flint::graphics
         m_selectionMesh.generate(device);
     }
 
-    void SelectionRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block_pos)
+    // Helper to get rotation for a face normal
+    glm::mat4 get_rotation_for_normal(const glm::ivec3 &normal)
     {
-        is_visible = selected_block_pos.has_value();
+        if (normal == glm::ivec3(0, 0, 1))
+            return glm::mat4(1.0f); // Front
+        if (normal == glm::ivec3(0, 0, -1))
+            return glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), {0.0f, 1.0f, 0.0f}); // Back
+        if (normal == glm::ivec3(1, 0, 0))
+            return glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), {0.0f, 1.0f, 0.0f}); // Right
+        if (normal == glm::ivec3(-1, 0, 0))
+            return glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), {0.0f, 1.0f, 0.0f}); // Left
+        if (normal == glm::ivec3(0, 1, 0))
+            return glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), {1.0f, 0.0f, 0.0f}); // Top
+        if (normal == glm::ivec3(0, -1, 0))
+            return glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), {1.0f, 0.0f, 0.0f}); // Bottom
+        return glm::mat4(1.0f);
+    }
+
+    void SelectionRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block_pos, const std::vector<glm::ivec3> &exposed_faces)
+    {
+        is_visible = selected_block_pos.has_value() && !exposed_faces.empty();
 
         if (!is_visible)
         {
             return;
         }
 
-        // Update camera uniform buffer
+        // Update camera uniform buffer once
         m_cameraUniform.updateViewProj(camera);
         wgpuQueueWriteBuffer(queue, m_cameraUniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 
-        // Update model uniform buffer
-        glm::vec3 pos = selected_block_pos.value();
-        float scale_factor = 1.002f; // Scale slightly to prevent Z-fighting
-        glm::mat4 model = glm::mat4(1.0f);
-
-        // 1. Translate to the block's position.
-        model = glm::translate(model, pos);
-        // 2. Translate to the center of the block.
-        model = glm::translate(model, glm::vec3(0.5f));
-        // 3. Scale from the center.
-        model = glm::scale(model, glm::vec3(scale_factor));
-        // 4. Translate back from the center.
-        model = glm::translate(model, glm::vec3(-0.5f));
-
-        m_modelUniform.model = model;
-        wgpuQueueWriteBuffer(queue, m_modelUniformBuffer, 0, &m_modelUniform, sizeof(ModelUniform));
-
-        // Set pipeline and bind group
+        // Set pipeline and bind group once
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
         wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_renderPipeline.getBindGroup(), 0, nullptr);
 
-        // Draw the selection mesh
-        m_selectionMesh.render(renderPass);
+        glm::vec3 block_center = glm::vec3(selected_block_pos.value()) + glm::vec3(0.5f);
+
+        for (const auto &normal : exposed_faces)
+        {
+            glm::mat4 rotation_matrix = get_rotation_for_normal(normal);
+            glm::vec3 face_center = block_center + (glm::vec3(normal) * 0.501f); // 0.5 to reach face, 0.001 to prevent Z-fighting
+
+            glm::mat4 model_matrix = glm::translate(glm::mat4(1.0f), face_center) * rotation_matrix;
+
+            m_modelUniform.model = model_matrix;
+            wgpuQueueWriteBuffer(queue, m_modelUniformBuffer, 0, &m_modelUniform, sizeof(ModelUniform));
+
+            // Draw the border mesh for this face
+            m_selectionMesh.render(renderPass);
+        }
     }
 
     void SelectionRenderer::cleanup()

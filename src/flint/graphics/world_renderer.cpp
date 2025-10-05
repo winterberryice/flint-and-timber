@@ -47,7 +47,8 @@ namespace flint::graphics
             false, // Do not use model matrix
             true,  // Enable depth writing
             WGPUCompareFunction_Less, // Use standard Less for depth comparison
-            WGPUPrimitiveTopology_TriangleList
+            WGPUPrimitiveTopology_TriangleList,
+            true // Use blending for transparent textures
         );
 
         std::cout << "World renderer initialized." << std::endl;

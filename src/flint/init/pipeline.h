@@ -16,7 +16,8 @@ namespace flint::init
         bool useModel,
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
-        WGPUPrimitiveTopology topology);
+        WGPUPrimitiveTopology topology,
+        bool use_blending);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,

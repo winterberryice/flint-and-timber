@@ -5,6 +5,7 @@
 #include <webgpu/webgpu.h>
 #include <glm/glm.hpp>
 #include <optional>
+#include <vector>
 
 #include "../camera.h"
 #include "render_pipeline.h"
@@ -26,7 +27,7 @@ namespace flint::graphics
 
         void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, WGPUTextureFormat depthTextureFormat);
         void create_mesh(WGPUDevice device);
-        void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block_pos);
+        void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block_pos, const std::vector<glm::ivec3> &exposed_faces);
         void cleanup();
 
     private:

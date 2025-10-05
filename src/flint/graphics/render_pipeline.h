@@ -25,7 +25,8 @@ namespace flint::graphics
             bool useModel,
             bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
-        WGPUPrimitiveTopology topology);
+        WGPUPrimitiveTopology topology,
+        bool use_blending);
 
         void cleanup();
 

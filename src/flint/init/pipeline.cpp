@@ -24,7 +24,8 @@ namespace flint::init
         bool useModel,
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
-        WGPUPrimitiveTopology topology)
+        WGPUPrimitiveTopology topology,
+        bool use_blending)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -126,15 +127,22 @@ namespace flint::init
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
-        // Enable blending for transparency
+        // Conditionally enable blending for transparency
         WGPUBlendState blendState = {};
-        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
-        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        blendState.color.operation = WGPUBlendOperation_Add;
-        blendState.alpha.srcFactor = WGPUBlendFactor_One;
-        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
-        blendState.alpha.operation = WGPUBlendOperation_Add;
-        colorTarget.blend = &blendState;
+        if (use_blending)
+        {
+            blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+            blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+            blendState.color.operation = WGPUBlendOperation_Add;
+            blendState.alpha.srcFactor = WGPUBlendFactor_One;
+            blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
+            blendState.alpha.operation = WGPUBlendOperation_Add;
+            colorTarget.blend = &blendState;
+        }
+        else
+        {
+            colorTarget.blend = nullptr;
+        }
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;

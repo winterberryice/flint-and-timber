@@ -155,13 +155,33 @@ namespace flint
             m_worldRenderer.render(renderPass, m_queue, m_camera);
 
             // Get selected block from player and render selection box
-            auto selected_block = m_player.get_selected_block();
+            auto selected_block_opt = m_player.get_selected_block();
             std::optional<glm::ivec3> selected_block_pos;
-            if (selected_block.has_value())
+            std::vector<glm::ivec3> exposed_faces;
+
+            if (selected_block_opt.has_value())
             {
-                selected_block_pos = selected_block->block_position;
+                selected_block_pos = selected_block_opt->block_position;
+                const auto &chunk = m_worldRenderer.getChunk();
+
+                // Check neighbors to find exposed faces
+                const std::vector<glm::ivec3> face_normals = {
+                    {1, 0, 0}, {-1, 0, 0}, // Right, Left
+                    {0, 1, 0}, {0, -1, 0}, // Top, Bottom
+                    {0, 0, 1}, {0, 0, -1}  // Front, Back
+                };
+
+                for (const auto &normal : face_normals)
+                {
+                    glm::ivec3 neighbor_pos = *selected_block_pos + normal;
+                    if (!chunk.is_solid(neighbor_pos.x, neighbor_pos.y, neighbor_pos.z))
+                    {
+                        exposed_faces.push_back(normal);
+                    }
+                }
             }
-            m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
+
+            m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos, exposed_faces);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
