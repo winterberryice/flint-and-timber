@@ -7,6 +7,7 @@
 #include "chunk.h"
 #include "camera.h"
 #include "graphics/world_renderer.h"
+#include "graphics/selection_renderer.h"
 #include "player.h"
 
 namespace flint
@@ -45,6 +46,7 @@ namespace flint
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
 
         graphics::WorldRenderer m_worldRenderer;
+        graphics::SelectionRenderer m_selectionRenderer;
 
         Camera m_camera;
         player::Player m_player;
