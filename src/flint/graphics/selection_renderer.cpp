@@ -2,6 +2,7 @@
 #include "../vertex.h"
 #include "glm/gtc/type_ptr.hpp"
 #include <vector>
+#include <array>
 
 namespace flint
 {
@@ -39,14 +40,28 @@ namespace flint
             std::vector<Vertex> vertices;
             std::vector<uint16_t> indices;
 
-            auto add_quad = [&](const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3, const glm::vec3 &v4, const glm::vec3 &color)
-            {
+            // Atlas info for Dirt texture
+            const float ATLAS_COLS = 16.0f;
+            const float ATLAS_ROWS = 1.0f;
+            const glm::ivec2 tile_coords = {2, 0}; // Dirt
+
+            // Calculate UVs for the tile
+            float tile_width = 1.0f / ATLAS_COLS;
+            float tile_height = 1.0f / ATLAS_ROWS;
+            float u0 = static_cast<float>(tile_coords.x) * tile_width;
+            float v0 = static_cast<float>(tile_coords.y) * tile_height;
+            float u1 = u0 + tile_width;
+            float v1 = v0 + tile_height;
+
+            const std::array<glm::vec2, 4> uvs = {{{u0, v0}, {u1, v0}, {u1, v1}, {u0, v1}}};
+            const glm::vec3 color = {1.0f, 1.0f, 1.0f}; // Color for dirt is white (no tint)
+
+            auto add_quad = [&](const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3, const glm::vec3 &v4) {
                 uint16_t base_index = vertices.size();
-                // We provide a color instead of a normal, and dummy UVs.
-                vertices.push_back({v1, color, {0, 0}});
-                vertices.push_back({v2, color, {0, 0}});
-                vertices.push_back({v3, color, {0, 0}});
-                vertices.push_back({v4, color, {0, 0}});
+                vertices.push_back({v1, color, uvs[0]});
+                vertices.push_back({v2, color, uvs[1]});
+                vertices.push_back({v3, color, uvs[2]});
+                vertices.push_back({v4, color, uvs[3]});
                 indices.push_back(base_index + 0);
                 indices.push_back(base_index + 1);
                 indices.push_back(base_index + 2);
@@ -61,17 +76,16 @@ namespace flint
 
             float t = 0.02f;
             float e = 0.002f;
-            glm::vec3 color(1.0f, 1.0f, 1.0f); // White color for the outline
 
             // Top face (+Y)
             {
                 float y_ = y + 1.0f + e;
                 glm::vec3 v1(x, y_, z + 1), v2(x + 1, y_, z + 1), v3(x + 1, y_, z), v4(x, y_, z);
                 glm::vec3 v1_in(x + t, y_, z + 1 - t), v2_in(x + 1 - t, y_, z + 1 - t), v3_in(x + 1 - t, y_, z + t), v4_in(x + t, y_, z + t);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             // Bottom face (-Y)
@@ -79,10 +93,10 @@ namespace flint
                 float y_ = y - e;
                 glm::vec3 v1(x, y_, z), v2(x + 1, y_, z), v3(x + 1, y_, z + 1), v4(x, y_, z + 1);
                 glm::vec3 v1_in(x + t, y_, z + t), v2_in(x + 1 - t, y_, z + t), v3_in(x + 1 - t, y_, z + 1 - t), v4_in(x + t, y_, z + 1 - t);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             // Right face (+X)
@@ -90,10 +104,10 @@ namespace flint
                 float x_ = x + 1.0f + e;
                 glm::vec3 v1(x_, y, z), v2(x_, y + 1, z), v3(x_, y + 1, z + 1), v4(x_, y, z + 1);
                 glm::vec3 v1_in(x_, y + t, z + t), v2_in(x_, y + 1 - t, z + t), v3_in(x_, y + 1 - t, z + 1 - t), v4_in(x_, y + t, z + 1 - t);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             // Left face (-X)
@@ -101,10 +115,10 @@ namespace flint
                 float x_ = x - e;
                 glm::vec3 v1(x_, y, z + 1), v2(x_, y + 1, z + 1), v3(x_, y + 1, z), v4(x_, y, z);
                 glm::vec3 v1_in(x_, y + t, z + 1 - t), v2_in(x_, y + 1 - t, z + 1 - t), v3_in(x_, y + 1 - t, z + t), v4_in(x_, y + t, z + t);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             // Front face (+Z)
@@ -112,10 +126,10 @@ namespace flint
                 float z_ = z + 1.0f + e;
                 glm::vec3 v1(x + 1, y, z_), v2(x + 1, y + 1, z_), v3(x, y + 1, z_), v4(x, y, z_);
                 glm::vec3 v1_in(x + 1 - t, y + t, z_), v2_in(x + 1 - t, y + 1 - t, z_), v3_in(x + t, y + 1 - t, z_), v4_in(x + t, y + t, z_);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             // Back face (-Z)
@@ -123,10 +137,10 @@ namespace flint
                 float z_ = z - e;
                 glm::vec3 v1(x, y, z_), v2(x, y + 1, z_), v3(x + 1, y + 1, z_), v4(x + 1, y, z_);
                 glm::vec3 v1_in(x + t, y + t, z_), v2_in(x + t, y + 1 - t, z_), v3_in(x + 1 - t, y + 1 - t, z_), v4_in(x + 1 - t, y + t, z_);
-                add_quad(v1, v2, v2_in, v1_in, color);
-                add_quad(v2, v3, v3_in, v2_in, color);
-                add_quad(v3, v4, v4_in, v3_in, color);
-                add_quad(v4, v1, v1_in, v4_in, color);
+                add_quad(v1, v2, v2_in, v1_in);
+                add_quad(v2, v3, v3_in, v2_in);
+                add_quad(v3, v4, v4_in, v3_in);
+                add_quad(v4, v1, v1_in, v4_in);
             }
 
             m_indexCount = indices.size();
@@ -173,5 +187,5 @@ namespace flint
                 m_indexBuffer = nullptr;
             }
         }
-    } // namespace graphics
-} // namespace flint
+    }
+}

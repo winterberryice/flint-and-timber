@@ -10,16 +10,9 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat,
-        WGPUBindGroupLayout *pBindGroupLayout);
-
-    WGPURenderPipeline create_selection_pipeline(
-        WGPUDevice device,
-        WGPUShaderModule vertexShader,
-        WGPUShaderModule fragmentShader,
-        WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat,
-        WGPUBindGroupLayout bindGroupLayout); // Takes the main layout as input
+        WGPUTextureFormat depthTextureFormat, // New parameter for depth texture
+        WGPUBindGroupLayout *pBindGroupLayout // Output parameter
+    );
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
