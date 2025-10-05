@@ -29,8 +29,13 @@ namespace flint::graphics
         m_vertexShader = init::create_shader_module(device, "World Vertex Shader", WGSL_vertexShaderSource);
         m_fragmentShader = init::create_shader_module(device, "World Fragment Shader", WGSL_fragmentShaderSource);
 
-        // Create uniform buffer for camera matrices
-        m_uniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
+        // Create uniform buffers
+        m_cameraUniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));
+        m_modelUniformBuffer = init::create_uniform_buffer(device, "Model Uniform Buffer", sizeof(ModelUniform));
+
+        // The world itself doesn't move, so we can set its model matrix to identity and forget about it.
+        m_modelUniform.model = glm::mat4(1.0f);
+        wgpuQueueWriteBuffer(queue, m_modelUniformBuffer, 0, &m_modelUniform, sizeof(ModelUniform));
 
         // Create render pipeline
         m_renderPipeline.init(
@@ -39,8 +44,8 @@ namespace flint::graphics
             m_fragmentShader,
             surfaceFormat,
             depthTextureFormat,
-            m_uniformBuffer,
-            nullptr, // No model uniform buffer for the world
+            m_cameraUniformBuffer,
+            m_modelUniformBuffer,
             m_atlas.getView(),
             m_atlas.getSampler(),
             WGPUPrimitiveTopology_TriangleList,
@@ -75,7 +80,7 @@ namespace flint::graphics
     {
         // Update the uniform buffer with the new camera view-projection matrix
         m_cameraUniform.updateViewProj(camera);
-        wgpuQueueWriteBuffer(queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
+        wgpuQueueWriteBuffer(queue, m_cameraUniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 
         // Set pipeline and bind group
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
@@ -93,10 +98,15 @@ namespace flint::graphics
         m_atlas.cleanup();
         m_chunkMesh.cleanup();
 
-        if (m_uniformBuffer)
+        if (m_modelUniformBuffer)
         {
-            wgpuBufferRelease(m_uniformBuffer);
-            m_uniformBuffer = nullptr;
+            wgpuBufferRelease(m_modelUniformBuffer);
+            m_modelUniformBuffer = nullptr;
+        }
+        if (m_cameraUniformBuffer)
+        {
+            wgpuBufferRelease(m_cameraUniformBuffer);
+            m_cameraUniformBuffer = nullptr;
         }
         if (m_vertexShader)
         {

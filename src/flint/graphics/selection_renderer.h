@@ -10,12 +10,6 @@
 
 namespace flint::graphics
 {
-    // Uniform struct for model matrix
-    struct ModelUniform
-    {
-        alignas(16) glm::mat4 model;
-    };
-
     class SelectionRenderer
     {
     public:

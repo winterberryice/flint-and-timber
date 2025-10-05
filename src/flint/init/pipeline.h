@@ -14,7 +14,6 @@ namespace flint::init
         WGPUBindGroupLayout *pBindGroupLayout,
     WGPUPrimitiveTopology topology,
         bool useTexture,
-    bool useModelMatrix,
         bool depthWriteEnabled,
     WGPUCompareFunction depthCompare);
 
@@ -25,8 +24,7 @@ namespace flint::init
     WGPUBuffer modelUniformBuffer,
         WGPUTextureView textureView,
         WGPUSampler sampler,
-    bool useTexture,
-    bool useModelMatrix);
+    bool useTexture);
 
     WGPURenderPassEncoder begin_render_pass(
         WGPUCommandEncoder encoder,

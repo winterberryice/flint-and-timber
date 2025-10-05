@@ -38,7 +38,7 @@ namespace flint::graphics
             m_modelUniformBuffer,
             nullptr, // No texture view
             nullptr, // No sampler
-            WGPUPrimitiveTopology_LineList,
+            WGPUPrimitiveTopology_TriangleList,
             false,   // Do not use texture
             false,   // Do not write to depth buffer
             WGPUCompareFunction_LessEqual

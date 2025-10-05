@@ -36,8 +36,11 @@ namespace flint::graphics
 
         RenderPipeline m_renderPipeline;
 
-        WGPUBuffer m_uniformBuffer = nullptr;
+        WGPUBuffer m_cameraUniformBuffer = nullptr;
         CameraUniform m_cameraUniform;
+
+        WGPUBuffer m_modelUniformBuffer = nullptr;
+        ModelUniform m_modelUniform;
     };
 
 } // namespace flint::graphics

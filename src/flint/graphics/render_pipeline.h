@@ -18,7 +18,7 @@ namespace flint::graphics
             WGPUTextureFormat surfaceFormat,
             WGPUTextureFormat depthTextureFormat,
             WGPUBuffer cameraUniformBuffer,
-            WGPUBuffer modelUniformBuffer, // Can be nullptr
+            WGPUBuffer modelUniformBuffer,
             WGPUTextureView textureView,
             WGPUSampler sampler,
             WGPUPrimitiveTopology topology,

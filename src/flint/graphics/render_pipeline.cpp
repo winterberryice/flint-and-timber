@@ -24,8 +24,6 @@ namespace flint::graphics
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare)
     {
-        bool useModelMatrix = (modelUniformBuffer != nullptr);
-
         m_pipeline = flint::init::create_render_pipeline(
             device,
             vertexShader,
@@ -35,7 +33,6 @@ namespace flint::graphics
             &m_bindGroupLayout,
             topology,
             useTexture,
-            useModelMatrix,
             depthWriteEnabled,
             depthCompare);
 
@@ -46,8 +43,7 @@ namespace flint::graphics
             modelUniformBuffer,
             textureView,
             sampler,
-            useTexture,
-            useModelMatrix);
+            useTexture);
     }
 
     void RenderPipeline::cleanup()

@@ -4,11 +4,17 @@ namespace flint
 {
 
     inline constexpr const char *WGSL_vertexShaderSource = R"(
-struct Uniforms {
-    viewProjectionMatrix: mat4x4<f32>,
+struct CameraUniform {
+    view_proj: mat4x4<f32>,
 };
+@group(0) @binding(0)
+var<uniform> camera: CameraUniform;
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+struct ModelUniform {
+    model: mat4x4<f32>,
+};
+@group(0) @binding(1)
+var<uniform> model_uniform: ModelUniform;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -25,7 +31,9 @@ struct VertexOutput {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.position = uniforms.viewProjectionMatrix * vec4<f32>(in.position, 1.0);
+    // The world renderer will pass an identity matrix for the model.
+    let world_position = model_uniform.model * vec4<f32>(in.position, 1.0);
+    out.position = camera.view_proj * world_position;
     out.color = in.color;
     out.uv = in.uv;
     return out;
@@ -33,8 +41,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 )";
 
     inline constexpr const char *WGSL_fragmentShaderSource = R"(
-@group(0) @binding(1) var t_atlas: texture_2d<f32>;
-@group(0) @binding(2) var s_atlas: sampler;
+@group(0) @binding(2) var t_atlas: texture_2d<f32>;
+@group(0) @binding(3) var s_atlas: sampler;
 
 struct FragmentInput {
     @location(0) color: vec3<f32>,

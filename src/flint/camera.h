@@ -44,6 +44,12 @@ namespace flint
         void updateViewProj(const Camera &camera);
     };
 
+// Uniform struct for model matrix
+struct ModelUniform
+{
+    alignas(16) glm::mat4 model;
+};
+
     // Equivalent to `CameraMovement`.
     struct CameraMovement
     {
