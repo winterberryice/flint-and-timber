@@ -42,8 +42,10 @@ namespace flint
         );
 
         m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
-        m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_worldRenderer.generateChunk(m_device);
+
+        m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
+        m_selectionRenderer.generateSelectionBox(m_device);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.

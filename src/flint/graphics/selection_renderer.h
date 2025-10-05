@@ -1,11 +1,10 @@
 #pragma once
 
 #include <webgpu/webgpu.h>
-#include <vector>
 
 #include "../camera.h"
 #include "render_pipeline.h"
-#include "../vertex.h"
+#include "selection_mesh.h"
 
 namespace flint::graphics
 {
@@ -17,12 +16,11 @@ namespace flint::graphics
         ~SelectionRenderer();
 
         void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, WGPUTextureFormat depthTextureFormat);
+        void generateSelectionBox(WGPUDevice device);
         void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera);
         void cleanup();
 
     private:
-        void createCubeMesh(WGPUDevice device);
-
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
 
@@ -31,9 +29,7 @@ namespace flint::graphics
         WGPUBuffer m_uniformBuffer = nullptr;
         CameraUniform m_cameraUniform;
 
-        WGPUBuffer m_vertexBuffer = nullptr;
-        WGPUBuffer m_indexBuffer = nullptr;
-        uint32_t m_indexCount = 0;
+        SelectionMesh m_selectionMesh;
     };
 
 } // namespace flint::graphics

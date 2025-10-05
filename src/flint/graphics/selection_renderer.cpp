@@ -5,7 +5,6 @@
 #include "../init/buffer.h"
 #include "../init/shader.h"
 #include "../selection_shader.wgsl.h"
-#include "../cube_geometry.h"
 #include "../chunk.h"
 
 namespace flint::graphics
@@ -38,41 +37,14 @@ namespace flint::graphics
             nullptr  // No sampler
         );
 
-        createCubeMesh(device);
-
         std::cout << "Selection renderer initialized." << std::endl;
     }
 
-    void SelectionRenderer::createCubeMesh(WGPUDevice device)
+    void SelectionRenderer::generateSelectionBox(WGPUDevice device)
     {
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-
         // Hardcoded position for the cube for now, raised slightly for visibility
         glm::vec3 position(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 10.0f, CHUNK_DEPTH / 2.0f);
-
-        // Get cube geometry
-        const auto &cube_vertices = flint::CubeGeometry::getVertices();
-        const auto &cube_indices_16 = flint::CubeGeometry::getIndices();
-
-        for (const auto &vert : cube_vertices)
-        {
-            vertices.push_back({vert.position + position, vert.color, vert.uv});
-        }
-
-        indices.reserve(cube_indices_16.size());
-        for (uint16_t index : cube_indices_16)
-        {
-            indices.push_back(static_cast<uint32_t>(index));
-        }
-
-        m_indexCount = static_cast<uint32_t>(indices.size());
-
-        // Create vertex buffer
-        m_vertexBuffer = init::create_vertex_buffer(device, "Selection Vertex Buffer", vertices.data(), vertices.size() * sizeof(Vertex));
-
-        // Create index buffer
-        m_indexBuffer = init::create_index_buffer(device, "Selection Index Buffer", indices.data(), indices.size() * sizeof(uint32_t));
+        m_selectionMesh.generate(device, position);
     }
 
     void SelectionRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera)
@@ -85,12 +57,8 @@ namespace flint::graphics
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
         wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_renderPipeline.getBindGroup(), 0, nullptr);
 
-        // Set vertex and index buffers
-        wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, WGPU_WHOLE_SIZE);
-        wgpuRenderPassEncoderSetIndexBuffer(renderPass, m_indexBuffer, WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
-
-        // Draw the cube
-        wgpuRenderPassEncoderDrawIndexed(renderPass, m_indexCount, 1, 0, 0, 0);
+        // Draw the selection mesh
+        m_selectionMesh.render(renderPass);
     }
 
     void SelectionRenderer::cleanup()
@@ -98,17 +66,8 @@ namespace flint::graphics
         std::cout << "Cleaning up selection renderer..." << std::endl;
 
         m_renderPipeline.cleanup();
+        m_selectionMesh.cleanup();
 
-        if (m_vertexBuffer)
-        {
-            wgpuBufferRelease(m_vertexBuffer);
-            m_vertexBuffer = nullptr;
-        }
-        if (m_indexBuffer)
-        {
-            wgpuBufferRelease(m_indexBuffer);
-            m_indexBuffer = nullptr;
-        }
         if (m_uniformBuffer)
         {
             wgpuBufferRelease(m_uniformBuffer);
