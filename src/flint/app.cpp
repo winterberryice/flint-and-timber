@@ -3,7 +3,7 @@
 #include "init/sdl.h"
 #include "init/wgpu.h"
 #include "init/utils.h"
-#include "init/shader.hh"
+#include "init/shader.h"
 #include "init/buffer.h"
 #include "init/pipeline.h"
 #include "shader.wgsl.h"
