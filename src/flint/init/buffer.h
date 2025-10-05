@@ -1,6 +1,7 @@
 #pragma once
 
 #include <webgpu/webgpu.h>
+#include <cstdint>
 
 namespace flint::init
 {

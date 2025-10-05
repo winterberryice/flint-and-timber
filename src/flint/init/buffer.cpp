@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <webgpu/webgpu.h> // Include the full header for all definitions
 
 namespace flint::init
 {
@@ -24,7 +25,8 @@ namespace flint::init
         bufferDesc.usage = WGPUBufferUsage_Vertex;
         bufferDesc.mappedAtCreation = true;
         WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-        memcpy(wgpuBufferGetMappedRange(buffer, 0, size), data, size);
+        void* mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
+        memcpy(mappedRange, data, size);
         wgpuBufferUnmap(buffer);
         return buffer;
     }
@@ -37,7 +39,8 @@ namespace flint::init
         bufferDesc.usage = WGPUBufferUsage_Index;
         bufferDesc.mappedAtCreation = true;
         WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-        memcpy(wgpuBufferGetMappedRange(buffer, 0, size), data, size);
+        void* mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
+        memcpy(mappedRange, data, size);
         wgpuBufferUnmap(buffer);
         return buffer;
     }
