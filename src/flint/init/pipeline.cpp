@@ -19,15 +19,17 @@ namespace flint::init
         WGPUTextureFormat surfaceFormat,
         WGPUTextureFormat depthTextureFormat,
         WGPUBindGroupLayout *pBindGroupLayout,
-        bool useTexture)
+        bool useTexture,
+        bool depthWriteEnabled,
+        WGPUCompareFunction depthCompare)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
         // Depth Stencil State
         WGPUDepthStencilState depthStencilState = {};
         depthStencilState.format = depthTextureFormat;
-        depthStencilState.depthWriteEnabled = WGPUOptionalBool_True;
-        depthStencilState.depthCompare = WGPUCompareFunction_Less;
+        depthStencilState.depthWriteEnabled = depthWriteEnabled ? WGPUOptionalBool_True : WGPUOptionalBool_False;
+        depthStencilState.depthCompare = depthCompare;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
 

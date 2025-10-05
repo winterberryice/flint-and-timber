@@ -20,7 +20,9 @@ namespace flint::graphics
             WGPUBuffer uniformBuffer,
             WGPUTextureView textureView,
             WGPUSampler sampler,
-            bool useTexture);
+            bool useTexture,
+            bool depthWriteEnabled,
+            WGPUCompareFunction depthCompare);
 
         void cleanup();
 

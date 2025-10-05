@@ -12,7 +12,9 @@ namespace flint::init
         WGPUTextureFormat surfaceFormat,
         WGPUTextureFormat depthTextureFormat,
         WGPUBindGroupLayout *pBindGroupLayout,
-        bool useTexture);
+        bool useTexture,
+        bool depthWriteEnabled,
+        WGPUCompareFunction depthCompare);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
