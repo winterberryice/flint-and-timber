@@ -36,38 +36,33 @@ namespace flint
         WGPUSurface m_surface = nullptr;
         WGPUTextureFormat m_surfaceFormat;
 
-        // New depth texture fields
         WGPUTexture m_depthTexture = nullptr;
         WGPUTextureView m_depthTextureView = nullptr;
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
 
-        WGPUBuffer m_vertexBuffer = nullptr;
+        // Shaders
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
-        WGPURenderPipeline m_renderPipeline = nullptr;
+        WGPUShaderModule m_selectionVertexShader = nullptr;
+        WGPUShaderModule m_selectionFragmentShader = nullptr;
 
+        // Pipelines
+        WGPURenderPipeline m_renderPipeline = nullptr;
+        WGPURenderPipeline m_selectionRenderPipeline = nullptr;
+
+        // Shared resources
+        WGPUBuffer m_uniformBuffer = nullptr;
+        WGPUBindGroup m_bindGroup = nullptr;
+        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+
+        // Game objects
         Camera m_camera;
         CameraUniform m_cameraUniform;
-
         player::Player m_player;
-
         Chunk m_chunk;
         graphics::ChunkMesh m_chunkMesh;
         graphics::Texture m_atlas;
         graphics::SelectionRenderer m_selectionRenderer;
-
-        WGPUBuffer m_uniformBuffer = nullptr;
-
-        // Main render pipeline resources
-        WGPUBindGroup m_bindGroup = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
-
-        // Selection render pipeline resources
-        WGPUShaderModule m_selectionVertexShader = nullptr;
-        WGPUShaderModule m_selectionFragmentShader = nullptr;
-        WGPURenderPipeline m_selectionRenderPipeline = nullptr;
-        WGPUBindGroup m_selectionBindGroup = nullptr;
-        WGPUBindGroupLayout m_selectionBindGroupLayout = nullptr;
 
         // App state
         bool m_running = false;
