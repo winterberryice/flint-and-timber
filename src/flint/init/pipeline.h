@@ -16,9 +16,7 @@ namespace flint::init
         bool useTexture,
     bool useModelMatrix,
         bool depthWriteEnabled,
-    WGPUCompareFunction depthCompare,
-    int32_t depthBias,
-    float depthBiasSlopeScale);
+    WGPUCompareFunction depthCompare);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,

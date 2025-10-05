@@ -22,9 +22,7 @@ namespace flint::graphics
         WGPUPrimitiveTopology topology,
         bool useTexture,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare,
-        int32_t depthBias,
-        float depthBiasSlopeScale)
+        WGPUCompareFunction depthCompare)
     {
         bool useModelMatrix = (modelUniformBuffer != nullptr);
 
@@ -39,9 +37,7 @@ namespace flint::graphics
             useTexture,
             useModelMatrix,
             depthWriteEnabled,
-            depthCompare,
-            depthBias,
-            depthBiasSlopeScale);
+            depthCompare);
 
         m_bindGroup = flint::init::create_bind_group(
             device,

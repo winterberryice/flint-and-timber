@@ -24,9 +24,7 @@ namespace flint::graphics
             WGPUPrimitiveTopology topology,
             bool useTexture,
             bool depthWriteEnabled,
-            WGPUCompareFunction depthCompare,
-            int32_t depthBias = 0,
-            float depthBiasSlopeScale = 0.0f);
+            WGPUCompareFunction depthCompare);
 
         void cleanup();
 

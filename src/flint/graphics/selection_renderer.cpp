@@ -41,9 +41,7 @@ namespace flint::graphics
             WGPUPrimitiveTopology_LineList,
             false,   // Do not use texture
             false,   // Do not write to depth buffer
-            WGPUCompareFunction_LessEqual,
-            -1,      // Depth bias
-            0.0f     // Depth bias slope scale
+            WGPUCompareFunction_LessEqual
         );
 
         std::cout << "Selection renderer initialized." << std::endl;

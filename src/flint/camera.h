@@ -35,8 +35,8 @@ namespace flint
     // glm::mat4 already has a memory layout compatible with GPU standards.
     struct CameraUniform
     {
-        // We can use alignas to be explicit about memory alignment if needed,
-        // but for a single mat4, it's usually fine.
+    // We can use alignas to be explicit about memory alignment if needed,
+    // but for a single mat4, it's usually fine.
         alignas(16) glm::mat4 view_proj;
 
         CameraUniform();
