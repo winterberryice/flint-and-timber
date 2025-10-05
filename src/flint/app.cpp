@@ -40,20 +40,8 @@ namespace flint
             m_queue //
         );
 
-        if (!m_atlas.loadFromMemory(m_device, m_queue, assets_textures_block_atlas_png, assets_textures_block_atlas_png_len))
-        {
-            std::cerr << "Failed to load texture atlas!" << std::endl;
-            // For now, we'll just print an error. In a real app, you might want to exit.
-        }
-
-        std::cout << "Creating shaders..." << std::endl;
-
-        m_vertexShader = init::create_shader_module(m_device, "Vertex Shader", WGSL_vertexShaderSource);
-        m_fragmentShader = init::create_shader_module(m_device, "Fragment Shader", WGSL_fragmentShaderSource);
-
-        std::cout << "Shaders created successfully" << std::endl;
-
-        std::cout << "Setting up 3D components..." << std::endl;
+        m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
+        m_worldRenderer.generateChunk(m_device);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
@@ -66,18 +54,6 @@ namespace flint
             0.1f,                                         // znear
             1000.0f                                       // zfar
         );
-
-        // Generate terrain and mesh
-        std::cout << "Generating terrain..." << std::endl;
-        m_chunk.generateTerrain();
-        std::cout << "Generating chunk mesh..." << std::endl;
-        m_chunkMesh.generate(m_device, m_chunk);
-        std::cout << "Chunk mesh generated." << std::endl;
-
-        // Create uniform buffer for camera matrices
-        m_uniformBuffer = init::create_uniform_buffer(m_device, "Camera Uniform Buffer", sizeof(CameraUniform));
-
-        std::cout << "3D components ready!" << std::endl;
 
         // Create depth texture
         WGPUTextureDescriptor depthTextureDesc = {};
@@ -100,16 +76,6 @@ namespace flint
         depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
         depthTextureViewDesc.format = m_depthTextureFormat;
         m_depthTextureView = wgpuTextureCreateView(m_depthTexture, &depthTextureViewDesc);
-
-        m_renderPipeline.init(
-            m_device,
-            m_vertexShader,
-            m_fragmentShader,
-            m_surfaceFormat,
-            m_depthTextureFormat,
-            m_uniformBuffer,
-            m_atlas.getView(),
-            m_atlas.getSampler());
 
         // ====
         m_running = true;
@@ -150,7 +116,7 @@ namespace flint
             }
 
             // Update player physics and state
-            m_player.update(dt, m_chunk);
+            m_player.update(dt, m_worldRenderer.getChunk());
 
             // Render the scene
             render();
@@ -174,10 +140,6 @@ namespace flint
         front.y = sin(pitch_rad);
         front.z = sin(yaw_rad) * cos(pitch_rad);
         m_camera.target = m_camera.eye + glm::normalize(front);
-
-        // Update the uniform buffer with the new camera view-projection matrix
-        m_cameraUniform.updateViewProj(m_camera);
-        wgpuQueueWriteBuffer(m_queue, m_uniformBuffer, 0, &m_cameraUniform, sizeof(CameraUniform));
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -221,14 +183,7 @@ namespace flint
 
             WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
-            // NEW: 3D Cube rendering instead of triangle
-            wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
-
-            // Bind the uniform buffer (camera matrix)
-            wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_renderPipeline.getBindGroup(), 0, nullptr);
-
-            // Draw the chunk
-            m_chunkMesh.render(renderPass);
+            m_worldRenderer.render(renderPass, m_queue, m_camera);
 
             wgpuRenderPassEncoderEnd(renderPass);
 
@@ -255,27 +210,13 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        m_renderPipeline.cleanup();
-        m_atlas.cleanup();
-        m_chunkMesh.cleanup();
+        m_worldRenderer.cleanup();
 
         if (m_depthTextureView)
             wgpuTextureViewRelease(m_depthTextureView);
         if (m_depthTexture)
             wgpuTextureRelease(m_depthTexture);
 
-        if (m_uniformBuffer)
-            wgpuBufferRelease(m_uniformBuffer);
-        if (m_vertexShader)
-        {
-            wgpuShaderModuleRelease(m_vertexShader);
-            m_vertexShader = nullptr;
-        }
-        if (m_fragmentShader)
-        {
-            wgpuShaderModuleRelease(m_fragmentShader);
-            m_fragmentShader = nullptr;
-        }
         if (m_vertexBuffer)
         {
             wgpuBufferRelease(m_vertexBuffer);
