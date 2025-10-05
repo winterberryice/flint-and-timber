@@ -34,7 +34,8 @@ namespace flint::graphics
             depthTextureFormat,
             m_uniformBuffer,
             nullptr, // No texture view
-            nullptr  // No sampler
+            nullptr, // No sampler
+            false    // Do not use texture
         );
 
         std::cout << "Selection renderer initialized." << std::endl;

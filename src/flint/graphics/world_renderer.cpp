@@ -41,7 +41,8 @@ namespace flint::graphics
             depthTextureFormat,
             m_uniformBuffer,
             m_atlas.getView(),
-            m_atlas.getSampler());
+            m_atlas.getSampler(),
+            true); // Use texture
 
         std::cout << "World renderer initialized." << std::endl;
     }

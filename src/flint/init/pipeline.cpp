@@ -17,8 +17,9 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat, // New parameter
-        WGPUBindGroupLayout *pBindGroupLayout)
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout *pBindGroupLayout,
+        bool useTexture)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -30,25 +31,34 @@ namespace flint::init
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
 
-        // Create bind group layout for uniforms, texture, and sampler
-        std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries(3);
+        // Create bind group layout
+        std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries;
 
-        // Binding 0: Uniform Buffer (Vertex)
-        bindingLayoutEntries[0].binding = 0;
-        bindingLayoutEntries[0].visibility = WGPUShaderStage_Vertex;
-        bindingLayoutEntries[0].buffer.type = WGPUBufferBindingType_Uniform;
-        bindingLayoutEntries[0].buffer.minBindingSize = sizeof(glm::mat4);
+        // Binding 0: Uniform Buffer (Vertex) - Always present
+        WGPUBindGroupLayoutEntry uniformEntry = {};
+        uniformEntry.binding = 0;
+        uniformEntry.visibility = WGPUShaderStage_Vertex;
+        uniformEntry.buffer.type = WGPUBufferBindingType_Uniform;
+        uniformEntry.buffer.minBindingSize = sizeof(glm::mat4);
+        bindingLayoutEntries.push_back(uniformEntry);
 
-        // Binding 1: Texture View (Fragment)
-        bindingLayoutEntries[1].binding = 1;
-        bindingLayoutEntries[1].visibility = WGPUShaderStage_Fragment;
-        bindingLayoutEntries[1].texture.sampleType = WGPUTextureSampleType_Float;
-        bindingLayoutEntries[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+        if (useTexture)
+        {
+            // Binding 1: Texture View (Fragment)
+            WGPUBindGroupLayoutEntry textureEntry = {};
+            textureEntry.binding = 1;
+            textureEntry.visibility = WGPUShaderStage_Fragment;
+            textureEntry.texture.sampleType = WGPUTextureSampleType_Float;
+            textureEntry.texture.viewDimension = WGPUTextureViewDimension_2D;
+            bindingLayoutEntries.push_back(textureEntry);
 
-        // Binding 2: Sampler (Fragment)
-        bindingLayoutEntries[2].binding = 2;
-        bindingLayoutEntries[2].visibility = WGPUShaderStage_Fragment;
-        bindingLayoutEntries[2].sampler.type = WGPUSamplerBindingType_Filtering;
+            // Binding 2: Sampler (Fragment)
+            WGPUBindGroupLayoutEntry samplerEntry = {};
+            samplerEntry.binding = 2;
+            samplerEntry.visibility = WGPUShaderStage_Fragment;
+            samplerEntry.sampler.type = WGPUSamplerBindingType_Filtering;
+            bindingLayoutEntries.push_back(samplerEntry);
+        }
 
         WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
         bindGroupLayoutDesc.entryCount = bindingLayoutEntries.size();
@@ -74,7 +84,7 @@ namespace flint::init
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
-        pipelineDescriptor.label = makeStringView("Cube Render Pipeline");
+        pipelineDescriptor.label = makeStringView("Render Pipeline");
 
         // Vertex state
         pipelineDescriptor.vertex.module = vertexShader;
@@ -91,6 +101,16 @@ namespace flint::init
         WGPUColorTargetState colorTarget = {};
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
+
+        // Enable blending for transparency
+        WGPUBlendState blendState = {};
+        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+        blendState.color.operation = WGPUBlendOperation_Add;
+        blendState.alpha.srcFactor = WGPUBlendFactor_One;
+        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
+        blendState.alpha.operation = WGPUBlendOperation_Add;
+        colorTarget.blend = &blendState;
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;
@@ -131,23 +151,33 @@ namespace flint::init
         WGPUBindGroupLayout bindGroupLayout,
         WGPUBuffer uniformBuffer,
         WGPUTextureView textureView,
-        WGPUSampler sampler)
+        WGPUSampler sampler,
+        bool useTexture)
     {
-        std::vector<WGPUBindGroupEntry> bindings(3);
+        std::vector<WGPUBindGroupEntry> bindings;
 
-        // Binding 0: Uniform Buffer
-        bindings[0].binding = 0;
-        bindings[0].buffer = uniformBuffer;
-        bindings[0].offset = 0;
-        bindings[0].size = sizeof(glm::mat4);
+        // Binding 0: Uniform Buffer - Always present
+        WGPUBindGroupEntry uniformBinding = {};
+        uniformBinding.binding = 0;
+        uniformBinding.buffer = uniformBuffer;
+        uniformBinding.offset = 0;
+        uniformBinding.size = sizeof(glm::mat4);
+        bindings.push_back(uniformBinding);
 
-        // Binding 1: Texture View
-        bindings[1].binding = 1;
-        bindings[1].textureView = textureView;
+        if (useTexture)
+        {
+            // Binding 1: Texture View
+            WGPUBindGroupEntry textureBinding = {};
+            textureBinding.binding = 1;
+            textureBinding.textureView = textureView;
+            bindings.push_back(textureBinding);
 
-        // Binding 2: Sampler
-        bindings[2].binding = 2;
-        bindings[2].sampler = sampler;
+            // Binding 2: Sampler
+            WGPUBindGroupEntry samplerBinding = {};
+            samplerBinding.binding = 2;
+            samplerBinding.sampler = sampler;
+            bindings.push_back(samplerBinding);
+        }
 
         WGPUBindGroupDescriptor bindGroupDesc = {};
         bindGroupDesc.layout = bindGroupLayout;
