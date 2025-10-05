@@ -110,7 +110,7 @@ namespace flint
         }
     }
 
-    void App::render()
+    void App::update_camera()
     {
         // Update camera from player state
         glm::vec3 player_pos = m_player.get_position();
@@ -127,6 +127,11 @@ namespace flint
         front.y = sin(pitch_rad);
         front.z = sin(yaw_rad) * cos(pitch_rad);
         m_camera.target = m_camera.eye + glm::normalize(front);
+    }
+
+    void App::render()
+    {
+        update_camera();
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -142,33 +147,7 @@ namespace flint
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
-            WGPURenderPassColorAttachment colorAttachment = {};
-            colorAttachment.view = textureView;
-            colorAttachment.resolveTarget = nullptr;
-            colorAttachment.loadOp = WGPULoadOp_Clear;
-            colorAttachment.storeOp = WGPUStoreOp_Store;
-            colorAttachment.clearValue = {0.1f, 0.1f, 0.2f, 1.0f}; // Dark blue background
-            colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-
-            WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
-            depthStencilAttachment.view = m_depthTextureView;
-            depthStencilAttachment.depthClearValue = 1.0f;
-            depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
-            depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
-            depthStencilAttachment.depthReadOnly = false;
-            depthStencilAttachment.stencilClearValue = 0;
-            depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
-            depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
-            depthStencilAttachment.stencilReadOnly = true;
-
-            WGPURenderPassDescriptor renderPassDesc = {};
-            renderPassDesc.nextInChain = nullptr;
-            renderPassDesc.label = {nullptr, 0};
-            renderPassDesc.colorAttachmentCount = 1;
-            renderPassDesc.colorAttachments = &colorAttachment;
-            renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
-
-            WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+            WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
 
             m_worldRenderer.render(renderPass, m_queue, m_camera);
 

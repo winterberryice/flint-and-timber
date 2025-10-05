@@ -22,6 +22,7 @@ namespace flint
 
     private:
         void render();
+        void update_camera();
 
     private:
         // SDL resources
