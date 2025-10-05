@@ -23,7 +23,8 @@ namespace flint::init
         bool useTexture,
         bool useModel,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        WGPUPrimitiveTopology topology)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -140,7 +141,7 @@ namespace flint::init
         pipelineDescriptor.fragment = &fragmentState;
 
         // Primitive state
-        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipelineDescriptor.primitive.topology = topology;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
         pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;

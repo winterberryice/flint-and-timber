@@ -22,7 +22,8 @@ namespace flint::graphics
         bool useTexture,
         bool useModel,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        WGPUPrimitiveTopology topology)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -34,7 +35,8 @@ namespace flint::graphics
             useTexture,
             useModel,
             depthWriteEnabled,
-            depthCompare);
+            depthCompare,
+            topology);
 
         m_bindGroup = flint::init::create_bind_group(
             device,
