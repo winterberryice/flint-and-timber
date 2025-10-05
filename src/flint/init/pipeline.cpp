@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "../vertex.h"
+#include "../camera.h"
 #include "utils.h"
 
 namespace flint::init
@@ -56,19 +57,27 @@ namespace flint::init
             bindingLayoutEntries.push_back(modelEntry);
         }
 
+        uint32_t current_binding = 1;
+
+        if (useModel)
+        {
+            // This was already correct, but for clarity, it uses binding 1.
+            current_binding++;
+        }
+
         if (useTexture)
         {
-            // Binding 1: Texture View (Fragment)
+            // Binding 1 or 2: Texture View (Fragment)
             WGPUBindGroupLayoutEntry textureEntry = {};
-            textureEntry.binding = 1;
+            textureEntry.binding = current_binding++;
             textureEntry.visibility = WGPUShaderStage_Fragment;
             textureEntry.texture.sampleType = WGPUTextureSampleType_Float;
             textureEntry.texture.viewDimension = WGPUTextureViewDimension_2D;
             bindingLayoutEntries.push_back(textureEntry);
 
-            // Binding 2: Sampler (Fragment)
+            // Binding 2 or 3: Sampler (Fragment)
             WGPUBindGroupLayoutEntry samplerEntry = {};
-            samplerEntry.binding = 2;
+            samplerEntry.binding = current_binding++;
             samplerEntry.visibility = WGPUShaderStage_Fragment;
             samplerEntry.sampler.type = WGPUSamplerBindingType_Filtering;
             bindingLayoutEntries.push_back(samplerEntry);
@@ -177,7 +186,7 @@ namespace flint::init
         cameraBinding.binding = 0;
         cameraBinding.buffer = cameraUniformBuffer;
         cameraBinding.offset = 0;
-        cameraBinding.size = sizeof(glm::mat4) * 2; // view-proj
+        cameraBinding.size = sizeof(CameraUniform);
         bindings.push_back(cameraBinding);
 
         uint32_t current_binding = 1;
