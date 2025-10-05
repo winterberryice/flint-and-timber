@@ -44,7 +44,7 @@ namespace flint::graphics
     void SelectionRenderer::generateSelectionBox(WGPUDevice device)
     {
         // Hardcoded position for the cube for now, raised slightly for visibility
-        glm::vec3 position(CHUNK_WIDTH / 2.0f, CHUNK_HEIGHT / 2.0f + 10.0f, CHUNK_DEPTH / 2.0f);
+        glm::vec3 position(7.0f, 19.0f, 7.0f);
         m_selectionMesh.generate(device, position);
     }
 

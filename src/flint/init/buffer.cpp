@@ -2,15 +2,15 @@
 
 #include <iostream>
 #include <cstring>
-#include <webgpu/webgpu.h> // Include the full header for all definitions
+#include "utils.h"
 
 namespace flint::init
 {
 
-    WGPUBuffer create_buffer(WGPUDevice device, const char *label, uint64_t size, WGPUBufferUsageFlags usage)
+    WGPUBuffer create_buffer(WGPUDevice device, const char *label, uint64_t size, WGPUBufferUsage usage)
     {
         WGPUBufferDescriptor bufferDesc = {};
-        bufferDesc.label = label;
+        bufferDesc.label = makeStringView(label);
         bufferDesc.size = size;
         bufferDesc.usage = usage;
         bufferDesc.mappedAtCreation = false;
@@ -20,12 +20,12 @@ namespace flint::init
     WGPUBuffer create_vertex_buffer(WGPUDevice device, const char *label, const void *data, uint64_t size)
     {
         WGPUBufferDescriptor bufferDesc = {};
-        bufferDesc.label = label;
+        bufferDesc.label = makeStringView(label);
         bufferDesc.size = size;
         bufferDesc.usage = WGPUBufferUsage_Vertex;
         bufferDesc.mappedAtCreation = true;
         WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-        void* mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
+        void *mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
         memcpy(mappedRange, data, size);
         wgpuBufferUnmap(buffer);
         return buffer;
@@ -34,12 +34,12 @@ namespace flint::init
     WGPUBuffer create_index_buffer(WGPUDevice device, const char *label, const void *data, uint64_t size)
     {
         WGPUBufferDescriptor bufferDesc = {};
-        bufferDesc.label = label;
+        bufferDesc.label = makeStringView(label);
         bufferDesc.size = size;
         bufferDesc.usage = WGPUBufferUsage_Index;
         bufferDesc.mappedAtCreation = true;
         WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-        void* mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
+        void *mappedRange = wgpuBufferGetMappedRange(buffer, 0, size);
         memcpy(mappedRange, data, size);
         wgpuBufferUnmap(buffer);
         return buffer;
