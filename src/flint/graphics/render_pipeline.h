@@ -21,6 +21,7 @@ namespace flint::graphics
             WGPUBuffer modelUniformBuffer, // Can be nullptr
             WGPUTextureView textureView,
             WGPUSampler sampler,
+            WGPUPrimitiveTopology topology,
             bool useTexture,
             bool depthWriteEnabled,
             WGPUCompareFunction depthCompare);

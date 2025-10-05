@@ -18,23 +18,35 @@ namespace flint::graphics
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        const auto &cube_vertices = flint::CubeGeometry::getVertices();
-        const auto &cube_indices_16 = flint::CubeGeometry::getIndices();
+        // 8 vertices of a cube
+        const std::vector<glm::vec3> cube_positions = {
+            {0.0f, 0.0f, 0.0f},
+            {1.0f, 0.0f, 0.0f},
+            {1.0f, 1.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f},
+            {1.0f, 0.0f, 1.0f},
+            {1.0f, 1.0f, 1.0f},
+            {0.0f, 1.0f, 1.0f}};
 
+        // Scale and offset the vertices to prevent Z-fighting
         const float scale = 1.01f;
         const float offset = -0.005f;
-
-        for (const auto &vert : cube_vertices)
+        for (const auto &pos : cube_positions)
         {
-            glm::vec3 scaled_pos = vert.position * scale + glm::vec3(offset, offset, offset);
-            vertices.push_back({scaled_pos, vert.color, vert.uv});
+            glm::vec3 scaled_pos = pos * scale + glm::vec3(offset, offset, offset);
+            // Color and UVs are not used for the selection box, but the vertex layout requires them.
+            vertices.push_back({scaled_pos, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}});
         }
 
-        indices.reserve(cube_indices_16.size());
-        for (uint16_t index : cube_indices_16)
-        {
-            indices.push_back(static_cast<uint32_t>(index));
-        }
+        // 12 edges of the cube, 2 indices per edge
+        indices = {
+            // Bottom face
+            0, 1, 1, 5, 5, 4, 4, 0,
+            // Top face
+            3, 2, 2, 6, 6, 7, 7, 3,
+            // Connecting edges
+            0, 3, 1, 2, 5, 6, 4, 7};
 
         m_indexCount = static_cast<uint32_t>(indices.size());
 

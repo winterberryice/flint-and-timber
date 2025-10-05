@@ -32,6 +32,7 @@ namespace flint::graphics
             surfaceFormat,
             depthTextureFormat,
             &m_bindGroupLayout,
+            topology,
             useTexture,
             useModelMatrix,
             depthWriteEnabled,

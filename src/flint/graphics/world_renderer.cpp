@@ -40,8 +40,10 @@ namespace flint::graphics
             surfaceFormat,
             depthTextureFormat,
             m_uniformBuffer,
+            nullptr, // No model uniform buffer for the world
             m_atlas.getView(),
             m_atlas.getSampler(),
+            WGPUPrimitiveTopology_TriangleList,
             true, // Use texture
             true, // Enable depth writing
             WGPUCompareFunction_Less // Use standard Less for depth comparison

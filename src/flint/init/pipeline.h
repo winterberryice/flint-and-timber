@@ -12,6 +12,7 @@ namespace flint::init
         WGPUTextureFormat surfaceFormat,
         WGPUTextureFormat depthTextureFormat,
         WGPUBindGroupLayout *pBindGroupLayout,
+    WGPUPrimitiveTopology topology,
         bool useTexture,
     bool useModelMatrix,
         bool depthWriteEnabled,
