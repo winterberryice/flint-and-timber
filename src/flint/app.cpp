@@ -108,6 +108,9 @@ namespace flint
             // Update player physics and state
             m_player.update(dt, m_worldRenderer.getChunk());
 
+            // Update selected block
+            m_selected_block = m_player.raycast(m_worldRenderer.getChunk(), 5.0f);
+
             // Render the scene
             render();
         }
@@ -153,7 +156,7 @@ namespace flint
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
 
             m_worldRenderer.render(renderPass, m_queue, m_camera);
-            m_selectionRenderer.render(renderPass, m_queue, m_camera);
+            m_selectionRenderer.render(renderPass, m_queue, m_camera, m_selected_block);
 
             wgpuRenderPassEncoderEnd(renderPass);
 

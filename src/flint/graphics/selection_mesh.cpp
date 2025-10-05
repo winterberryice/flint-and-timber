@@ -13,18 +13,21 @@ namespace flint::graphics
     SelectionMesh::SelectionMesh() = default;
     SelectionMesh::~SelectionMesh() = default;
 
-    void SelectionMesh::generate(WGPUDevice device, const glm::vec3 &position)
+    void SelectionMesh::generate(WGPUDevice device)
     {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        // Get cube geometry
         const auto &cube_vertices = flint::CubeGeometry::getVertices();
         const auto &cube_indices_16 = flint::CubeGeometry::getIndices();
 
+        const float scale = 1.01f;
+        const float offset = -0.005f;
+
         for (const auto &vert : cube_vertices)
         {
-            vertices.push_back({vert.position + position, vert.color, vert.uv});
+            glm::vec3 scaled_pos = vert.position * scale + glm::vec3(offset, offset, offset);
+            vertices.push_back({scaled_pos, vert.color, vert.uv});
         }
 
         indices.reserve(cube_indices_16.size());

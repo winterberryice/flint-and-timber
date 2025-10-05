@@ -50,6 +50,7 @@ namespace flint
 
         Camera m_camera;
         player::Player m_player;
+        std::optional<glm::ivec3> m_selected_block;
 
         // App state
         bool m_running = false;

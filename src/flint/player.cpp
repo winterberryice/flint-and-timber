@@ -216,6 +216,113 @@ namespace flint
         float Player::get_yaw() const { return yaw; }
         float Player::get_pitch() const { return pitch; }
 
+        glm::vec3 Player::get_eye_position() const
+        {
+            return position + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+        }
+
+        glm::vec3 Player::get_forward_vector() const
+        {
+            float yaw_rad = glm::radians(yaw);
+            float pitch_rad = glm::radians(pitch);
+
+            return glm::normalize(glm::vec3(
+                cos(yaw_rad) * cos(pitch_rad),
+                sin(pitch_rad),
+                sin(yaw_rad) * cos(pitch_rad)));
+        }
+
+        std::optional<glm::ivec3> Player::raycast(const flint::Chunk &chunk, float max_distance) const
+        {
+            glm::vec3 ray_origin = get_eye_position();
+            glm::vec3 ray_direction = get_forward_vector();
+
+            glm::ivec3 current_block_pos = {
+                static_cast<int>(std::floor(ray_origin.x)),
+                static_cast<int>(std::floor(ray_origin.y)),
+                static_cast<int>(std::floor(ray_origin.z))};
+
+            // Check if the starting block is solid
+            if (chunk.is_solid(current_block_pos.x, current_block_pos.y, current_block_pos.z))
+            {
+                return current_block_pos;
+            }
+
+            glm::vec3 side_dist; // Distance from origin to the nearest side of a block
+            glm::ivec3 step;     // -1, 0, or 1 in each component
+
+            // Calculate initial side_dist and step
+            if (ray_direction.x > 0)
+            {
+                step.x = 1;
+                side_dist.x = (static_cast<float>(current_block_pos.x) + 1.0f - ray_origin.x) / ray_direction.x;
+            }
+            else
+            {
+                step.x = -1;
+                side_dist.x = (ray_origin.x - static_cast<float>(current_block_pos.x)) / -ray_direction.x;
+            }
+
+            if (ray_direction.y > 0)
+            {
+                step.y = 1;
+                side_dist.y = (static_cast<float>(current_block_pos.y) + 1.0f - ray_origin.y) / ray_direction.y;
+            }
+            else
+            {
+                step.y = -1;
+                side_dist.y = (ray_origin.y - static_cast<float>(current_block_pos.y)) / -ray_direction.y;
+            }
+
+            if (ray_direction.z > 0)
+            {
+                step.z = 1;
+                side_dist.z = (static_cast<float>(current_block_pos.z) + 1.0f - ray_origin.z) / ray_direction.z;
+            }
+            else
+            {
+                step.z = -1;
+                side_dist.z = (ray_origin.z - static_cast<float>(current_block_pos.z)) / -ray_direction.z;
+            }
+
+            glm::vec3 delta_dist = {
+                std::abs(1.0f / ray_direction.x),
+                std::abs(1.0f / ray_direction.y),
+                std::abs(1.0f / ray_direction.z)};
+
+            float current_distance = 0.0f;
+
+            while (current_distance < max_distance)
+            {
+                // Step to the next block
+                if (side_dist.x < side_dist.y && side_dist.x < side_dist.z)
+                {
+                    current_distance = side_dist.x;
+                    side_dist.x += delta_dist.x;
+                    current_block_pos.x += step.x;
+                }
+                else if (side_dist.y < side_dist.z)
+                {
+                    current_distance = side_dist.y;
+                    side_dist.y += delta_dist.y;
+                    current_block_pos.y += step.y;
+                }
+                else
+                {
+                    current_distance = side_dist.z;
+                    side_dist.z += delta_dist.z;
+                    current_block_pos.z += step.z;
+                }
+
+                if (chunk.is_solid(current_block_pos.x, current_block_pos.y, current_block_pos.z))
+                {
+                    return current_block_pos;
+                }
+            }
+
+            return std::nullopt; // No block found within max_distance
+        }
+
         physics::AABB Player::get_world_bounding_box() const
         {
             return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);

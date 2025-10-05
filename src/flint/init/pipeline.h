@@ -13,16 +13,19 @@ namespace flint::init
         WGPUTextureFormat depthTextureFormat,
         WGPUBindGroupLayout *pBindGroupLayout,
         bool useTexture,
+    bool useModelMatrix,
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer,
+    WGPUBuffer cameraUniformBuffer,
+    WGPUBuffer modelUniformBuffer,
         WGPUTextureView textureView,
         WGPUSampler sampler,
-        bool useTexture);
+    bool useTexture,
+    bool useModelMatrix);
 
     WGPURenderPassEncoder begin_render_pass(
         WGPUCommandEncoder encoder,

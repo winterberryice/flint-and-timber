@@ -4,6 +4,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 #include <SDL3/SDL_events.h>
+#include <optional>
 
 #include "physics.h"
 
@@ -33,8 +34,12 @@ namespace flint
             void update(float dt, const flint::Chunk &chunk);
 
             glm::vec3 get_position() const;
+            glm::vec3 get_eye_position() const;
+            glm::vec3 get_forward_vector() const;
             float get_yaw() const;
             float get_pitch() const;
+
+            std::optional<glm::ivec3> raycast(const flint::Chunk &chunk, float max_distance) const;
 
         private:
             physics::AABB get_world_bounding_box() const;

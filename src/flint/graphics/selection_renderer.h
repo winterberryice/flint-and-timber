@@ -1,6 +1,8 @@
 #pragma once
 
 #include <webgpu/webgpu.h>
+#include <optional>
+#include <glm/glm.hpp>
 
 #include "../camera.h"
 #include "render_pipeline.h"
@@ -8,6 +10,11 @@
 
 namespace flint::graphics
 {
+    // Uniform struct for model matrix
+    struct ModelUniform
+    {
+        alignas(16) glm::mat4 model;
+    };
 
     class SelectionRenderer
     {
@@ -17,7 +24,7 @@ namespace flint::graphics
 
         void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, WGPUTextureFormat depthTextureFormat);
         void generateSelectionBox(WGPUDevice device);
-        void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera);
+        void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, const std::optional<glm::ivec3> &selected_block);
         void cleanup();
 
     private:
@@ -26,8 +33,11 @@ namespace flint::graphics
 
         RenderPipeline m_renderPipeline;
 
-        WGPUBuffer m_uniformBuffer = nullptr;
+        WGPUBuffer m_cameraUniformBuffer = nullptr;
         CameraUniform m_cameraUniform;
+
+        WGPUBuffer m_modelUniformBuffer = nullptr;
+        ModelUniform m_modelUniform;
 
         SelectionMesh m_selectionMesh;
     };

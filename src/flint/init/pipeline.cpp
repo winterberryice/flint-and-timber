@@ -20,6 +20,7 @@ namespace flint::init
         WGPUTextureFormat depthTextureFormat,
         WGPUBindGroupLayout *pBindGroupLayout,
         bool useTexture,
+    bool useModelMatrix,
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare)
     {
@@ -36,27 +37,39 @@ namespace flint::init
         // Create bind group layout
         std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries;
 
-        // Binding 0: Uniform Buffer (Vertex) - Always present
-        WGPUBindGroupLayoutEntry uniformEntry = {};
-        uniformEntry.binding = 0;
-        uniformEntry.visibility = WGPUShaderStage_Vertex;
-        uniformEntry.buffer.type = WGPUBufferBindingType_Uniform;
-        uniformEntry.buffer.minBindingSize = sizeof(glm::mat4);
-        bindingLayoutEntries.push_back(uniformEntry);
+    // Binding 0: Camera Uniform Buffer (Vertex) - Always present
+    WGPUBindGroupLayoutEntry cameraUniformEntry = {};
+    cameraUniformEntry.binding = 0;
+    cameraUniformEntry.visibility = WGPUShaderStage_Vertex;
+    cameraUniformEntry.buffer.type = WGPUBufferBindingType_Uniform;
+    cameraUniformEntry.buffer.minBindingSize = sizeof(glm::mat4); // Minimum size, can be larger
+    bindingLayoutEntries.push_back(cameraUniformEntry);
+
+    int nextBinding = 1;
+
+    if (useModelMatrix)
+    {
+        WGPUBindGroupLayoutEntry modelUniformEntry = {};
+        modelUniformEntry.binding = nextBinding++;
+        modelUniformEntry.visibility = WGPUShaderStage_Vertex;
+        modelUniformEntry.buffer.type = WGPUBufferBindingType_Uniform;
+        modelUniformEntry.buffer.minBindingSize = sizeof(glm::mat4);
+        bindingLayoutEntries.push_back(modelUniformEntry);
+    }
 
         if (useTexture)
         {
-            // Binding 1: Texture View (Fragment)
+        // Binding 1 or 2: Texture View (Fragment)
             WGPUBindGroupLayoutEntry textureEntry = {};
-            textureEntry.binding = 1;
+        textureEntry.binding = nextBinding++;
             textureEntry.visibility = WGPUShaderStage_Fragment;
             textureEntry.texture.sampleType = WGPUTextureSampleType_Float;
             textureEntry.texture.viewDimension = WGPUTextureViewDimension_2D;
             bindingLayoutEntries.push_back(textureEntry);
 
-            // Binding 2: Sampler (Fragment)
+        // Binding 2 or 3: Sampler (Fragment)
             WGPUBindGroupLayoutEntry samplerEntry = {};
-            samplerEntry.binding = 2;
+        samplerEntry.binding = nextBinding++;
             samplerEntry.visibility = WGPUShaderStage_Fragment;
             samplerEntry.sampler.type = WGPUSamplerBindingType_Filtering;
             bindingLayoutEntries.push_back(samplerEntry);
@@ -151,32 +164,44 @@ namespace flint::init
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer,
+    WGPUBuffer cameraUniformBuffer,
+    WGPUBuffer modelUniformBuffer,
         WGPUTextureView textureView,
         WGPUSampler sampler,
-        bool useTexture)
+    bool useTexture,
+    bool useModelMatrix)
     {
         std::vector<WGPUBindGroupEntry> bindings;
+    int nextBinding = 0;
 
-        // Binding 0: Uniform Buffer - Always present
-        WGPUBindGroupEntry uniformBinding = {};
-        uniformBinding.binding = 0;
-        uniformBinding.buffer = uniformBuffer;
-        uniformBinding.offset = 0;
-        uniformBinding.size = sizeof(glm::mat4);
-        bindings.push_back(uniformBinding);
+    // Binding 0: Camera Uniform Buffer - Always present
+    WGPUBindGroupEntry cameraUniformBinding = {};
+    cameraUniformBinding.binding = nextBinding++;
+    cameraUniformBinding.buffer = cameraUniformBuffer;
+    cameraUniformBinding.offset = 0;
+    cameraUniformBinding.size = sizeof(glm::mat4); // CameraUniform size
+    bindings.push_back(cameraUniformBinding);
+
+    if (useModelMatrix)
+    {
+        WGPUBindGroupEntry modelUniformBinding = {};
+        modelUniformBinding.binding = nextBinding++;
+        modelUniformBinding.buffer = modelUniformBuffer;
+        modelUniformBinding.offset = 0;
+        modelUniformBinding.size = sizeof(glm::mat4); // ModelUniform size
+        bindings.push_back(modelUniformBinding);
+    }
 
         if (useTexture)
         {
-            // Binding 1: Texture View
+        // Bindings for texture and sampler
             WGPUBindGroupEntry textureBinding = {};
-            textureBinding.binding = 1;
+        textureBinding.binding = nextBinding++;
             textureBinding.textureView = textureView;
             bindings.push_back(textureBinding);
 
-            // Binding 2: Sampler
             WGPUBindGroupEntry samplerBinding = {};
-            samplerBinding.binding = 2;
+        samplerBinding.binding = nextBinding++;
             samplerBinding.sampler = sampler;
             bindings.push_back(samplerBinding);
         }

@@ -11,7 +11,7 @@ namespace flint::graphics
         SelectionMesh();
         ~SelectionMesh();
 
-        void generate(WGPUDevice device, const glm::vec3& position);
+        void generate(WGPUDevice device);
         void render(WGPURenderPassEncoder renderPass) const;
         void cleanup();
 
