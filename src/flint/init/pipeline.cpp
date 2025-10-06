@@ -126,10 +126,13 @@ namespace flint::init
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
+        // The blend state needs to be defined here to ensure it doesn't go out of scope
+        // before the pipeline is created.
+        WGPUBlendState blendState = {};
+
         if (useBlending)
         {
             // Enable blending for transparency
-            WGPUBlendState blendState = {};
             blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
             blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
             blendState.color.operation = WGPUBlendOperation_Add;
