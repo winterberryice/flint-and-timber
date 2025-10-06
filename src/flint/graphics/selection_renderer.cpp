@@ -66,7 +66,19 @@ namespace flint::graphics
 
         // Update model uniform buffer
         glm::vec3 pos = selected_block_pos.value();
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
+        float scale_factor = 1.002f;
+        glm::mat4 model = glm::mat4(1.0f);
+
+        // To prevent Z-fighting, we scale the selection box to be slightly larger
+        // than the block. We must scale it from its center.
+        // 1. Translate to the block's position.
+        model = glm::translate(model, pos);
+        // 2. Translate to the center of the block (which is the center of the unit cube mesh).
+        model = glm::translate(model, glm::vec3(0.5f));
+        // 3. Scale from the center.
+        model = glm::scale(model, glm::vec3(scale_factor));
+        // 4. Translate back from the center.
+        model = glm::translate(model, glm::vec3(-0.5f));
 
         m_modelUniform.model = model;
         wgpuQueueWriteBuffer(queue, m_modelUniformBuffer, 0, &m_modelUniform, sizeof(ModelUniform));
