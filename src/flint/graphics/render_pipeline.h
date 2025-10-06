@@ -25,7 +25,8 @@ namespace flint::graphics
             bool useModel,
             bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
-        bool useBlending);
+        bool useBlending,
+        bool useCulling);
 
         void cleanup();
 

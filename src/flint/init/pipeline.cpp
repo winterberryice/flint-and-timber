@@ -24,7 +24,8 @@ namespace flint::init
         bool useModel,
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
-        bool useBlending)
+        bool useBlending,
+        bool useCulling)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -154,7 +155,7 @@ namespace flint::init
         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
+        pipelineDescriptor.primitive.cullMode = useCulling ? WGPUCullMode_Back : WGPUCullMode_None;
 
         // Multisample state
         pipelineDescriptor.multisample.count = 1;
