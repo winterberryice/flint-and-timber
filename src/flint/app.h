@@ -9,6 +9,7 @@
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
 #include "player.h"
+#include "ui/crosshair.h"
 
 namespace flint
 {
@@ -24,6 +25,7 @@ namespace flint
     private:
         void render();
         void update_camera();
+        void resize(int width, int height);
 
     private:
         // SDL resources
@@ -47,6 +49,7 @@ namespace flint
 
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
+        ui::Crosshair m_crosshair;
 
         Camera m_camera;
         player::Player m_player;

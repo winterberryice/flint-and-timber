@@ -47,6 +47,8 @@ namespace flint
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
 
+        m_crosshair.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -99,6 +101,10 @@ namespace flint
                 {
                     m_running = false;
                 }
+                else if (e.type == SDL_EVENT_WINDOW_RESIZED)
+                {
+                    resize(e.window.data1, e.window.data2);
+                }
                 else if (e.type == SDL_EVENT_MOUSE_MOTION)
                 {
                     m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
@@ -112,6 +118,34 @@ namespace flint
             render();
         }
     }
+
+void App::resize(int width, int height)
+{
+    std::cout << "Resizing to " << width << "x" << height << std::endl;
+
+    m_windowWidth = width;
+    m_windowHeight = height;
+
+    // Re-create depth texture
+    if (m_depthTextureView)
+        wgpuTextureViewRelease(m_depthTextureView);
+    if (m_depthTexture)
+        wgpuTextureRelease(m_depthTexture);
+
+    init::create_depth_texture(
+        m_device,
+        m_windowWidth,
+        m_windowHeight,
+        m_depthTextureFormat,
+        &m_depthTexture,
+        &m_depthTextureView);
+
+    // Update camera aspect ratio
+    m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
+
+    // Update crosshair projection
+    m_crosshair.resize(m_windowWidth, m_windowHeight, m_queue);
+}
 
     void App::update_camera()
     {
@@ -163,6 +197,8 @@ namespace flint
             }
             m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
 
+            m_crosshair.draw(renderPass);
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -188,6 +224,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_crosshair.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();
 
