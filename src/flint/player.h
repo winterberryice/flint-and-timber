@@ -4,8 +4,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 #include <SDL3/SDL_events.h>
+#include <optional>
 
 #include "physics.h"
+#include "raycast.h"
 
 namespace flint
 {
@@ -35,8 +37,13 @@ namespace flint
             glm::vec3 get_position() const;
             float get_yaw() const;
             float get_pitch() const;
+            glm::vec3 get_camera_forward_vector() const;
+            glm::vec3 get_camera_position() const;
+            std::optional<raycast::RaycastResult> get_selected_block() const;
 
         private:
+            void cast_ray(const flint::Chunk &chunk);
+
             physics::AABB get_world_bounding_box() const;
             glm::vec3 position; // Position of the player's feet
             glm::vec3 velocity;
@@ -52,6 +59,8 @@ namespace flint
             float mouse_sensitivity;
 
             PlayerMovementIntention movement_intention;
+
+            std::optional<raycast::RaycastResult> selected_block;
         };
     }
 }

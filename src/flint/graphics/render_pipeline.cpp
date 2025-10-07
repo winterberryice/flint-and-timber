@@ -15,12 +15,16 @@ namespace flint::graphics
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
         WGPUTextureFormat depthTextureFormat,
-        WGPUBuffer uniformBuffer,
+        WGPUBuffer cameraUniformBuffer,
+        WGPUBuffer modelUniformBuffer,
         WGPUTextureView textureView,
         WGPUSampler sampler,
         bool useTexture,
+        bool useModel,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        bool useBlending,
+        bool useCulling)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -30,16 +34,21 @@ namespace flint::graphics
             depthTextureFormat,
             &m_bindGroupLayout,
             useTexture,
+            useModel,
             depthWriteEnabled,
-            depthCompare);
+            depthCompare,
+            useBlending,
+            useCulling);
 
         m_bindGroup = flint::init::create_bind_group(
             device,
             m_bindGroupLayout,
-            uniformBuffer,
+            cameraUniformBuffer,
+            modelUniformBuffer,
             textureView,
             sampler,
-            useTexture);
+            useTexture,
+            useModel);
     }
 
     void RenderPipeline::cleanup()

@@ -89,6 +89,9 @@ namespace flint
 
         void Player::update(float dt, const flint::Chunk &chunk)
         {
+            // Raycasting
+            cast_ray(chunk);
+
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
             float yaw_radians = glm::radians(yaw);
@@ -215,6 +218,35 @@ namespace flint
         glm::vec3 Player::get_position() const { return position; }
         float Player::get_yaw() const { return yaw; }
         float Player::get_pitch() const { return pitch; }
+
+        std::optional<raycast::RaycastResult> Player::get_selected_block() const
+        {
+            return selected_block;
+        }
+
+        glm::vec3 Player::get_camera_position() const
+        {
+            // Position the camera at eye level
+            return position + glm::vec3(0.0f, physics::PLAYER_EYE_HEIGHT, 0.0f);
+        }
+
+        glm::vec3 Player::get_camera_forward_vector() const
+        {
+            float yaw_rad = glm::radians(yaw);
+            float pitch_rad = glm::radians(pitch);
+
+            return glm::normalize(glm::vec3(
+                cos(yaw_rad) * cos(pitch_rad),
+                sin(pitch_rad),
+                sin(yaw_rad) * cos(pitch_rad)));
+        }
+
+        void Player::cast_ray(const flint::Chunk &chunk)
+        {
+            glm::vec3 camera_pos = get_camera_position();
+            glm::vec3 forward = get_camera_forward_vector();
+            selected_block = raycast::raycast(camera_pos, forward, 5.0f, chunk);
+        }
 
         physics::AABB Player::get_world_bounding_box() const
         {
