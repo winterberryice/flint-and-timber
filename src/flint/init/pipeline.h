@@ -10,16 +10,24 @@ namespace flint::init
         WGPUShaderModule vertexShader,
         WGPUShaderModule fragmentShader,
         WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat, // New parameter for depth texture
-        WGPUBindGroupLayout *pBindGroupLayout // Output parameter
-    );
+        WGPUTextureFormat depthTextureFormat,
+        WGPUBindGroupLayout *pBindGroupLayout,
+        bool useTexture,
+        bool useModel,
+        bool depthWriteEnabled,
+        WGPUCompareFunction depthCompare,
+        bool useBlending,
+        bool useCulling);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
         WGPUBindGroupLayout bindGroupLayout,
-        WGPUBuffer uniformBuffer,
+        WGPUBuffer cameraUniformBuffer,
+        WGPUBuffer modelUniformBuffer,
         WGPUTextureView textureView,
-        WGPUSampler sampler);
+        WGPUSampler sampler,
+        bool useTexture,
+        bool useModel);
 
     WGPURenderPassEncoder begin_render_pass(
         WGPUCommandEncoder encoder,

@@ -40,8 +40,16 @@ namespace flint::graphics
             surfaceFormat,
             depthTextureFormat,
             m_uniformBuffer,
+            nullptr, // No model uniform buffer for the world
             m_atlas.getView(),
-            m_atlas.getSampler());
+            m_atlas.getSampler(),
+            true,  // Use texture
+            false, // Do not use model matrix
+            true,  // Enable depth writing
+            WGPUCompareFunction_Less, // Use standard Less for depth comparison
+            true,  // Use blending
+            true   // Use culling
+        );
 
         std::cout << "World renderer initialized." << std::endl;
     }

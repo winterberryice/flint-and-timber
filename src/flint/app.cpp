@@ -44,6 +44,9 @@ namespace flint
         m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_worldRenderer.generateChunk(m_device);
 
+        m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
+        m_selectionRenderer.create_mesh(m_device);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -151,6 +154,15 @@ namespace flint
 
             m_worldRenderer.render(renderPass, m_queue, m_camera);
 
+            // Get selected block from player and render selection box
+            auto selected_block = m_player.get_selected_block();
+            std::optional<glm::ivec3> selected_block_pos;
+            if (selected_block.has_value())
+            {
+                selected_block_pos = selected_block->block_position;
+            }
+            m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
+
             wgpuRenderPassEncoderEnd(renderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -176,6 +188,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();
 
         if (m_depthTextureView)
