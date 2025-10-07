@@ -40,7 +40,7 @@ fn vs_main(
     constexpr std::string_view SELECTION_WGSL_fragmentShaderSource = R"(
 @fragment
 fn fs_main() -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 1.0, 0.0, 0.5); // Yellow, semi-transparent
+    return vec4<f32>(0.2, 0.2, 0.2, 1.0); 
 }
 )";
 }
