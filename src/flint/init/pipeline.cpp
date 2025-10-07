@@ -23,7 +23,9 @@ namespace flint::init
         bool useTexture,
         bool useModel,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        bool useBlending,
+        bool useCulling)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
@@ -125,15 +127,25 @@ namespace flint::init
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
-        // Enable blending for transparency
+        // The blend state needs to be defined here to ensure it doesn't go out of scope
+        // before the pipeline is created.
         WGPUBlendState blendState = {};
-        blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
-        blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-        blendState.color.operation = WGPUBlendOperation_Add;
-        blendState.alpha.srcFactor = WGPUBlendFactor_One;
-        blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
-        blendState.alpha.operation = WGPUBlendOperation_Add;
-        colorTarget.blend = &blendState;
+
+        if (useBlending)
+        {
+            // Enable blending for transparency
+            blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+            blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+            blendState.color.operation = WGPUBlendOperation_Add;
+            blendState.alpha.srcFactor = WGPUBlendFactor_One;
+            blendState.alpha.dstFactor = WGPUBlendFactor_Zero;
+            blendState.alpha.operation = WGPUBlendOperation_Add;
+            colorTarget.blend = &blendState;
+        }
+        else
+        {
+            colorTarget.blend = nullptr;
+        }
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;
@@ -143,7 +155,7 @@ namespace flint::init
         pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
-        pipelineDescriptor.primitive.cullMode = WGPUCullMode_Back;
+        pipelineDescriptor.primitive.cullMode = useCulling ? WGPUCullMode_Back : WGPUCullMode_None;
 
         // Multisample state
         pipelineDescriptor.multisample.count = 1;

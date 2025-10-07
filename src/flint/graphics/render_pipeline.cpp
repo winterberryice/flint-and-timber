@@ -22,7 +22,9 @@ namespace flint::graphics
         bool useTexture,
         bool useModel,
         bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare)
+        WGPUCompareFunction depthCompare,
+        bool useBlending,
+        bool useCulling)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -34,7 +36,9 @@ namespace flint::graphics
             useTexture,
             useModel,
             depthWriteEnabled,
-            depthCompare);
+            depthCompare,
+            useBlending,
+            useCulling);
 
         m_bindGroup = flint::init::create_bind_group(
             device,
