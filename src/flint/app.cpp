@@ -148,12 +148,12 @@ void App::resize(int width, int height)
 
     // Reconfigure the surface with the new size
     WGPUSurfaceConfiguration surface_config = {};
-    surface_config.device = m_device;
     surface_config.format = m_surfaceFormat;
     surface_config.usage = WGPUTextureUsage_RenderAttachment;
     surface_config.width = m_windowWidth;
     surface_config.height = m_windowHeight;
     surface_config.presentMode = WGPUPresentMode_Fifo;
+    surface_config.alphaMode = WGPUCompositeAlphaMode_Auto;
     wgpuSurfaceConfigure(m_surface, &surface_config);
 }
 
