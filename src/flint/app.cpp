@@ -5,7 +5,6 @@
 #include "init/utils.h"
 #include "init/shader.h"
 #include "init/buffer.h"
-#include "init/pipeline.h"
 #include "init/texture.h"
 #include "shader.wgsl.h"
 

@@ -1,5 +1,5 @@
 #include "render_pipeline_builder.h"
-#include "vertex.h" // For vertex buffer layout.
+#include "../vertex.h" // For vertex buffer layout.
 #include <iostream>
 #include <vector>
 
