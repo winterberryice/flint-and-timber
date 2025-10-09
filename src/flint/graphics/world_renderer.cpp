@@ -48,7 +48,9 @@ namespace flint::graphics
             true,  // Enable depth writing
             WGPUCompareFunction_Less, // Use standard Less for depth comparison
             true,  // Use blending
-            true   // Use culling
+            true,  // Use culling
+            WGPUPrimitiveTopology_TriangleList,
+            false
         );
 
         std::cout << "World renderer initialized." << std::endl;

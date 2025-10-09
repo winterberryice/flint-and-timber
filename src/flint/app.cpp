@@ -47,6 +47,8 @@ namespace flint
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
 
+        m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, (float)m_windowWidth / (float)m_windowHeight);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -150,11 +152,9 @@ namespace flint
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
+            // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
-
             m_worldRenderer.render(renderPass, m_queue, m_camera);
-
-            // Get selected block from player and render selection box
             auto selected_block = m_player.get_selected_block();
             std::optional<glm::ivec3> selected_block_pos;
             if (selected_block.has_value())
@@ -162,8 +162,12 @@ namespace flint
                 selected_block_pos = selected_block->block_position;
             }
             m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
-
             wgpuRenderPassEncoderEnd(renderPass);
+
+            // --- UI Overlay Render Pass ---
+            WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
+            m_crosshairRenderer.render(overlayRenderPass);
+            wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.nextInChain = nullptr;
@@ -176,6 +180,7 @@ namespace flint
 
             // Cleanup
             wgpuCommandBufferRelease(cmdBuffer);
+            wgpuRenderPassEncoderRelease(overlayRenderPass);
             wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
             wgpuTextureViewRelease(textureView);
@@ -188,6 +193,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();
 

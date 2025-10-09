@@ -25,27 +25,34 @@ namespace flint::init
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
         bool useBlending,
-        bool useCulling)
+    bool useCulling,
+    WGPUPrimitiveTopology primitiveTopology,
+    bool isUi)
     {
         std::cout << "Creating render pipeline..." << std::endl;
 
         // Depth Stencil State
         WGPUDepthStencilState depthStencilState = {};
+    if (depthTextureFormat != WGPUTextureFormat_Undefined)
+    {
         depthStencilState.format = depthTextureFormat;
         depthStencilState.depthWriteEnabled = depthWriteEnabled ? WGPUOptionalBool_True : WGPUOptionalBool_False;
         depthStencilState.depthCompare = depthCompare;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
+    }
 
         // Create bind group layout
         std::vector<WGPUBindGroupLayoutEntry> bindingLayoutEntries;
 
+    if (!isUi)
+        {
         // Binding 0: Uniform Buffer (Vertex) - Always present
         WGPUBindGroupLayoutEntry uniformEntry = {};
         uniformEntry.binding = 0;
         uniformEntry.visibility = WGPUShaderStage_Vertex;
         uniformEntry.buffer.type = WGPUBufferBindingType_Uniform;
-        uniformEntry.buffer.minBindingSize = sizeof(glm::mat4);
+        uniformEntry.buffer.minBindingSize = sizeof(CameraUniform);
         bindingLayoutEntries.push_back(uniformEntry);
 
         if (useModel)
@@ -59,13 +66,7 @@ namespace flint::init
             bindingLayoutEntries.push_back(modelEntry);
         }
 
-        uint32_t current_binding = 1;
-
-        if (useModel)
-        {
-            // This was already correct, but for clarity, it uses binding 1.
-            current_binding++;
-        }
+        uint32_t current_binding = useModel ? 2 : 1;
 
         if (useTexture)
         {
@@ -84,6 +85,7 @@ namespace flint::init
             samplerEntry.sampler.type = WGPUSamplerBindingType_Filtering;
             bindingLayoutEntries.push_back(samplerEntry);
         }
+        }
 
         WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc = {};
         bindGroupLayoutDesc.entryCount = bindingLayoutEntries.size();
@@ -97,15 +99,43 @@ namespace flint::init
         }
         *pBindGroupLayout = bindGroupLayout; // Output the layout
 
-        // Create pipeline layout using our bind group layout
+    // Create pipeline layout
         WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+    if (!bindingLayoutEntries.empty())
+    {
         pipelineLayoutDesc.bindGroupLayoutCount = 1;
         pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
+    }
+    else
+    {
+        pipelineLayoutDesc.bindGroupLayoutCount = 0;
+        pipelineLayoutDesc.bindGroupLayouts = nullptr;
+    }
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
 
-        // Get vertex layout from the Vertex struct
-        WGPUVertexBufferLayout vertexBufferLayout = flint::Vertex::getLayout();
+    // Get vertex layout
+    WGPUVertexBufferLayout vertexBufferLayout;
+    std::vector<WGPUVertexAttribute> vertexAttributes;
+
+    if (isUi)
+    {
+        vertexAttributes.resize(1);
+
+        // position
+        vertexAttributes[0].format = WGPUVertexFormat_Float32x2;
+        vertexAttributes[0].offset = 0;
+        vertexAttributes[0].shaderLocation = 0;
+
+        vertexBufferLayout.arrayStride = 2 * sizeof(float);
+        vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+        vertexBufferLayout.attributeCount = vertexAttributes.size();
+        vertexBufferLayout.attributes = vertexAttributes.data();
+    }
+    else
+    {
+        vertexBufferLayout = flint::Vertex::getLayout();
+    }
 
         // Create render pipeline descriptor
         WGPURenderPipelineDescriptor pipelineDescriptor = {};
@@ -127,13 +157,9 @@ namespace flint::init
         colorTarget.format = surfaceFormat;
         colorTarget.writeMask = WGPUColorWriteMask_All;
 
-        // The blend state needs to be defined here to ensure it doesn't go out of scope
-        // before the pipeline is created.
         WGPUBlendState blendState = {};
-
         if (useBlending)
         {
-            // Enable blending for transparency
             blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
             blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
             blendState.color.operation = WGPUBlendOperation_Add;
@@ -142,17 +168,13 @@ namespace flint::init
             blendState.alpha.operation = WGPUBlendOperation_Add;
             colorTarget.blend = &blendState;
         }
-        else
-        {
-            colorTarget.blend = nullptr;
-        }
 
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTarget;
         pipelineDescriptor.fragment = &fragmentState;
 
         // Primitive state
-        pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    pipelineDescriptor.primitive.topology = primitiveTopology;
         pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
         pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
         pipelineDescriptor.primitive.cullMode = useCulling ? WGPUCullMode_Back : WGPUCullMode_None;
@@ -163,7 +185,14 @@ namespace flint::init
         pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
 
         // Set depth stencil state
+    if (depthTextureFormat != WGPUTextureFormat_Undefined)
+    {
         pipelineDescriptor.depthStencil = &depthStencilState;
+    }
+    else
+    {
+        pipelineDescriptor.depthStencil = nullptr;
+    }
 
         pipelineDescriptor.layout = pipelineLayout;
 
@@ -273,6 +302,28 @@ namespace flint::init
         renderPassDesc.colorAttachmentCount = 1;
         renderPassDesc.colorAttachments = &colorAttachment;
         renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
+
+        return wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+    }
+
+    WGPURenderPassEncoder begin_overlay_render_pass(
+        WGPUCommandEncoder encoder,
+        WGPUTextureView textureView)
+    {
+        WGPURenderPassColorAttachment colorAttachment = {};
+        colorAttachment.view = textureView;
+        colorAttachment.resolveTarget = nullptr;
+        colorAttachment.loadOp = WGPULoadOp_Load; // Load the existing content
+        colorAttachment.storeOp = WGPUStoreOp_Store;
+        colorAttachment.clearValue = {0.0f, 0.0f, 0.0f, 0.0f}; // Not used
+        colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+        WGPURenderPassDescriptor renderPassDesc = {};
+        renderPassDesc.nextInChain = nullptr;
+        renderPassDesc.label = {nullptr, 0};
+        renderPassDesc.colorAttachmentCount = 1;
+        renderPassDesc.colorAttachments = &colorAttachment;
+        renderPassDesc.depthStencilAttachment = nullptr; // No depth/stencil
 
         return wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
     }

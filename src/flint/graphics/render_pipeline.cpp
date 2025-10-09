@@ -24,7 +24,9 @@ namespace flint::graphics
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
         bool useBlending,
-        bool useCulling)
+    bool useCulling,
+    WGPUPrimitiveTopology primitiveTopology,
+    bool isUi)
     {
         m_pipeline = flint::init::create_render_pipeline(
             device,
@@ -38,8 +40,12 @@ namespace flint::graphics
             depthWriteEnabled,
             depthCompare,
             useBlending,
-            useCulling);
+        useCulling,
+        primitiveTopology,
+        isUi);
 
+    if (!isUi)
+    {
         m_bindGroup = flint::init::create_bind_group(
             device,
             m_bindGroupLayout,
@@ -49,6 +55,7 @@ namespace flint::graphics
             sampler,
             useTexture,
             useModel);
+    }
     }
 
     void RenderPipeline::cleanup()

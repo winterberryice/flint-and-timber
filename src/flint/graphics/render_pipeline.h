@@ -24,9 +24,11 @@ namespace flint::graphics
             bool useTexture,
             bool useModel,
             bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare,
-        bool useBlending,
-        bool useCulling);
+            WGPUCompareFunction depthCompare,
+            bool useBlending,
+            bool useCulling,
+            WGPUPrimitiveTopology primitiveTopology = WGPUPrimitiveTopology_TriangleList,
+            bool isUi = false);
 
         void cleanup();
 

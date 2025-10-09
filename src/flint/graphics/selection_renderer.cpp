@@ -42,7 +42,10 @@ namespace flint::graphics
             false,   // Do not write to depth buffer
             WGPUCompareFunction_LessEqual,
             false,  // No blending
-            false); // No culling
+            false, // No culling
+            WGPUPrimitiveTopology_TriangleList,
+            false
+            );
 
         std::cout << "Selection renderer initialized." << std::endl;
     }
