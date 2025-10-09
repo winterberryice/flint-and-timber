@@ -152,11 +152,9 @@ namespace flint
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
+            // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
-
             m_worldRenderer.render(renderPass, m_queue, m_camera);
-
-            // Get selected block from player and render selection box
             auto selected_block = m_player.get_selected_block();
             std::optional<glm::ivec3> selected_block_pos;
             if (selected_block.has_value())
@@ -164,10 +162,12 @@ namespace flint
                 selected_block_pos = selected_block->block_position;
             }
             m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
-
-            m_crosshairRenderer.render(renderPass);
-
             wgpuRenderPassEncoderEnd(renderPass);
+
+            // --- UI Overlay Render Pass ---
+            WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
+            m_crosshairRenderer.render(overlayRenderPass);
+            wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.nextInChain = nullptr;
@@ -180,6 +180,7 @@ namespace flint
 
             // Cleanup
             wgpuCommandBufferRelease(cmdBuffer);
+            wgpuRenderPassEncoderRelease(overlayRenderPass);
             wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
             wgpuTextureViewRelease(textureView);

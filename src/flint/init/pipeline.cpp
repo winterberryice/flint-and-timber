@@ -306,4 +306,26 @@ namespace flint::init
         return wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
     }
 
+    WGPURenderPassEncoder begin_overlay_render_pass(
+        WGPUCommandEncoder encoder,
+        WGPUTextureView textureView)
+    {
+        WGPURenderPassColorAttachment colorAttachment = {};
+        colorAttachment.view = textureView;
+        colorAttachment.resolveTarget = nullptr;
+        colorAttachment.loadOp = WGPULoadOp_Load; // Load the existing content
+        colorAttachment.storeOp = WGPUStoreOp_Store;
+        colorAttachment.clearValue = {0.0f, 0.0f, 0.0f, 0.0f}; // Not used
+        colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+        WGPURenderPassDescriptor renderPassDesc = {};
+        renderPassDesc.nextInChain = nullptr;
+        renderPassDesc.label = {nullptr, 0};
+        renderPassDesc.colorAttachmentCount = 1;
+        renderPassDesc.colorAttachments = &colorAttachment;
+        renderPassDesc.depthStencilAttachment = nullptr; // No depth/stencil
+
+        return wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+    }
+
 } // namespace flint::init

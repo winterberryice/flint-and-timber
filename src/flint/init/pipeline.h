@@ -36,4 +36,8 @@ namespace flint::init
         WGPUTextureView textureView,
         WGPUTextureView depthTextureView);
 
+    WGPURenderPassEncoder begin_overlay_render_pass(
+        WGPUCommandEncoder encoder,
+        WGPUTextureView textureView);
+
 } // namespace flint::init
