@@ -55,8 +55,7 @@ namespace flint::ui
             device,
             "Crosshair Vertex Buffer",
             vertices.size() * sizeof(CrosshairVertex),
-            WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst,
-            true);
+            WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst);
         wgpuQueueWriteBuffer(queue, m_vertex_buffer, 0, vertices.data(), vertices.size() * sizeof(CrosshairVertex));
 
         // Create projection matrix and buffer
@@ -73,8 +72,7 @@ namespace flint::ui
             device,
             "Crosshair Projection Buffer",
             sizeof(glm::mat4),
-            WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst,
-            true);
+            WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst);
         wgpuQueueWriteBuffer(queue, m_projection_buffer, 0, &m_projection_matrix, sizeof(glm::mat4));
 
         // Create bind group layout and bind group
@@ -86,7 +84,6 @@ namespace flint::ui
         WGPUBindGroupLayoutDescriptor projection_bind_group_layout_desc{};
         projection_bind_group_layout_desc.entryCount = 1;
         projection_bind_group_layout_desc.entries = &projection_bind_group_layout_entry;
-        projection_bind_group_layout_desc.label = "Crosshair Projection Bind Group Layout";
         WGPUBindGroupLayout projection_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &projection_bind_group_layout_desc);
 
         WGPUBindGroupEntry projection_bind_group_entry{};
@@ -98,17 +95,15 @@ namespace flint::ui
         projection_bind_group_desc.layout = projection_bind_group_layout;
         projection_bind_group_desc.entryCount = 1;
         projection_bind_group_desc.entries = &projection_bind_group_entry;
-        projection_bind_group_desc.label = "Crosshair Projection Bind Group";
         m_projection_bind_group = wgpuDeviceCreateBindGroup(device, &projection_bind_group_desc);
 
         // Create shader module
-        WGPUShaderModule shader_module = init::create_shader_module(device, crosshair_shader_wgsl.data());
+        WGPUShaderModule shader_module = init::create_shader_module(device, "Crosshair Shader", crosshair_shader_wgsl.data());
 
         // Create render pipeline
         WGPUPipelineLayoutDescriptor pipeline_layout_desc{};
         pipeline_layout_desc.bindGroupLayoutCount = 1;
         pipeline_layout_desc.bindGroupLayouts = &projection_bind_group_layout;
-        pipeline_layout_desc.label = "Crosshair Pipeline Layout";
         WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &pipeline_layout_desc);
 
         WGPUVertexAttribute vertex_attribute{};
@@ -122,22 +117,40 @@ namespace flint::ui
         vertex_buffer_layout.attributeCount = 1;
         vertex_buffer_layout.attributes = &vertex_attribute;
 
+        WGPUBlendState blend_state{};
+        blend_state.color.operation = WGPUBlendOperation_Add;
+        blend_state.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+        blend_state.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+        blend_state.alpha.operation = WGPUBlendOperation_Add;
+        blend_state.alpha.srcFactor = WGPUBlendFactor_One;
+        blend_state.alpha.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+
         WGPUColorTargetState color_target_state{};
         color_target_state.format = surface_format;
-        color_target_state.blend = &init::BLEND_STATE_ALPHA_BLENDING;
+        color_target_state.blend = &blend_state;
         color_target_state.writeMask = WGPUColorWriteMask_All;
 
-        m_render_pipeline = init::create_render_pipeline(
-            device,
-            pipeline_layout,
-            shader_module,
-            "vs_main",
-            "fs_main",
-            vertex_buffer_layout,
-            color_target_state,
-            nullptr, // No depth/stencil state
-            WGPUPrimitiveTopology_TriangleList,
-            WGPUCullMode_None);
+        WGPUFragmentState fragment_state{};
+        fragment_state.module = shader_module;
+        fragment_state.entryPoint = "fs_main";
+        fragment_state.targetCount = 1;
+        fragment_state.targets = &color_target_state;
+
+        WGPURenderPipelineDescriptor pipeline_desc{};
+        pipeline_desc.layout = pipeline_layout;
+        pipeline_desc.vertex.module = shader_module;
+        pipeline_desc.vertex.entryPoint = "vs_main";
+        pipeline_desc.vertex.bufferCount = 1;
+        pipeline_desc.vertex.buffers = &vertex_buffer_layout;
+        pipeline_desc.fragment = &fragment_state;
+        pipeline_desc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+        pipeline_desc.primitive.frontFace = WGPUFrontFace_CCW;
+        pipeline_desc.primitive.cullMode = WGPUCullMode_None;
+        pipeline_desc.depthStencil = nullptr;
+        pipeline_desc.multisample.count = 1;
+        pipeline_desc.multisample.mask = 0xFFFFFFFF;
+
+        m_render_pipeline = wgpuDeviceCreateRenderPipeline(device, &pipeline_desc);
 
         // Release temporary resources
         wgpuBindGroupLayoutRelease(projection_bind_group_layout);
