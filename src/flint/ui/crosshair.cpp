@@ -6,6 +6,7 @@
 #include "../init/buffer.h"
 #include "../init/pipeline.h"
 #include "../init/shader.h"
+#include "../init/utils.h"
 #include "crosshair.wgsl.h"
 
 namespace flint::ui
@@ -84,6 +85,7 @@ namespace flint::ui
         WGPUBindGroupLayoutDescriptor projection_bind_group_layout_desc{};
         projection_bind_group_layout_desc.entryCount = 1;
         projection_bind_group_layout_desc.entries = &projection_bind_group_layout_entry;
+        projection_bind_group_layout_desc.label = init::makeStringView("Crosshair Projection Bind Group Layout");
         WGPUBindGroupLayout projection_bind_group_layout = wgpuDeviceCreateBindGroupLayout(device, &projection_bind_group_layout_desc);
 
         WGPUBindGroupEntry projection_bind_group_entry{};
@@ -95,15 +97,25 @@ namespace flint::ui
         projection_bind_group_desc.layout = projection_bind_group_layout;
         projection_bind_group_desc.entryCount = 1;
         projection_bind_group_desc.entries = &projection_bind_group_entry;
+        projection_bind_group_desc.label = init::makeStringView("Crosshair Projection Bind Group");
         m_projection_bind_group = wgpuDeviceCreateBindGroup(device, &projection_bind_group_desc);
 
         // Create shader module
-        WGPUShaderModule shader_module = init::create_shader_module(device, "Crosshair Shader", crosshair_shader_wgsl.data());
+        WGPUShaderModuleWGSLDescriptor shader_wgsl_desc{};
+        shader_wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
+        shader_wgsl_desc.code = init::makeStringView(crosshair_shader_wgsl.data());
+
+        WGPUShaderModuleDescriptor shader_desc{};
+        shader_desc.nextInChain = &shader_wgsl_desc.chain;
+        shader_desc.label = init::makeStringView("Crosshair Shader");
+        WGPUShaderModule shader_module = wgpuDeviceCreateShaderModule(device, &shader_desc);
+
 
         // Create render pipeline
         WGPUPipelineLayoutDescriptor pipeline_layout_desc{};
         pipeline_layout_desc.bindGroupLayoutCount = 1;
         pipeline_layout_desc.bindGroupLayouts = &projection_bind_group_layout;
+        pipeline_layout_desc.label = init::makeStringView("Crosshair Pipeline Layout");
         WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device, &pipeline_layout_desc);
 
         WGPUVertexAttribute vertex_attribute{};
@@ -132,14 +144,15 @@ namespace flint::ui
 
         WGPUFragmentState fragment_state{};
         fragment_state.module = shader_module;
-        fragment_state.entryPoint = "fs_main";
+        fragment_state.entryPoint = init::makeStringView("fs_main");
         fragment_state.targetCount = 1;
         fragment_state.targets = &color_target_state;
 
         WGPURenderPipelineDescriptor pipeline_desc{};
+        pipeline_desc.label = init::makeStringView("Crosshair Render Pipeline");
         pipeline_desc.layout = pipeline_layout;
         pipeline_desc.vertex.module = shader_module;
-        pipeline_desc.vertex.entryPoint = "vs_main";
+        pipeline_desc.vertex.entryPoint = init::makeStringView("vs_main");
         pipeline_desc.vertex.bufferCount = 1;
         pipeline_desc.vertex.buffers = &vertex_buffer_layout;
         pipeline_desc.fragment = &fragment_state;
