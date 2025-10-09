@@ -17,7 +17,9 @@ namespace flint::init
         bool depthWriteEnabled,
         WGPUCompareFunction depthCompare,
         bool useBlending,
-        bool useCulling);
+        bool useCulling,
+        WGPUPrimitiveTopology primitiveTopology = WGPUPrimitiveTopology_TriangleList,
+        bool isUi = false);
 
     WGPUBindGroup create_bind_group(
         WGPUDevice device,
