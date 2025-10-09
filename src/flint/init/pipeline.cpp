@@ -99,10 +99,18 @@ namespace flint::init
         }
         *pBindGroupLayout = bindGroupLayout; // Output the layout
 
-        // Create pipeline layout using our bind group layout
+    // Create pipeline layout
         WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+    if (!bindingLayoutEntries.empty())
+    {
         pipelineLayoutDesc.bindGroupLayoutCount = 1;
         pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
+    }
+    else
+    {
+        pipelineLayoutDesc.bindGroupLayoutCount = 0;
+        pipelineLayoutDesc.bindGroupLayouts = nullptr;
+    }
 
         WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
 
