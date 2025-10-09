@@ -1,0 +1,196 @@
+#include "render_pipeline_builder.h"
+#include "vertex.h" // For vertex buffer layout.
+#include <iostream>
+#include <vector>
+
+namespace flint::graphics {
+
+RenderPipelineBuilder::RenderPipelineBuilder(WGPUDevice device) : device_(device) {
+}
+
+auto RenderPipelineBuilder::with_shaders(WGPUShaderModule vertex_shader, WGPUShaderModule fragment_shader)
+    -> RenderPipelineBuilder & {
+    vertex_shader_ = vertex_shader;
+    fragment_shader_ = fragment_shader;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_surface_format(WGPUTextureFormat format) -> RenderPipelineBuilder & {
+    surface_format_ = format;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_depth_format(WGPUTextureFormat format) -> RenderPipelineBuilder & {
+    depth_format_ = format;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_camera_uniform(WGPUBuffer buffer) -> RenderPipelineBuilder & {
+    camera_uniform_ = buffer;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_model_uniform(WGPUBuffer buffer) -> RenderPipelineBuilder & {
+    model_uniform_ = buffer;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_texture(WGPUTextureView view, WGPUSampler sampler) -> RenderPipelineBuilder & {
+    texture_view_ = view;
+    sampler_ = sampler;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_primitive_topology(WGPUPrimitiveTopology topology) -> RenderPipelineBuilder & {
+    primitive_topology_ = topology;
+    return *this;
+}
+
+auto RenderPipelineBuilder::enable_depth_write(bool enabled) -> RenderPipelineBuilder & {
+    depth_write_enabled_ = enabled;
+    return *this;
+}
+
+auto RenderPipelineBuilder::with_depth_compare(WGPUCompareFunction function) -> RenderPipelineBuilder & {
+    depth_compare_ = function;
+    return *this;
+}
+
+auto RenderPipelineBuilder::enable_blending(bool enabled) -> RenderPipelineBuilder & {
+    blending_enabled_ = enabled;
+    return *this;
+}
+
+auto RenderPipelineBuilder::enable_culling(bool enabled) -> RenderPipelineBuilder & {
+    culling_enabled_ = enabled;
+    return *this;
+}
+
+auto RenderPipelineBuilder::build() -> RenderPipeline {
+    // --- Bind Group Layout ---
+    std::vector<WGPUBindGroupLayoutEntry> bg_layout_entries;
+    std::vector<WGPUBindGroupEntry> bg_entries;
+
+    if (camera_uniform_) {
+        bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
+            .binding = 0,
+            .visibility = WGPUShaderStage_Vertex,
+            .buffer = {.type = WGPUBufferBindingType_Uniform},
+        });
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = 0, .buffer = camera_uniform_, .size = WGPU_WHOLE_SIZE});
+    }
+    if (model_uniform_) {
+        bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
+            .binding = 1,
+            .visibility = WGPUShaderStage_Vertex,
+            .buffer = {.type = WGPUBufferBindingType_Uniform},
+        });
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = 1, .buffer = model_uniform_, .size = WGPU_WHOLE_SIZE});
+    }
+    if (texture_view_) {
+        bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
+            .binding = 2,
+            .visibility = WGPUShaderStage_Fragment,
+            .texture = {.sampleType = WGPUTextureSampleType_Float},
+        });
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = 2, .textureView = texture_view_});
+    }
+    if (sampler_) {
+        bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
+            .binding = 3,
+            .visibility = WGPUShaderStage_Fragment,
+            .sampler = {.type = WGPUSamplerBindingType_Filtering},
+        });
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = 3, .sampler = sampler_});
+    }
+
+    WGPUBindGroupLayoutDescriptor bg_layout_desc{
+        .entryCount = static_cast<uint32_t>(bg_layout_entries.size()),
+        .entries = bg_layout_entries.data(),
+    };
+    WGPUBindGroupLayout bind_group_layout = wgpuDeviceCreateBindGroupLayout(device_, &bg_layout_desc);
+
+    // --- Bind Group ---
+    WGPUBindGroup bind_group = nullptr;
+    if (!bg_entries.empty()) {
+        WGPUBindGroupDescriptor bg_desc{
+            .layout = bind_group_layout,
+            .entryCount = static_cast<uint32_t>(bg_entries.size()),
+            .entries = bg_entries.data(),
+        };
+        bind_group = wgpuDeviceCreateBindGroup(device_, &bg_desc);
+    }
+
+    // --- Pipeline Layout ---
+    WGPUPipelineLayoutDescriptor layout_desc{
+        .bindGroupLayoutCount = 1,
+        .bindGroupLayouts = &bind_group_layout,
+    };
+    WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device_, &layout_desc);
+
+    // --- Shaders ---
+    WGPUVertexState vertex_state{};
+    vertex_state.module = vertex_shader_;
+    vertex_state.entryPoint = "vs_main";
+    // Vertex buffer layout
+    WGPUVertexBufferLayout vb_layout = Vertex::get_layout();
+    vertex_state.bufferCount = 1;
+    vertex_state.buffers = &vb_layout;
+
+    WGPUColorTargetState color_target{
+        .format = surface_format_,
+        .writeMask = WGPUColorWriteMask_All,
+    };
+
+    if (blending_enabled_) {
+        color_target.blend = new WGPUBlendState{
+            .color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha},
+            .alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_Zero}
+        };
+    }
+
+    WGPUFragmentState fragment_state{
+        .module = fragment_shader_,
+        .entryPoint = "fs_main",
+        .targetCount = 1,
+        .targets = &color_target,
+    };
+
+    // --- Depth Stencil ---
+    WGPUDepthStencilState depth_stencil_state{};
+    if (depth_format_ != WGPUTextureFormat_Undefined) {
+        depth_stencil_state.format = depth_format_;
+        depth_stencil_state.depthWriteEnabled = depth_write_enabled_ ? WGPUOptionalBool_True : WGPUOptionalBool_False;
+        depth_stencil_state.depthCompare = depth_compare_;
+    }
+
+    // --- Primitive State ---
+    WGPUPrimitiveState primitive_state{
+        .topology = primitive_topology_,
+        .stripIndexFormat = WGPUIndexFormat_Undefined,
+        .frontFace = WGPUFrontFace_CCW,
+        .cullMode = culling_enabled_ ? WGPUCullMode_Back : WGPUCullMode_None,
+    };
+
+    // --- Render Pipeline Descriptor ---
+    WGPURenderPipelineDescriptor pipeline_desc{
+        .layout = pipeline_layout,
+        .vertex = vertex_state,
+        .primitive = primitive_state,
+        .depthStencil = (depth_format_ != WGPUTextureFormat_Undefined) ? &depth_stencil_state : nullptr,
+        .multisample = {.count = 1, .mask = 0xFFFFFFFF},
+        .fragment = &fragment_state,
+    };
+
+    WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device_, &pipeline_desc);
+
+    if (color_target.blend) {
+        delete color_target.blend;
+    }
+
+    wgpuPipelineLayoutRelease(pipeline_layout);
+
+    return RenderPipeline(pipeline, bind_group_layout, bind_group);
+}
+
+} // namespace flint::graphics

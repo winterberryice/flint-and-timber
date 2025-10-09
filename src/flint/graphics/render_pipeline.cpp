@@ -1,90 +1,61 @@
 #include "render_pipeline.h"
+#include <utility> // For std::swap
 
-#include "../init/pipeline.h"
+namespace flint::graphics {
 
-namespace flint::graphics
-{
+RenderPipeline::RenderPipeline(WGPURenderPipeline pipeline, WGPUBindGroupLayout bind_group_layout, WGPUBindGroup bind_group)
+    : pipeline_(pipeline), bind_group_layout_(bind_group_layout), bind_group_(bind_group) {
+}
 
-    RenderPipeline::RenderPipeline() = default;
+RenderPipeline::~RenderPipeline() {
+    cleanup();
+}
 
-    RenderPipeline::~RenderPipeline() = default;
+RenderPipeline::RenderPipeline(RenderPipeline &&other) noexcept
+    : pipeline_(other.pipeline_), bind_group_layout_(other.bind_group_layout_), bind_group_(other.bind_group_) {
+    other.pipeline_ = nullptr;
+    other.bind_group_layout_ = nullptr;
+    other.bind_group_ = nullptr;
+}
 
-    void RenderPipeline::init(
-        WGPUDevice device,
-        WGPUShaderModule vertexShader,
-        WGPUShaderModule fragmentShader,
-        WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat,
-        WGPUBuffer cameraUniformBuffer,
-        WGPUBuffer modelUniformBuffer,
-        WGPUTextureView textureView,
-        WGPUSampler sampler,
-        bool useTexture,
-        bool useModel,
-        bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare,
-        bool useBlending,
-    bool useCulling,
-    WGPUPrimitiveTopology primitiveTopology,
-    bool isUi)
-    {
-        m_pipeline = flint::init::create_render_pipeline(
-            device,
-            vertexShader,
-            fragmentShader,
-            surfaceFormat,
-            depthTextureFormat,
-            &m_bindGroupLayout,
-            useTexture,
-            useModel,
-            depthWriteEnabled,
-            depthCompare,
-            useBlending,
-        useCulling,
-        primitiveTopology,
-        isUi);
-
-    if (!isUi)
-    {
-        m_bindGroup = flint::init::create_bind_group(
-            device,
-            m_bindGroupLayout,
-            cameraUniformBuffer,
-            modelUniformBuffer,
-            textureView,
-            sampler,
-            useTexture,
-            useModel);
+auto RenderPipeline::operator=(RenderPipeline &&other) noexcept -> RenderPipeline & {
+    if (this != &other) {
+        cleanup();
+        pipeline_ = other.pipeline_;
+        bind_group_layout_ = other.bind_group_layout_;
+        bind_group_ = other.bind_group_;
+        other.pipeline_ = nullptr;
+        other.bind_group_layout_ = nullptr;
+        other.bind_group_ = nullptr;
     }
-    }
+    return *this;
+}
 
-    void RenderPipeline::cleanup()
-    {
-        if (m_bindGroup)
-        {
-            wgpuBindGroupRelease(m_bindGroup);
-            m_bindGroup = nullptr;
-        }
-        if (m_bindGroupLayout)
-        {
-            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
-            m_bindGroupLayout = nullptr;
-        }
-        if (m_pipeline)
-        {
-            wgpuRenderPipelineRelease(m_pipeline);
-            m_pipeline = nullptr;
-        }
+void RenderPipeline::cleanup() {
+    if (bind_group_) {
+        wgpuBindGroupRelease(bind_group_);
+        bind_group_ = nullptr;
     }
+    if (bind_group_layout_) {
+        wgpuBindGroupLayoutRelease(bind_group_layout_);
+        bind_group_layout_ = nullptr;
+    }
+    if (pipeline_) {
+        wgpuRenderPipelineRelease(pipeline_);
+        pipeline_ = nullptr;
+    }
+}
 
-    WGPURenderPipeline RenderPipeline::getPipeline() const
-    {
-        return m_pipeline;
-    }
+auto RenderPipeline::get_pipeline() const -> WGPURenderPipeline {
+    return pipeline_;
+}
 
-    WGPUBindGroup RenderPipeline::getBindGroup() const
-    {
-        return m_bindGroup;
-    }
+auto RenderPipeline::get_bind_group_layout() const -> WGPUBindGroupLayout {
+    return bind_group_layout_;
+}
+
+auto RenderPipeline::get_bind_group() const -> WGPUBindGroup {
+    return bind_group_;
+}
 
 } // namespace flint::graphics
