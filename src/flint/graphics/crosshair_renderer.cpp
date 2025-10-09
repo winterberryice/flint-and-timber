@@ -14,8 +14,8 @@ void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureForm
     std::cout << "Initializing crosshair renderer..." << std::endl;
 
     // Create shaders
-    m_vertexShader = init::create_shader_module(device, "Crosshair Vertex Shader", CROSSHAIR_WGSL_vertexShaderSource.data());
-    m_fragmentShader = init::create_shader_module(device, "Crosshair Fragment Shader", CROSSHAIR_WGSL_fragmentShaderSource.data());
+    m_vertexShader = init::create_shader_module(device, "Crosshair Vertex Shader", CROSSHAIR_WGSL_vertexShaderSource);
+    m_fragmentShader = init::create_shader_module(device, "Crosshair Fragment Shader", CROSSHAIR_WGSL_fragmentShaderSource);
 
     // Create render pipeline
     m_renderPipeline = RenderPipelineBuilder(device)

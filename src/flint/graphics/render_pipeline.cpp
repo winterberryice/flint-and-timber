@@ -4,7 +4,7 @@
 namespace flint::graphics {
 
 RenderPipeline::RenderPipeline(WGPURenderPipeline pipeline, WGPUBindGroupLayout bind_group_layout, WGPUBindGroup bind_group)
-    : pipeline_(pipeline), bind_group_layout_(bind_group_layout), bind_group_(bind_group) {
+    : m_pipeline(pipeline), m_bindGroupLayout(bind_group_layout), m_bindGroup(bind_group) {
 }
 
 RenderPipeline::~RenderPipeline() {
@@ -12,50 +12,50 @@ RenderPipeline::~RenderPipeline() {
 }
 
 RenderPipeline::RenderPipeline(RenderPipeline &&other) noexcept
-    : pipeline_(other.pipeline_), bind_group_layout_(other.bind_group_layout_), bind_group_(other.bind_group_) {
-    other.pipeline_ = nullptr;
-    other.bind_group_layout_ = nullptr;
-    other.bind_group_ = nullptr;
+    : m_pipeline(other.m_pipeline), m_bindGroupLayout(other.m_bindGroupLayout), m_bindGroup(other.m_bindGroup) {
+    other.m_pipeline = nullptr;
+    other.m_bindGroupLayout = nullptr;
+    other.m_bindGroup = nullptr;
 }
 
 auto RenderPipeline::operator=(RenderPipeline &&other) noexcept -> RenderPipeline & {
     if (this != &other) {
         cleanup();
-        pipeline_ = other.pipeline_;
-        bind_group_layout_ = other.bind_group_layout_;
-        bind_group_ = other.bind_group_;
-        other.pipeline_ = nullptr;
-        other.bind_group_layout_ = nullptr;
-        other.bind_group_ = nullptr;
+        m_pipeline = other.m_pipeline;
+        m_bindGroupLayout = other.m_bindGroupLayout;
+        m_bindGroup = other.m_bindGroup;
+        other.m_pipeline = nullptr;
+        other.m_bindGroupLayout = nullptr;
+        other.m_bindGroup = nullptr;
     }
     return *this;
 }
 
 void RenderPipeline::cleanup() {
-    if (bind_group_) {
-        wgpuBindGroupRelease(bind_group_);
-        bind_group_ = nullptr;
+    if (m_bindGroup) {
+        wgpuBindGroupRelease(m_bindGroup);
+        m_bindGroup = nullptr;
     }
-    if (bind_group_layout_) {
-        wgpuBindGroupLayoutRelease(bind_group_layout_);
-        bind_group_layout_ = nullptr;
+    if (m_bindGroupLayout) {
+        wgpuBindGroupLayoutRelease(m_bindGroupLayout);
+        m_bindGroupLayout = nullptr;
     }
-    if (pipeline_) {
-        wgpuRenderPipelineRelease(pipeline_);
-        pipeline_ = nullptr;
+    if (m_pipeline) {
+        wgpuRenderPipelineRelease(m_pipeline);
+        m_pipeline = nullptr;
     }
 }
 
 auto RenderPipeline::get_pipeline() const -> WGPURenderPipeline {
-    return pipeline_;
+    return m_pipeline;
 }
 
 auto RenderPipeline::get_bind_group_layout() const -> WGPUBindGroupLayout {
-    return bind_group_layout_;
+    return m_bindGroupLayout;
 }
 
 auto RenderPipeline::get_bind_group() const -> WGPUBindGroup {
-    return bind_group_;
+    return m_bindGroup;
 }
 
 } // namespace flint::graphics

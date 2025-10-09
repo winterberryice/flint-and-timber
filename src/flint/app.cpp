@@ -145,33 +145,67 @@ namespace flint
         {
             WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);
 
-            WGPUCommandEncoderDescriptor encoderDesc = {};
-            encoderDesc.nextInChain = nullptr;
-            encoderDesc.label = {nullptr, 0};
-
+            WGPUCommandEncoderDescriptor encoderDesc = {.label = "Main Command Encoder"};
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
             // --- Main 3D Render Pass ---
-            WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
-            m_worldRenderer.render(renderPass, m_queue, m_camera);
-            auto selected_block = m_player.get_selected_block();
-            std::optional<glm::ivec3> selected_block_pos;
-            if (selected_block.has_value())
             {
-                selected_block_pos = selected_block->block_position;
+                WGPURenderPassColorAttachment colorAttachment{
+                    .view = textureView,
+                    .loadOp = WGPULoadOp_Clear,
+                    .storeOp = WGPUStoreOp_Store,
+                    .clearValue = {0.1f, 0.2f, 0.3f, 1.0f},
+                };
+
+                WGPURenderPassDepthStencilAttachment depthAttachment{
+                    .view = m_depthTextureView,
+                    .depthLoadOp = WGPULoadOp_Clear,
+                    .depthStoreOp = WGPUStoreOp_Store,
+                    .depthClearValue = 1.0f,
+                };
+
+                WGPURenderPassDescriptor renderPassDesc{
+                    .label = "Main 3D Render Pass",
+                    .colorAttachmentCount = 1,
+                    .colorAttachments = &colorAttachment,
+                    .depthStencilAttachment = &depthAttachment,
+                };
+
+                WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+                m_worldRenderer.render(renderPass, m_queue, m_camera);
+                auto selected_block = m_player.get_selected_block();
+                std::optional<glm::ivec3> selected_block_pos;
+                if (selected_block.has_value())
+                {
+                    selected_block_pos = selected_block->block_position;
+                }
+                m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
+                wgpuRenderPassEncoderEnd(renderPass);
+                wgpuRenderPassEncoderRelease(renderPass);
             }
-            m_selectionRenderer.render(renderPass, m_queue, m_camera, selected_block_pos);
-            wgpuRenderPassEncoderEnd(renderPass);
 
             // --- UI Overlay Render Pass ---
-            WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
-            m_crosshairRenderer.render(overlayRenderPass);
-            wgpuRenderPassEncoderEnd(overlayRenderPass);
+            {
+                WGPURenderPassColorAttachment overlayColorAttachment{
+                    .view = textureView,
+                    .loadOp = WGPULoadOp_Load,
+                    .storeOp = WGPUStoreOp_Store,
+                };
 
-            WGPUCommandBufferDescriptor cmdBufferDesc = {};
-            cmdBufferDesc.nextInChain = nullptr;
-            cmdBufferDesc.label = {nullptr, 0};
+                WGPURenderPassDescriptor overlayRenderPassDesc{
+                    .label = "UI Overlay Render Pass",
+                    .colorAttachmentCount = 1,
+                    .colorAttachments = &overlayColorAttachment,
+                    .depthStencilAttachment = nullptr,
+                };
 
+                WGPURenderPassEncoder overlayRenderPass = wgpuCommandEncoderBeginRenderPass(encoder, &overlayRenderPassDesc);
+                m_crosshairRenderer.render(overlayRenderPass);
+                wgpuRenderPassEncoderEnd(overlayRenderPass);
+                wgpuRenderPassEncoderRelease(overlayRenderPass);
+            }
+
+            WGPUCommandBufferDescriptor cmdBufferDesc{.label = "Main Command Buffer"};
             WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
             wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
 
@@ -179,8 +213,6 @@ namespace flint
 
             // Cleanup
             wgpuCommandBufferRelease(cmdBuffer);
-            wgpuRenderPassEncoderRelease(overlayRenderPass);
-            wgpuRenderPassEncoderRelease(renderPass);
             wgpuCommandEncoderRelease(encoder);
             wgpuTextureViewRelease(textureView);
         }

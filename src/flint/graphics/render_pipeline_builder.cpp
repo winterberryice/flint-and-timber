@@ -129,24 +129,29 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device_, &layout_desc);
 
     // --- Shaders ---
-    WGPUVertexState vertex_state{};
-    vertex_state.module = vertex_shader_;
-    vertex_state.entryPoint = "vs_main";
     // Vertex buffer layout
-    WGPUVertexBufferLayout vb_layout = Vertex::get_layout();
-    vertex_state.bufferCount = 1;
-    vertex_state.buffers = &vb_layout;
+    WGPUVertexBufferLayout vb_layout = Vertex::getLayout();
+
+    WGPUVertexState vertex_state{
+        .module = vertex_shader_,
+        .entryPoint = "vs_main",
+        .bufferCount = 1,
+        .buffers = &vb_layout,
+    };
 
     WGPUColorTargetState color_target{
         .format = surface_format_,
         .writeMask = WGPUColorWriteMask_All,
+        .blend = nullptr,
     };
 
+    WGPUBlendState blend_state; // Safely stack-allocated
     if (blending_enabled_) {
-        color_target.blend = new WGPUBlendState{
+        blend_state = {
             .color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha},
             .alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_Zero}
         };
+        color_target.blend = &blend_state;
     }
 
     WGPUFragmentState fragment_state{
@@ -183,10 +188,6 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     };
 
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device_, &pipeline_desc);
-
-    if (color_target.blend) {
-        delete color_target.blend;
-    }
 
     wgpuPipelineLayoutRelease(pipeline_layout);
 

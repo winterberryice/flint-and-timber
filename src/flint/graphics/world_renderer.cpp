@@ -23,8 +23,8 @@ void WorldRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat s
     }
 
     // Create shaders
-    m_vertexShader = init::create_shader_module(device, "World Vertex Shader", WGSL_vertexShaderSource.data());
-    m_fragmentShader = init::create_shader_module(device, "World Fragment Shader", WGSL_fragmentShaderSource.data());
+    m_vertexShader = init::create_shader_module(device, "World Vertex Shader", WGSL_vertexShaderSource);
+    m_fragmentShader = init::create_shader_module(device, "World Fragment Shader", WGSL_fragmentShaderSource);
 
     // Create uniform buffer for camera matrices
     m_uniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));

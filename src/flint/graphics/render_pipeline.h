@@ -52,9 +52,9 @@ public:
 private:
     void cleanup();
 
-    WGPURenderPipeline pipeline_ = nullptr;
-    WGPUBindGroupLayout bind_group_layout_ = nullptr;
-    WGPUBindGroup bind_group_ = nullptr;
+    WGPURenderPipeline m_pipeline = nullptr;
+    WGPUBindGroupLayout m_bindGroupLayout = nullptr;
+    WGPUBindGroup m_bindGroup = nullptr;
 };
 
 } // namespace flint::graphics
