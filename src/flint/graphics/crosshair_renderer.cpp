@@ -37,7 +37,7 @@ namespace flint::graphics
             WGPUCompareFunction_Always,  // Depth test always passes
             false,                       // No blending
             false,                       // No culling
-            WGPULineList,                // Use LineList primitive topology
+            WGPUPrimitiveTopology_LineList, // Use LineList primitive topology
             true                         // Is UI
         );
 

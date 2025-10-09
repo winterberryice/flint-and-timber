@@ -36,7 +36,7 @@ namespace flint::init
     if (depthTextureFormat != WGPUTextureFormat_Undefined)
     {
         depthStencilState.format = depthTextureFormat;
-        depthStencilState.depthWriteEnabled = depthWriteEnabled;
+        depthStencilState.depthWriteEnabled = depthWriteEnabled ? WGPUOptionalBool_True : WGPUOptionalBool_False;
         depthStencilState.depthCompare = depthCompare;
         depthStencilState.stencilReadMask = 0;
         depthStencilState.stencilWriteMask = 0;
