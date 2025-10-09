@@ -14,7 +14,7 @@ namespace flint::graphics
         CrosshairRenderer();
         ~CrosshairRenderer();
 
-        void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat);
+        void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio);
         void render(WGPURenderPassEncoder renderPass);
         void cleanup();
 

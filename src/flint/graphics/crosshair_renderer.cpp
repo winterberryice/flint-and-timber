@@ -12,7 +12,7 @@ namespace flint::graphics
 
     CrosshairRenderer::~CrosshairRenderer() = default;
 
-    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat)
+    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio)
     {
         std::cout << "Initializing crosshair renderer..." << std::endl;
 
@@ -37,12 +37,12 @@ namespace flint::graphics
             WGPUCompareFunction_Always,  // Depth test always passes
             false,                       // No blending
             false,                       // No culling
-            WGPUPrimitiveTopology_LineList, // Use LineList primitive topology
+            WGPUPrimitiveTopology_TriangleList, // Use TriangleList to render quads
             true                         // Is UI
         );
 
         // Create the crosshair mesh
-        m_crosshairMesh.generate(device);
+        m_crosshairMesh.generate(device, aspectRatio);
 
         std::cout << "Crosshair renderer initialized." << std::endl;
     }

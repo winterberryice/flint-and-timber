@@ -47,7 +47,7 @@ namespace flint
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
 
-        m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat);
+        m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, (float)m_windowWidth / (float)m_windowHeight);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.

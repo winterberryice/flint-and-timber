@@ -7,18 +7,36 @@
 namespace flint::graphics
 {
 
-    void CrosshairMesh::generate(WGPUDevice device)
+void CrosshairMesh::generate(WGPUDevice device, float aspectRatio)
     {
-        // A simple crosshair mesh '+'
-        const float size = 0.05f;
-        std::vector<float> vertices = {
-            // Horizontal line
-            -size, 0.0f,
-            size, 0.0f,
+    const float length = 0.05f;    // The length of the lines as a proportion of screen height
+    const float thickness = 0.005f; // The thickness of the lines as a proportion of screen height
 
-            // Vertical line
-            0.0f, -size,
-            0.0f, size,
+    // Adjust for aspect ratio to make the lines appear equal in length
+    const float h_len = length / aspectRatio; // Horizontal length adjusted for aspect ratio
+    const float v_len = length;               // Vertical length
+
+    const float h_thick = thickness;              // Horizontal thickness
+    const float v_thick = thickness / aspectRatio; // Vertical thickness adjusted for aspect ratio
+
+        std::vector<float> vertices = {
+        // Horizontal bar (two triangles)
+        -h_len / 2, h_thick / 2,
+        -h_len / 2, -h_thick / 2,
+        h_len / 2, -h_thick / 2,
+
+        h_len / 2, -h_thick / 2,
+        h_len / 2, h_thick / 2,
+        -h_len / 2, h_thick / 2,
+
+        // Vertical bar (two triangles)
+        -v_thick / 2, v_len / 2,
+        -v_thick / 2, -v_len / 2,
+        v_thick / 2, -v_len / 2,
+
+        v_thick / 2, -v_len / 2,
+        v_thick / 2, v_len / 2,
+        -v_thick / 2, v_len / 2,
         };
 
         m_vertexCount = static_cast<uint32_t>(vertices.size() / 2);
