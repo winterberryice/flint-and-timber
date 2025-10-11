@@ -20,9 +20,9 @@ void SelectionRenderer::init(WGPUDevice device,
     std::cout << "Initializing selection renderer..." << std::endl;
 
     // Create shaders
-    m_vertexShader = init::create_shader_module(device, "Selection Vertex Shader", SELECTION_WGSL_vertexShaderSource);
+    m_vertexShader = init::create_shader_module(device, "Selection Vertex Shader", SELECTION_WGSL_vertexShaderSource.data());
     m_fragmentShader =
-        init::create_shader_module(device, "Selection Fragment Shader", SELECTION_WGSL_fragmentShaderSource);
+        init::create_shader_module(device, "Selection Fragment Shader", SELECTION_WGSL_fragmentShaderSource.data());
 
     // Create uniform buffers
     m_cameraUniformBuffer = init::create_uniform_buffer(device, "Camera Uniform Buffer", sizeof(CameraUniform));

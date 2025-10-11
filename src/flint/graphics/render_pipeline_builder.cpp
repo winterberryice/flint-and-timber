@@ -141,8 +141,8 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
 
     WGPUColorTargetState color_target{
         .format = surface_format_,
-        .writeMask = WGPUColorWriteMask_All,
         .blend = nullptr,
+        .writeMask = WGPUColorWriteMask_All,
     };
 
     WGPUBlendState blend_state; // Safely stack-allocated
