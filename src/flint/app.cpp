@@ -173,9 +173,9 @@ namespace flint
         // Update camera aspect ratio
         m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
         if (m_camera.aspect < m_initialAspectRatio) {
-            m_camera.fovy = m_initialFovY * m_initialAspectRatio / m_camera.aspect;
+            m_camera.fovy_rads = glm::radians(m_initialFovY * m_initialAspectRatio / m_camera.aspect);
         } else {
-            m_camera.fovy = m_initialFovY;
+            m_camera.fovy_rads = glm::radians(m_initialFovY);
         }
 
         // Update crosshair
