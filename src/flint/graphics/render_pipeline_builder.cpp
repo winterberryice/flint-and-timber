@@ -75,38 +75,43 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     // --- Bind Group Layout ---
     std::vector<WGPUBindGroupLayoutEntry> bg_layout_entries;
     std::vector<WGPUBindGroupEntry> bg_entries;
+    uint32_t binding_index = 0;
 
     if (camera_uniform_) {
         bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
-            .binding = 0,
+            .binding = binding_index,
             .visibility = WGPUShaderStage_Vertex,
             .buffer = {.type = WGPUBufferBindingType_Uniform},
         });
-        bg_entries.push_back(WGPUBindGroupEntry{.binding = 0, .buffer = camera_uniform_, .size = WGPU_WHOLE_SIZE});
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = binding_index, .buffer = camera_uniform_, .size = WGPU_WHOLE_SIZE});
+        binding_index++;
     }
     if (model_uniform_) {
         bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
-            .binding = 1,
+            .binding = binding_index,
             .visibility = WGPUShaderStage_Vertex,
             .buffer = {.type = WGPUBufferBindingType_Uniform},
         });
-        bg_entries.push_back(WGPUBindGroupEntry{.binding = 1, .buffer = model_uniform_, .size = WGPU_WHOLE_SIZE});
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = binding_index, .buffer = model_uniform_, .size = WGPU_WHOLE_SIZE});
+        binding_index++;
     }
     if (texture_view_) {
         bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
-            .binding = 2,
+            .binding = binding_index,
             .visibility = WGPUShaderStage_Fragment,
             .texture = {.sampleType = WGPUTextureSampleType_Float},
         });
-        bg_entries.push_back(WGPUBindGroupEntry{.binding = 2, .textureView = texture_view_});
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = binding_index, .textureView = texture_view_});
+        binding_index++;
     }
     if (sampler_) {
         bg_layout_entries.push_back(WGPUBindGroupLayoutEntry{
-            .binding = 3,
+            .binding = binding_index,
             .visibility = WGPUShaderStage_Fragment,
             .sampler = {.type = WGPUSamplerBindingType_Filtering},
         });
-        bg_entries.push_back(WGPUBindGroupEntry{.binding = 3, .sampler = sampler_});
+        bg_entries.push_back(WGPUBindGroupEntry{.binding = binding_index, .sampler = sampler_});
+        binding_index++;
     }
 
     WGPUBindGroupLayoutDescriptor bg_layout_desc{
@@ -134,9 +139,10 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device_, &layout_desc);
 
     // --- Shaders ---
-    WGPUVertexState vertex_state{};
-    vertex_state.module = vertex_shader_;
-    vertex_state.entryPoint = "vs_main";
+    WGPUVertexState vertex_state{
+        .module = vertex_shader_,
+        .entryPoint = "vs_main",
+    };
 
     WGPUVertexBufferLayout vb_layout;
     if (use_vertex_buffer_) {
