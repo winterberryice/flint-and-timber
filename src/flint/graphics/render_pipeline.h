@@ -11,34 +11,11 @@ namespace flint::graphics
         RenderPipeline();
         ~RenderPipeline();
 
-        void init(
-            WGPUDevice device,
-            WGPUShaderModule vertexShader,
-            WGPUShaderModule fragmentShader,
-            WGPUTextureFormat surfaceFormat,
-            WGPUTextureFormat depthTextureFormat,
-            WGPUBuffer cameraUniformBuffer,
-            WGPUBuffer modelUniformBuffer,
-            WGPUTextureView textureView,
-            WGPUSampler sampler,
-            bool useTexture,
-            bool useModel,
-            bool depthWriteEnabled,
-            WGPUCompareFunction depthCompare,
-            bool useBlending,
-            bool useCulling,
-            WGPUPrimitiveTopology primitiveTopology = WGPUPrimitiveTopology_TriangleList,
-            bool isUi = false);
-
         void cleanup();
 
-        WGPURenderPipeline getPipeline() const;
-        WGPUBindGroup getBindGroup() const;
-
-    private:
-        WGPURenderPipeline m_pipeline = nullptr;
-        WGPUBindGroupLayout m_bindGroupLayout = nullptr;
-        WGPUBindGroup m_bindGroup = nullptr;
+        WGPURenderPipeline pipeline = nullptr;
+        WGPUBindGroupLayout bindGroupLayout = nullptr;
+        WGPUBindGroup bindGroup = nullptr;
     };
 
 } // namespace flint::graphics

@@ -1,90 +1,27 @@
 #include "render_pipeline.h"
 
-#include "../init/pipeline.h"
-
 namespace flint::graphics
 {
-
     RenderPipeline::RenderPipeline() = default;
 
     RenderPipeline::~RenderPipeline() = default;
 
-    void RenderPipeline::init(
-        WGPUDevice device,
-        WGPUShaderModule vertexShader,
-        WGPUShaderModule fragmentShader,
-        WGPUTextureFormat surfaceFormat,
-        WGPUTextureFormat depthTextureFormat,
-        WGPUBuffer cameraUniformBuffer,
-        WGPUBuffer modelUniformBuffer,
-        WGPUTextureView textureView,
-        WGPUSampler sampler,
-        bool useTexture,
-        bool useModel,
-        bool depthWriteEnabled,
-        WGPUCompareFunction depthCompare,
-        bool useBlending,
-    bool useCulling,
-    WGPUPrimitiveTopology primitiveTopology,
-    bool isUi)
-    {
-        m_pipeline = flint::init::create_render_pipeline(
-            device,
-            vertexShader,
-            fragmentShader,
-            surfaceFormat,
-            depthTextureFormat,
-            &m_bindGroupLayout,
-            useTexture,
-            useModel,
-            depthWriteEnabled,
-            depthCompare,
-            useBlending,
-        useCulling,
-        primitiveTopology,
-        isUi);
-
-    if (!isUi)
-    {
-        m_bindGroup = flint::init::create_bind_group(
-            device,
-            m_bindGroupLayout,
-            cameraUniformBuffer,
-            modelUniformBuffer,
-            textureView,
-            sampler,
-            useTexture,
-            useModel);
-    }
-    }
-
     void RenderPipeline::cleanup()
     {
-        if (m_bindGroup)
+        if (bindGroup)
         {
-            wgpuBindGroupRelease(m_bindGroup);
-            m_bindGroup = nullptr;
+            wgpuBindGroupRelease(bindGroup);
+            bindGroup = nullptr;
         }
-        if (m_bindGroupLayout)
+        if (bindGroupLayout)
         {
-            wgpuBindGroupLayoutRelease(m_bindGroupLayout);
-            m_bindGroupLayout = nullptr;
+            wgpuBindGroupLayoutRelease(bindGroupLayout);
+            bindGroupLayout = nullptr;
         }
-        if (m_pipeline)
+        if (pipeline)
         {
-            wgpuRenderPipelineRelease(m_pipeline);
-            m_pipeline = nullptr;
+            wgpuRenderPipelineRelease(pipeline);
+            pipeline = nullptr;
         }
     }
-
-    WGPURenderPipeline RenderPipeline::getPipeline() const
-    {
-        return m_pipeline;
-    }
-
-    WGPUBindGroup RenderPipeline::getBindGroup() const
-    {
-        return m_bindGroup;
-    }
-
 } // namespace flint::graphics
