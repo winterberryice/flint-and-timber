@@ -139,20 +139,17 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device_, &layout_desc);
 
     // --- Shaders ---
-    WGPUVertexState vertex_state{
-        .module = vertex_shader_,
-        .entryPoint = "vs_main",
-    };
-
     WGPUVertexBufferLayout vb_layout;
     if (use_vertex_buffer_) {
         vb_layout = Vertex::getLayout();
-        vertex_state.bufferCount = 1;
-        vertex_state.buffers = &vb_layout;
-    } else {
-        vertex_state.bufferCount = 0;
-        vertex_state.buffers = nullptr;
     }
+
+    WGPUVertexState vertex_state {
+        .module = vertex_shader_,
+        .entryPoint = "vs_main",
+        .bufferCount = use_vertex_buffer_ ? 1u : 0u,
+        .buffers = use_vertex_buffer_ ? &vb_layout : nullptr,
+    };
 
     WGPUColorTargetState color_target{
         .nextInChain = nullptr,
