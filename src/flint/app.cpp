@@ -115,6 +115,10 @@ namespace flint
                         m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
                     }
                 }
+                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && e.button.button == SDL_BUTTON_LEFT)
+                {
+                    SDL_SetWindowRelativeMouseMode(m_window, true);
+                }
             }
 
             // Update player physics and state
