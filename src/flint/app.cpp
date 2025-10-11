@@ -142,6 +142,20 @@ namespace flint
         m_windowWidth = width;
         m_windowHeight = height;
 
+        // Reconfigure the surface
+        WGPUSurfaceConfiguration surfaceConfig = {};
+        surfaceConfig.nextInChain = nullptr;
+        surfaceConfig.device = m_device;
+        surfaceConfig.format = m_surfaceFormat;
+        surfaceConfig.usage = WGPUTextureUsage_RenderAttachment;
+        surfaceConfig.width = m_windowWidth;
+        surfaceConfig.height = m_windowHeight;
+        surfaceConfig.presentMode = WGPUPresentMode_Fifo;
+        surfaceConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
+        surfaceConfig.viewFormatCount = 0;
+        surfaceConfig.viewFormats = nullptr;
+        wgpuSurfaceConfigure(m_surface, &surfaceConfig);
+
         // Re-create depth texture
         if (m_depthTextureView)
             wgpuTextureViewRelease(m_depthTextureView);
