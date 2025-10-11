@@ -24,8 +24,8 @@ namespace flint
               0.1f)
     {
         std::cout << "Initializing app..." << std::endl;
-        m_windowWidth = 800;
-        m_windowHeight = 600;
+        m_windowWidth = 1280;
+        m_windowHeight = 720;
         m_window = init::sdl(m_windowWidth, m_windowHeight);
         SDL_SetWindowRelativeMouseMode(m_window, true);
 
