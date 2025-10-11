@@ -1,8 +1,10 @@
 #include "crosshair_renderer.h"
 
 #include <iostream>
+#include <vector>
 
 #include "../init/shader.h"
+#include "../init/utils.h"
 #include "../crosshair_shader.wgsl.h"
 
 namespace flint::graphics
@@ -20,26 +22,78 @@ namespace flint::graphics
         m_vertexShader = init::create_shader_module(device, "Crosshair Vertex Shader", CROSSHAIR_WGSL_vertexShaderSource.data());
         m_fragmentShader = init::create_shader_module(device, "Crosshair Fragment Shader", CROSSHAIR_WGSL_fragmentShaderSource.data());
 
-        // Create render pipeline
-        m_renderPipeline.init(
-            device,
-            m_vertexShader,
-            m_fragmentShader,
-            surfaceFormat,
-            WGPUTextureFormat_Undefined, // No depth texture
-            nullptr,                     // No camera uniform buffer
-            nullptr,                     // No model uniform buffer
-            nullptr,                     // No texture view
-            nullptr,                     // No sampler
-            false,                       // Do not use texture
-            false,                       // Do not use model matrix
-            false,                       // Do not write to depth buffer
-            WGPUCompareFunction_Always,  // Depth test always passes
-            false,                       // No blending
-            false,                       // No culling
-            WGPUPrimitiveTopology_TriangleList, // Use TriangleList to render quads
-            true                         // Is UI
-        );
+        // Create Render Pipeline
+        {
+            // The crosshair is a UI element, so it doesn't need a bind group layout.
+            m_renderPipeline.bindGroupLayout = nullptr;
+
+            // Create pipeline layout
+            WGPUPipelineLayoutDescriptor pipelineLayoutDesc = {};
+            pipelineLayoutDesc.bindGroupLayoutCount = 0;
+            pipelineLayoutDesc.bindGroupLayouts = nullptr;
+            WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineLayoutDesc);
+
+            // Vertex layout for UI
+            std::vector<WGPUVertexAttribute> vertexAttributes(1);
+            // position
+            vertexAttributes[0].format = WGPUVertexFormat_Float32x2;
+            vertexAttributes[0].offset = 0;
+            vertexAttributes[0].shaderLocation = 0;
+
+            WGPUVertexBufferLayout vertexBufferLayout = {};
+            vertexBufferLayout.arrayStride = 2 * sizeof(float);
+            vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+            vertexBufferLayout.attributeCount = vertexAttributes.size();
+            vertexBufferLayout.attributes = vertexAttributes.data();
+
+            // Create render pipeline descriptor
+            WGPURenderPipelineDescriptor pipelineDescriptor = {};
+            pipelineDescriptor.label = init::makeStringView("Crosshair Render Pipeline");
+
+            // Vertex state
+            pipelineDescriptor.vertex.module = m_vertexShader;
+            pipelineDescriptor.vertex.entryPoint = init::makeStringView("vs_main");
+            pipelineDescriptor.vertex.bufferCount = 1;
+            pipelineDescriptor.vertex.buffers = &vertexBufferLayout;
+
+            // Fragment state
+            WGPUFragmentState fragmentState = {};
+            fragmentState.module = m_fragmentShader;
+            fragmentState.entryPoint = init::makeStringView("fs_main");
+
+            // Color target
+            WGPUColorTargetState colorTarget = {};
+            colorTarget.format = surfaceFormat;
+            colorTarget.writeMask = WGPUColorWriteMask_All;
+            colorTarget.blend = nullptr; // No blending
+
+            fragmentState.targetCount = 1;
+            fragmentState.targets = &colorTarget;
+            pipelineDescriptor.fragment = &fragmentState;
+
+            // Primitive state
+            pipelineDescriptor.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+            pipelineDescriptor.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+            pipelineDescriptor.primitive.frontFace = WGPUFrontFace_CCW;
+            pipelineDescriptor.primitive.cullMode = WGPUCullMode_None;
+
+            // No depth stencil
+            pipelineDescriptor.depthStencil = nullptr;
+
+            // Multisample state
+            pipelineDescriptor.multisample.count = 1;
+            pipelineDescriptor.multisample.mask = 0xFFFFFFFF;
+            pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
+
+            pipelineDescriptor.layout = pipelineLayout;
+
+            m_renderPipeline.pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDescriptor);
+
+            wgpuPipelineLayoutRelease(pipelineLayout);
+        }
+
+        // The crosshair has no uniforms, so the bind group is not needed.
+        m_renderPipeline.bindGroup = nullptr;
 
         // Create the crosshair mesh
         m_crosshairMesh.generate(device, aspectRatio);
@@ -50,7 +104,7 @@ namespace flint::graphics
     void CrosshairRenderer::render(WGPURenderPassEncoder renderPass)
     {
         // Set pipeline and draw the crosshair
-        wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.getPipeline());
+        wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.pipeline);
         m_crosshairMesh.render(renderPass);
     }
 
