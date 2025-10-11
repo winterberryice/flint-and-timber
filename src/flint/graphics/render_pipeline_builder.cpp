@@ -66,6 +66,11 @@ auto RenderPipelineBuilder::enable_culling(bool enabled) -> RenderPipelineBuilde
     return *this;
 }
 
+auto RenderPipelineBuilder::uses_vertex_buffer(bool enabled) -> RenderPipelineBuilder & {
+    use_vertex_buffer_ = enabled;
+    return *this;
+}
+
 auto RenderPipelineBuilder::build() -> RenderPipeline {
     // --- Bind Group Layout ---
     std::vector<WGPUBindGroupLayoutEntry> bg_layout_entries;
@@ -129,15 +134,19 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     WGPUPipelineLayout pipeline_layout = wgpuDeviceCreatePipelineLayout(device_, &layout_desc);
 
     // --- Shaders ---
-    // Vertex buffer layout
-    WGPUVertexBufferLayout vb_layout = Vertex::getLayout();
+    WGPUVertexState vertex_state{};
+    vertex_state.module = vertex_shader_;
+    vertex_state.entryPoint = "vs_main";
 
-    WGPUVertexState vertex_state{
-        .module = vertex_shader_,
-        .entryPoint = "vs_main",
-        .bufferCount = 1,
-        .buffers = &vb_layout,
-    };
+    WGPUVertexBufferLayout vb_layout;
+    if (use_vertex_buffer_) {
+        vb_layout = Vertex::getLayout();
+        vertex_state.bufferCount = 1;
+        vertex_state.buffers = &vb_layout;
+    } else {
+        vertex_state.bufferCount = 0;
+        vertex_state.buffers = nullptr;
+    }
 
     WGPUColorTargetState color_target{
         .nextInChain = nullptr,

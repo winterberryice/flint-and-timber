@@ -76,6 +76,11 @@ public:
     auto enable_culling(bool enabled) -> RenderPipelineBuilder &;
 
     /**
+     * @brief Specifies whether the pipeline uses a vertex buffer. Defaults to true.
+     */
+    auto uses_vertex_buffer(bool enabled) -> RenderPipelineBuilder &;
+
+    /**
      * @brief Builds the render pipeline with the specified configuration.
      * @return A configured RenderPipeline object.
      */
@@ -96,6 +101,7 @@ private:
     WGPUCompareFunction depth_compare_ = WGPUCompareFunction_Always;
     bool blending_enabled_ = false;
     bool culling_enabled_ = false;
+    bool use_vertex_buffer_ = true;
 };
 
 } // namespace flint::graphics

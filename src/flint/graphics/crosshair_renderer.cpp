@@ -21,6 +21,7 @@ void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureForm
     m_renderPipeline = RenderPipelineBuilder(device)
                            .with_shaders(m_vertexShader, m_fragmentShader)
                            .with_surface_format(surfaceFormat)
+                           .uses_vertex_buffer(false)
                            .build();
 
     // Create the crosshair mesh
