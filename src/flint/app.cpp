@@ -99,11 +99,21 @@ namespace flint
                 }
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
                 {
-                    m_running = false;
+                    if (SDL_GetWindowRelativeMouseMode(m_window))
+                    {
+                        SDL_SetWindowRelativeMouseMode(m_window, false);
+                    }
+                    else
+                    {
+                        m_running = false;
+                    }
                 }
                 else if (e.type == SDL_EVENT_MOUSE_MOTION)
                 {
-                    m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
+                    if (SDL_GetWindowRelativeMouseMode(m_window))
+                    {
+                        m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
+                    }
                 }
             }
 
