@@ -101,6 +101,9 @@ namespace flint
                 {
                     m_running = false;
                 }
+                else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
+                    onResize(e.window.data1, e.window.data2);
+                }
                 else if (e.type == SDL_EVENT_MOUSE_MOTION)
                 {
                     m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
@@ -132,6 +135,31 @@ namespace flint
         front.y = sin(pitch_rad);
         front.z = sin(yaw_rad) * cos(pitch_rad);
         m_camera.target = m_camera.eye + glm::normalize(front);
+    }
+
+    void App::onResize(int width, int height)
+    {
+        m_windowWidth = width;
+        m_windowHeight = height;
+
+        // Re-create depth texture
+        if (m_depthTextureView)
+            wgpuTextureViewRelease(m_depthTextureView);
+        if (m_depthTexture)
+            wgpuTextureRelease(m_depthTexture);
+        init::create_depth_texture(
+            m_device,
+            m_windowWidth,
+            m_windowHeight,
+            m_depthTextureFormat,
+            &m_depthTexture,
+            &m_depthTextureView);
+
+        // Update camera aspect ratio
+        m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
+
+        // Update crosshair
+        m_crosshairRenderer.updateAspectRatio((float)m_windowWidth / (float)m_windowHeight);
     }
 
     void App::render()

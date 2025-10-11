@@ -108,6 +108,13 @@ namespace flint::graphics
         m_crosshairMesh.render(renderPass);
     }
 
+    void CrosshairRenderer::updateAspectRatio(float aspectRatio)
+    {
+        // The device is not available here. The mesh needs to be regenerated.
+        // This is a bit of a hack, but it's the simplest way to do it without a major refactor.
+        m_crosshairMesh.updateAspectRatio(aspectRatio);
+    }
+
     void CrosshairRenderer::cleanup()
     {
         std::cout << "Cleaning up crosshair renderer..." << std::endl;

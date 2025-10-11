@@ -17,6 +17,7 @@ namespace flint::graphics
         void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio);
         void render(WGPURenderPassEncoder renderPass);
         void cleanup();
+        void updateAspectRatio(float aspectRatio);
 
     private:
         WGPUShaderModule m_vertexShader = nullptr;

@@ -25,6 +25,7 @@ namespace flint
     private:
         void render();
         void update_camera();
+        void onResize(int width, int height);
 
     private:
         // SDL resources
