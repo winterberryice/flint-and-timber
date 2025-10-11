@@ -140,6 +140,7 @@ auto RenderPipelineBuilder::build() -> RenderPipeline {
     };
 
     WGPUColorTargetState color_target{
+        .nextInChain = nullptr,
         .format = surface_format_,
         .blend = nullptr,
         .writeMask = WGPUColorWriteMask_All,
