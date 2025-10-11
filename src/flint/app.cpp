@@ -26,6 +26,7 @@ namespace flint
         std::cout << "Initializing app..." << std::endl;
         m_windowWidth = 1280;
         m_windowHeight = 720;
+        m_initialAspectRatio = (float)m_windowWidth / (float)m_windowHeight;
         m_window = init::sdl(m_windowWidth, m_windowHeight);
         SDL_SetWindowRelativeMouseMode(m_window, true);
 
@@ -47,7 +48,7 @@ namespace flint
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
 
-        m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, (float)m_windowWidth / (float)m_windowHeight);
+        m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
@@ -56,7 +57,7 @@ namespace flint
             {0.0f, 0.0f, -1.0f},                          // target (will be overwritten)
             {0.0f, 1.0f, 0.0f},                           // up
             (float)m_windowWidth / (float)m_windowHeight, // aspect
-            45.0f,                                        // fovy
+            m_initialFovY,                                // fovy
             0.1f,                                         // znear
             1000.0f                                       // zfar
         );
@@ -171,9 +172,14 @@ namespace flint
 
         // Update camera aspect ratio
         m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
+        if (m_camera.aspect < m_initialAspectRatio) {
+            m_camera.fovy = m_initialFovY * m_initialAspectRatio / m_camera.aspect;
+        } else {
+            m_camera.fovy = m_initialFovY;
+        }
 
         // Update crosshair
-        m_crosshairRenderer.updateAspectRatio((float)m_windowWidth / (float)m_windowHeight);
+        m_crosshairRenderer.onResize(m_windowWidth, m_windowHeight);
     }
 
     void App::render()

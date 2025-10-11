@@ -11,10 +11,10 @@ namespace flint::graphics
         CrosshairMesh() = default;
         ~CrosshairMesh() = default;
 
-        void generate(WGPUDevice device, float aspectRatio);
+        void generate(WGPUDevice device, int width, int height);
         void render(WGPURenderPassEncoder renderPass) const;
         void cleanup();
-        void updateAspectRatio(float aspectRatio);
+        void onResize(int width, int height);
 
     private:
         WGPUDevice m_device = nullptr;

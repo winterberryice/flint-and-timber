@@ -14,7 +14,7 @@ namespace flint::graphics
 
     CrosshairRenderer::~CrosshairRenderer() = default;
 
-    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio)
+    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, int width, int height)
     {
         std::cout << "Initializing crosshair renderer..." << std::endl;
 
@@ -96,7 +96,7 @@ namespace flint::graphics
         m_renderPipeline.bindGroup = nullptr;
 
         // Create the crosshair mesh
-        m_crosshairMesh.generate(device, aspectRatio);
+        m_crosshairMesh.generate(device, width, height);
 
         std::cout << "Crosshair renderer initialized." << std::endl;
     }
@@ -108,11 +108,9 @@ namespace flint::graphics
         m_crosshairMesh.render(renderPass);
     }
 
-    void CrosshairRenderer::updateAspectRatio(float aspectRatio)
+    void CrosshairRenderer::onResize(int width, int height)
     {
-        // The device is not available here. The mesh needs to be regenerated.
-        // This is a bit of a hack, but it's the simplest way to do it without a major refactor.
-        m_crosshairMesh.updateAspectRatio(aspectRatio);
+        m_crosshairMesh.onResize(width, height);
     }
 
     void CrosshairRenderer::cleanup()
