@@ -16,10 +16,13 @@ namespace flint
     {
     public:
         // Constructor, equivalent to `new()` and the `Default` trait implementation.
-        Chunk();
+        Chunk(int chunkX, int chunkZ);
 
         // Member function to generate the chunk's terrain.
         void generateTerrain();
+
+        int getChunkX() const { return m_chunkX; }
+        int getChunkZ() const { return m_chunkZ; }
 
         // Gets a read-only pointer to a block.
         // Returning a pointer (`const Block*`) is the C++ equivalent of Rust's `Option<&Block>`.
@@ -36,6 +39,9 @@ namespace flint
         bool is_solid(int x, int y, int z) const;
 
     private:
+        int m_chunkX;
+        int m_chunkZ;
+
         // A 3D C-style array is much more efficient than a Vec<Vec<Vec<...>>>
         // for a fixed-size grid. It allocates all blocks in a single contiguous memory block.
         Block m_blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];

@@ -11,7 +11,7 @@ namespace flint
         auto key = std::make_pair(chunkX, chunkZ);
         if (m_chunks.find(key) == m_chunks.end())
         {
-            auto newChunk = std::make_unique<Chunk>();
+            auto newChunk = std::make_unique<Chunk>(chunkX, chunkZ);
             newChunk->generateTerrain();
             m_chunks[key] = std::move(newChunk);
         }

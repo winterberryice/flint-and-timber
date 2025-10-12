@@ -184,12 +184,13 @@ namespace flint
 
                                 for (size_t j = 0; j < faceVertices.size(); ++j)
                                 {
+                                    glm::vec3 world_pos = faceVertices[j].position + glm::vec3(
+                                                                                       x + chunk.getChunkX() * CHUNK_WIDTH,
+                                                                                       y,
+                                                                                       z + chunk.getChunkZ() * CHUNK_DEPTH);
                                     vertices.push_back({
-                                        // Offset the vertex position by the block's position in the chunk.
-                                        .position = faceVertices[j].position + glm::vec3(x, y, z),
-                                        // The color is now used for lighting/tinting.
+                                        .position = world_pos,
                                         .color = face_info.color,
-                                        // Assign the UV coordinates for this vertex.
                                         .uv = face_info.uvs[j],
                                     });
                                 }
