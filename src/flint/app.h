@@ -26,6 +26,7 @@ namespace flint
         void render();
         void update_camera();
         void onResize(int width, int height);
+        void rebuildChunkMeshesForBlock(const glm::ivec3 &blockPosition);
 
     private:
         // SDL resources

@@ -139,8 +139,7 @@ namespace flint
                             {
                                 if (m_world.setBlock(selected_block->block_position, BlockType::Air))
                                 {
-                                    auto [chunkCoords, localCoords] = World::worldToChunkCoordinates(glm::vec3(selected_block->block_position));
-                                    m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y));
+                                    rebuildChunkMeshesForBlock(selected_block->block_position);
                                 }
                             }
                             m_leftClickCooldown = m_actionCooldown;
@@ -161,8 +160,7 @@ namespace flint
                                 {
                                     if (m_world.setBlock(place_position, BlockType::Grass))
                                     {
-                                        auto [chunkCoords, localCoords] = World::worldToChunkCoordinates(glm::vec3(place_position));
-                                        m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y));
+                                        rebuildChunkMeshesForBlock(place_position);
                                     }
                                 }
                             }
@@ -299,6 +297,31 @@ namespace flint
         }
 
         wgpuTextureRelease(surfaceTexture.texture);
+    }
+
+    void App::rebuildChunkMeshesForBlock(const glm::ivec3 &blockPosition)
+    {
+        auto [chunkCoords, localCoords] = World::worldToChunkCoordinates(glm::vec3(blockPosition));
+        m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y));
+
+        // Check and update neighboring chunks if the block is on a border
+        if (localCoords.x == 0)
+        {
+            m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x - 1, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x - 1, chunkCoords.y));
+        }
+        else if (localCoords.x == CHUNK_WIDTH - 1)
+        {
+            m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x + 1, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x + 1, chunkCoords.y));
+        }
+
+        if (localCoords.z == 0)
+        {
+            m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y - 1, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y - 1));
+        }
+        else if (localCoords.z == CHUNK_DEPTH - 1)
+        {
+            m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y + 1, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y + 1));
+        }
     }
 
     App::~App()
