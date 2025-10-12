@@ -173,7 +173,14 @@ namespace flint
 
         // Update camera aspect ratio
         m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
-        m_camera.fovy_rads = 2.0f * atan(tan(m_initialFovX / 2.0f) / m_camera.aspect);
+
+        if (m_camera.aspect >= m_initialAspectRatio) {
+            // Wider than initial aspect ratio, so lock vertical FOV and expand horizontal
+            m_camera.fovy_rads = glm::radians(m_initialFovY);
+        } else {
+            // Taller than initial aspect ratio, so lock horizontal FOV and expand vertical
+            m_camera.fovy_rads = 2.0f * atan(tan(m_initialFovX / 2.0f) / m_camera.aspect);
+        }
 
         // Update crosshair
         m_crosshairRenderer.onResize(m_windowWidth, m_windowHeight);
