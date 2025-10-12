@@ -11,8 +11,8 @@ void CrosshairMesh::generate(WGPUDevice device, int width, int height)
     {
     m_device = device;
 
-    const float crosshair_len_px = 20.0f;
-    const float crosshair_thickness_px = 2.0f;
+    const float crosshair_len_px = 40.0f;
+    const float crosshair_thickness_px = 4.0f;
 
     float h_len = crosshair_len_px / width;
     float v_len = crosshair_len_px / height;
@@ -70,8 +70,8 @@ void CrosshairMesh::generate(WGPUDevice device, int width, int height)
             m_vertexBuffer = nullptr;
         }
 
-        const float crosshair_len_px = 20.0f;
-        const float crosshair_thickness_px = 2.0f;
+        const float crosshair_len_px = 40.0f;
+        const float crosshair_thickness_px = 4.0f;
 
         float h_len = crosshair_len_px / width;
         float v_len = crosshair_len_px / height;
