@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <optional>
 
-#include "chunk.h"
+#include "world.h"
 
 namespace flint
 {
@@ -12,13 +12,13 @@ namespace flint
         struct RaycastResult
         {
             glm::ivec3 block_position;
-            // Can add face information later if needed
+            glm::ivec3 normal;
         };
 
         std::optional<RaycastResult> raycast(
             const glm::vec3 &ray_origin,
             const glm::vec3 &ray_direction,
             float max_distance,
-            const flint::Chunk &chunk);
+            const flint::World *world);
     }
 }

@@ -124,7 +124,7 @@ namespace flint
                     {
                         if (m_leftClickCooldown <= 0)
                         {
-                            auto selected_block = raycast(m_camera.eye, m_camera.target - m_camera.eye, &m_world);
+                            auto selected_block = raycast::raycast(m_camera.eye, m_camera.target - m_camera.eye, 5.0f, &m_world);
                             if (selected_block.has_value())
                             {
                                 if (m_world.setBlock(selected_block->block_position, BlockType::Air))
@@ -141,7 +141,7 @@ namespace flint
                     {
                         if (m_rightClickCooldown <= 0)
                         {
-                            auto selected_block = raycast(m_camera.eye, m_camera.target - m_camera.eye, &m_world);
+                            auto selected_block = raycast::raycast(m_camera.eye, m_camera.target - m_camera.eye, 5.0f, &m_world);
                             if (selected_block.has_value())
                             {
                                 glm::ivec3 place_position = selected_block->block_position + selected_block->normal;
@@ -257,7 +257,7 @@ namespace flint
             // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
             m_worldRenderer.render(renderPass, m_queue, m_camera, m_world);
-            auto selected_block = raycast(m_camera.eye, m_camera.target - m_camera.eye, &m_world);
+            auto selected_block = raycast::raycast(m_camera.eye, m_camera.target - m_camera.eye, 5.0f, &m_world);
             std::optional<glm::ivec3> selected_block_pos;
             if (selected_block.has_value())
             {
