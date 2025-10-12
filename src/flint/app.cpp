@@ -77,6 +77,16 @@ namespace flint
     {
         std::cout << "Running app..." << std::endl;
 
+        // Generate and build initial chunks
+        for (int x = -1; x <= 1; ++x)
+        {
+            for (int z = -1; z <= 1; ++z)
+            {
+                Chunk *chunk = m_world.getOrCreateChunk(x, z);
+                m_worldRenderer.rebuildChunkMesh(m_device, x, z, *chunk);
+            }
+        }
+
         uint64_t last_tick = SDL_GetPerformanceCounter();
 
         SDL_Event e;
