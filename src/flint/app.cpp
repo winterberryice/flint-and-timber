@@ -26,8 +26,6 @@ namespace flint
         std::cout << "Initializing app..." << std::endl;
         m_windowWidth = 1280;
         m_windowHeight = 720;
-        m_initialAspectRatio = (float)m_windowWidth / (float)m_windowHeight;
-        m_initialFovX = 2.0f * atan(tan(glm::radians(m_initialFovY) / 2.0f) * m_initialAspectRatio);
         m_window = init::sdl(m_windowWidth, m_windowHeight);
         SDL_SetWindowRelativeMouseMode(m_window, true);
 
@@ -173,14 +171,7 @@ namespace flint
 
         // Update camera aspect ratio
         m_camera.aspect = (float)m_windowWidth / (float)m_windowHeight;
-
-        if (m_camera.aspect >= m_initialAspectRatio) {
-            // Wider than initial aspect ratio, so lock vertical FOV and expand horizontal
-            m_camera.fovy_rads = glm::radians(m_initialFovY);
-        } else {
-            // Taller than initial aspect ratio, so lock horizontal FOV and expand vertical
-            m_camera.fovy_rads = 2.0f * atan(tan(m_initialFovX / 2.0f) / m_camera.aspect);
-        }
+        m_camera.fovy_rads = glm::radians(m_initialFovY);
 
         // Update crosshair
         m_crosshairRenderer.onResize(m_windowWidth, m_windowHeight);
