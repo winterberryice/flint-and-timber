@@ -1,5 +1,5 @@
 #include "player.h"
-#include "chunk.h"
+#include "world.h"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -9,7 +9,7 @@ namespace flint
     namespace player
     {
         // Helper function to get AABBs of solid blocks near the player
-        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::Chunk &chunk)
+        std::vector<physics::AABB> get_nearby_block_aabbs(const physics::AABB &player_world_box, const flint::World &world)
         {
             std::vector<physics::AABB> nearby_blocks;
 
@@ -27,7 +27,8 @@ namespace flint
                 {
                     for (int bz = min_bz; bz < max_bz; ++bz)
                     {
-                        if (chunk.is_solid(bx, by, bz))
+                        const Block *block = world.getBlock({bx, by, bz});
+                        if (block && block->isSolid())
                         {
                             glm::vec3 block_min_corner(static_cast<float>(bx), static_cast<float>(by), static_cast<float>(bz));
                             glm::vec3 block_max_corner(bx + 1.0f, by + 1.0f, bz + 1.0f);
@@ -87,11 +88,8 @@ namespace flint
             pitch = std::clamp(pitch, -89.0f, 89.0f);
         }
 
-        void Player::update(float dt, const flint::Chunk &chunk)
+        void Player::update(float dt, const flint::World &world)
         {
-            // Raycasting
-            cast_ray(chunk);
-
             // 1. Apply Inputs & Intentions
             glm::vec3 intended_horizontal_velocity(0.0f);
             float yaw_radians = glm::radians(yaw);
@@ -149,7 +147,7 @@ namespace flint
             // --- Y-AXIS COLLISION ---
             position.y += desired_move.y;
             physics::AABB player_world_box = get_world_bounding_box();
-            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_y_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_y_blocks)
             {
@@ -173,7 +171,7 @@ namespace flint
             // --- X-AXIS COLLISION ---
             position.x += desired_move.x;
             player_world_box = get_world_bounding_box();
-            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_x_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_x_blocks)
             {
@@ -195,7 +193,7 @@ namespace flint
             // --- Z-AXIS COLLISION ---
             position.z += desired_move.z;
             player_world_box = get_world_bounding_box();
-            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, chunk);
+            auto nearby_z_blocks = get_nearby_block_aabbs(player_world_box, world);
 
             for (const auto &block_box : nearby_z_blocks)
             {
@@ -219,9 +217,9 @@ namespace flint
         float Player::get_yaw() const { return yaw; }
         float Player::get_pitch() const { return pitch; }
 
-        std::optional<raycast::RaycastResult> Player::get_selected_block() const
+        physics::AABB Player::get_world_bounding_box() const
         {
-            return selected_block;
+            return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
         }
 
         glm::vec3 Player::get_camera_position() const
@@ -241,16 +239,5 @@ namespace flint
                 sin(yaw_rad) * cos(pitch_rad)));
         }
 
-        void Player::cast_ray(const flint::Chunk &chunk)
-        {
-            glm::vec3 camera_pos = get_camera_position();
-            glm::vec3 forward = get_camera_forward_vector();
-            selected_block = raycast::raycast(camera_pos, forward, 5.0f, chunk);
-        }
-
-        physics::AABB Player::get_world_bounding_box() const
-        {
-            return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
-        }
     }
 }

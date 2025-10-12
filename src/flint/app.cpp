@@ -41,8 +41,7 @@ namespace flint
             m_queue //
         );
 
-        m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
-        m_worldRenderer.generateChunk(m_device);
+        m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat, m_world);
 
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
@@ -125,7 +124,47 @@ namespace flint
             }
 
             // Update player physics and state
-            m_player.update(dt, m_worldRenderer.getChunk());
+            m_player.update(dt, m_world);
+
+            // Update cooldowns
+            if (m_leftClickCooldown > 0)
+                m_leftClickCooldown -= dt;
+            if (m_rightClickCooldown > 0)
+                m_rightClickCooldown -= dt;
+
+            // Handle block placement/removal
+            auto selected_block = raycast(m_camera.eye, m_camera.target - m_camera.eye, &m_world);
+            if (selected_block.has_value())
+            {
+                const Uint8 *state = SDL_GetMouseState(NULL, NULL);
+                if (state & SDL_BUTTON(SDL_BUTTON_LEFT) && m_leftClickCooldown <= 0)
+                {
+                    if (m_world.setBlock(selected_block->block_position, BlockType::Air))
+                    {
+                        auto [chunkCoords, localCoords] = World::worldToChunkCoordinates(glm::vec3(selected_block->block_position));
+                        m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y));
+                    }
+                    m_leftClickCooldown = m_actionCooldown;
+                }
+                else if (state & SDL_BUTTON(SDL_BUTTON_RIGHT) && m_rightClickCooldown <= 0)
+                {
+                    glm::ivec3 place_position = selected_block->block_position + selected_block->normal;
+
+                    // Player collision check
+                    physics::AABB player_box = m_player.get_world_bounding_box();
+                    physics::AABB block_box(glm::vec3(place_position), glm::vec3(place_position + glm::ivec3(1)));
+
+                    if (!player_box.intersects(block_box))
+                    {
+                        if (m_world.setBlock(place_position, BlockType::Grass))
+                        {
+                            auto [chunkCoords, localCoords] = World::worldToChunkCoordinates(glm::vec3(place_position));
+                            m_worldRenderer.rebuildChunkMesh(m_device, chunkCoords.x, chunkCoords.y, *m_world.getOrCreateChunk(chunkCoords.x, chunkCoords.y));
+                        }
+                    }
+                    m_rightClickCooldown = m_actionCooldown;
+                }
+            }
 
             // Render the scene
             render();
@@ -211,8 +250,8 @@ namespace flint
 
             // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
-            m_worldRenderer.render(renderPass, m_queue, m_camera);
-            auto selected_block = m_player.get_selected_block();
+            m_worldRenderer.render(renderPass, m_queue, m_camera, m_world);
+            auto selected_block = raycast(m_camera.eye, m_camera.target - m_camera.eye, &m_world);
             std::optional<glm::ivec3> selected_block_pos;
             if (selected_block.has_value())
             {

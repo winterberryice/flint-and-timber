@@ -19,7 +19,7 @@ namespace flint::graphics
 
     WorldRenderer::~WorldRenderer() = default;
 
-    void WorldRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, WGPUTextureFormat depthTextureFormat)
+    void WorldRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, WGPUTextureFormat depthTextureFormat, World &world)
     {
         std::cout << "Initializing world renderer..." << std::endl;
 
@@ -170,26 +170,17 @@ namespace flint::graphics
         std::cout << "World renderer initialized." << std::endl;
     }
 
-    void WorldRenderer::generateChunk(WGPUDevice device)
+    void WorldRenderer::rebuildChunkMesh(WGPUDevice device, int chunkX, int chunkZ, const Chunk &chunk)
     {
-        std::cout << "Generating terrain..." << std::endl;
-        m_chunk.generateTerrain();
-        std::cout << "Generating chunk mesh..." << std::endl;
-        m_chunkMesh.generate(device, m_chunk);
-        std::cout << "Chunk mesh generated." << std::endl;
+        auto key = std::make_pair(chunkX, chunkZ);
+        if (m_chunkMeshes.find(key) == m_chunkMeshes.end())
+        {
+            m_chunkMeshes[key] = std::make_unique<ChunkMesh>();
+        }
+        m_chunkMeshes[key]->generate(device, chunk);
     }
 
-    Chunk &WorldRenderer::getChunk()
-    {
-        return m_chunk;
-    }
-
-    const Chunk &WorldRenderer::getChunk() const
-    {
-        return m_chunk;
-    }
-
-    void WorldRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera)
+    void WorldRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera, World &world)
     {
         // Update the uniform buffer with the new camera view-projection matrix
         m_cameraUniform.updateViewProj(camera);
@@ -199,8 +190,11 @@ namespace flint::graphics
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.pipeline);
         wgpuRenderPassEncoderSetBindGroup(renderPass, 0, m_renderPipeline.bindGroup, 0, nullptr);
 
-        // Draw the chunk
-        m_chunkMesh.render(renderPass);
+        // Draw the chunks
+        for (auto const &[key, val] : m_chunkMeshes)
+        {
+            val->render(renderPass);
+        }
     }
 
     void WorldRenderer::cleanup()
@@ -209,7 +203,10 @@ namespace flint::graphics
 
         m_renderPipeline.cleanup();
         m_atlas.cleanup();
-        m_chunkMesh.cleanup();
+        for (auto const &[key, val] : m_chunkMeshes)
+        {
+            val->cleanup();
+        }
 
         if (m_uniformBuffer)
         {

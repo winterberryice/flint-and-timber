@@ -4,7 +4,7 @@
 #include <webgpu/webgpu.h>
 
 #include "camera.h"
-#include "chunk.h"
+#include "world.h"
 #include "camera.h"
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
@@ -47,6 +47,8 @@ namespace flint
         WGPUTextureView m_depthTextureView = nullptr;
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
 
+        World m_world;
+
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
@@ -59,6 +61,11 @@ namespace flint
         int m_windowWidth = 800;
         int m_windowHeight = 600;
         float m_initialFovY = 60.0f;
+
+        // Mouse action cooldown
+        const float m_actionCooldown = 0.2f; // 200ms
+        float m_leftClickCooldown = 0.0f;
+        float m_rightClickCooldown = 0.0f;
     };
 
 } // namespace flint
