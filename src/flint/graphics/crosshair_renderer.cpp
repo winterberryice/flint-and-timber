@@ -14,7 +14,7 @@ namespace flint::graphics
 
     CrosshairRenderer::~CrosshairRenderer() = default;
 
-    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio)
+    void CrosshairRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, int width, int height)
     {
         std::cout << "Initializing crosshair renderer..." << std::endl;
 
@@ -96,7 +96,7 @@ namespace flint::graphics
         m_renderPipeline.bindGroup = nullptr;
 
         // Create the crosshair mesh
-        m_crosshairMesh.generate(device, aspectRatio);
+        m_crosshairMesh.generate(device, width, height);
 
         std::cout << "Crosshair renderer initialized." << std::endl;
     }
@@ -106,6 +106,11 @@ namespace flint::graphics
         // Set pipeline and draw the crosshair
         wgpuRenderPassEncoderSetPipeline(renderPass, m_renderPipeline.pipeline);
         m_crosshairMesh.render(renderPass);
+    }
+
+    void CrosshairRenderer::onResize(int width, int height)
+    {
+        m_crosshairMesh.onResize(width, height);
     }
 
     void CrosshairRenderer::cleanup()

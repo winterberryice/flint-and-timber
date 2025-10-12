@@ -15,7 +15,7 @@ SDL_Window *flint::init::sdl(uint32_t width, uint32_t height)
     printVideoSystemInfo();
 
     // Create window
-    SDL_Window *window = SDL_CreateWindow("Flint & Timber", width, height, 0);
+    SDL_Window *window = SDL_CreateWindow("Flint & Timber", width, height, SDL_WINDOW_RESIZABLE);
     if (!window)
     {
         std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;

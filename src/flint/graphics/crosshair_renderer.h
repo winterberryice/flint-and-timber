@@ -14,9 +14,10 @@ namespace flint::graphics
         CrosshairRenderer();
         ~CrosshairRenderer();
 
-        void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, float aspectRatio);
+        void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, int width, int height);
         void render(WGPURenderPassEncoder renderPass);
         void cleanup();
+        void onResize(int width, int height);
 
     private:
         WGPUShaderModule m_vertexShader = nullptr;

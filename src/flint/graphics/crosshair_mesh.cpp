@@ -7,17 +7,18 @@
 namespace flint::graphics
 {
 
-void CrosshairMesh::generate(WGPUDevice device, float aspectRatio)
+void CrosshairMesh::generate(WGPUDevice device, int width, int height)
     {
-    const float length = 0.05f;    // The length of the lines as a proportion of screen height
-    const float thickness = 0.005f; // The thickness of the lines as a proportion of screen height
+    m_device = device;
 
-    // Adjust for aspect ratio to make the lines appear equal in length
-    const float h_len = length / aspectRatio; // Horizontal length adjusted for aspect ratio
-    const float v_len = length;               // Vertical length
+    const float crosshair_len_px = 40.0f;
+    const float crosshair_thickness_px = 4.0f;
 
-    const float h_thick = thickness;              // Horizontal thickness
-    const float v_thick = thickness / aspectRatio; // Vertical thickness adjusted for aspect ratio
+    float h_len = crosshair_len_px / width;
+    float v_len = crosshair_len_px / height;
+
+    float h_thick = crosshair_thickness_px / height;
+    float v_thick = crosshair_thickness_px / width;
 
         std::vector<float> vertices = {
         // Horizontal bar (two triangles)
@@ -60,6 +61,46 @@ void CrosshairMesh::generate(WGPUDevice device, float aspectRatio)
             m_vertexBuffer = nullptr;
         }
         m_vertexCount = 0;
+    }
+
+    void CrosshairMesh::onResize(int width, int height) {
+        if (m_vertexBuffer)
+        {
+            wgpuBufferRelease(m_vertexBuffer);
+            m_vertexBuffer = nullptr;
+        }
+
+        const float crosshair_len_px = 40.0f;
+        const float crosshair_thickness_px = 4.0f;
+
+        float h_len = crosshair_len_px / width;
+        float v_len = crosshair_len_px / height;
+
+        float h_thick = crosshair_thickness_px / height;
+        float v_thick = crosshair_thickness_px / width;
+
+        std::vector<float> vertices = {
+        // Horizontal bar (two triangles)
+        -h_len / 2, h_thick / 2,
+        -h_len / 2, -h_thick / 2,
+        h_len / 2, -h_thick / 2,
+
+        h_len / 2, -h_thick / 2,
+        h_len / 2, h_thick / 2,
+        -h_len / 2, h_thick / 2,
+
+        // Vertical bar (two triangles)
+        -v_thick / 2, v_len / 2,
+        -v_thick / 2, -v_len / 2,
+        v_thick / 2, -v_len / 2,
+
+        v_thick / 2, -v_len / 2,
+        v_thick / 2, v_len / 2,
+        -v_thick / 2, v_len / 2,
+        };
+
+        m_vertexCount = static_cast<uint32_t>(vertices.size() / 2);
+        m_vertexBuffer = init::create_vertex_buffer(m_device, "Crosshair VB", vertices.data(), vertices.size() * sizeof(float));
     }
 
 } // namespace flint::graphics

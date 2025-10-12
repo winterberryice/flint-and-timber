@@ -25,6 +25,7 @@ namespace flint
     private:
         void render();
         void update_camera();
+        void onResize(int width, int height);
 
     private:
         // SDL resources
@@ -57,6 +58,7 @@ namespace flint
         bool m_running = false;
         int m_windowWidth = 800;
         int m_windowHeight = 600;
+        float m_initialFovY = 60.0f;
     };
 
 } // namespace flint
