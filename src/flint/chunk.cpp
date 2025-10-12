@@ -1,5 +1,4 @@
 #include "chunk.h"
-#include <cmath>
 
 namespace flint
 {
@@ -11,16 +10,12 @@ namespace flint
 
     void Chunk::generateTerrain()
     {
+        const size_t surface_level = CHUNK_HEIGHT / 2;
+
         for (size_t x = 0; x < CHUNK_WIDTH; ++x)
         {
             for (size_t z = 0; z < CHUNK_DEPTH; ++z)
             {
-                // Simple noise for terrain height
-                int worldX = m_chunkX * CHUNK_WIDTH + x;
-                int worldZ = m_chunkZ * CHUNK_DEPTH + z;
-                double height = (std::sin(worldX * 0.1) + std::cos(worldZ * 0.1)) * 4 + (CHUNK_HEIGHT / 2);
-                int surface_level = static_cast<int>(height);
-
                 for (size_t y = 0; y < CHUNK_HEIGHT; ++y)
                 {
                     if (y < surface_level)
@@ -30,6 +25,51 @@ namespace flint
                     else if (y == surface_level)
                     {
                         m_blocks[x][y][z] = Block(BlockType::Grass);
+                    }
+                    // Blocks above surface_level remain Air by default.
+                }
+            }
+        }
+
+        // Add hardcoded pillars for testing physics
+        const size_t pillar_y_start = surface_level + 1;
+
+        // Two 1-block high pillars
+        setBlock(5, pillar_y_start, 5, BlockType::Dirt);
+        setBlock(5, pillar_y_start, 7, BlockType::Dirt);
+
+        // Two 2-block high pillars
+        setBlock(7, pillar_y_start, 5, BlockType::Dirt);
+        setBlock(7, pillar_y_start + 1, 5, BlockType::Dirt);
+        setBlock(7, pillar_y_start, 7, BlockType::Dirt);
+        setBlock(7, pillar_y_start + 1, 7, BlockType::Dirt);
+
+        // Add a hardcoded tree
+        const size_t tree_x = 4;
+        const size_t tree_z = 4;
+        const size_t trunk_height = 5;
+        const size_t trunk_y_start = surface_level + 1;
+
+        // Trunk
+        for (size_t i = 0; i < trunk_height; ++i)
+        {
+            setBlock(tree_x, trunk_y_start + i, tree_z, BlockType::OakLog);
+        }
+
+        // Canopy
+        const size_t canopy_y_start = trunk_y_start + trunk_height;
+        for (int dx = -2; dx <= 2; ++dx)
+        {
+            for (int dy = -1; dy <= 1; ++dy)
+            {
+                for (int dz = -2; dz <= 2; ++dz)
+                {
+                    if (dx * dx + dy * dy + dz * dz <= 5)
+                    {
+                        // Avoid replacing the top of the trunk
+                        if (dx == 0 && dz == 0 && dy <= 0) continue;
+
+                        setBlock(tree_x + dx, canopy_y_start + dy, tree_z + dz, BlockType::OakLeaves);
                     }
                 }
             }
