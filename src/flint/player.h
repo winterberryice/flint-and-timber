@@ -40,11 +40,11 @@ namespace flint
             glm::vec3 get_camera_forward_vector() const;
             glm::vec3 get_camera_position() const;
             std::optional<raycast::RaycastResult> get_selected_block() const;
+            physics::AABB get_world_bounding_box() const;
 
         private:
             void cast_ray(const flint::Chunk &chunk);
 
-            physics::AABB get_world_bounding_box() const;
             glm::vec3 position; // Position of the player's feet
             glm::vec3 velocity;
 

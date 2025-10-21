@@ -22,6 +22,7 @@ namespace flint::graphics
         void cleanup();
 
         void generateChunk(WGPUDevice device);
+        void rebuild_chunk_mesh(WGPUDevice device);
 
         Chunk &getChunk();
         const Chunk &getChunk() const;
