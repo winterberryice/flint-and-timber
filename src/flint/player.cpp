@@ -52,6 +52,55 @@ namespace flint
         {
         }
 
+        bool Player::on_mouse_click(const SDL_MouseButtonEvent &button, Chunk &chunk)
+        {
+            if (m_block_action_cooldown > 0.0f)
+            {
+                return false;
+            }
+
+            auto selected_block_opt = get_selected_block();
+            if (!selected_block_opt.has_value())
+            {
+                return false;
+            }
+
+            auto selected_block = selected_block_opt.value();
+
+            if (button.button == SDL_BUTTON_LEFT) // Remove block
+            {
+                chunk.setBlock(
+                    selected_block.block_position.x,
+                    selected_block.block_position.y,
+                    selected_block.block_position.z,
+                    BlockType::Air);
+                m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
+                return true;
+            }
+            else if (button.button == SDL_BUTTON_RIGHT) // Place block
+            {
+                glm::ivec3 new_block_pos = selected_block.block_position + selected_block.face_normal;
+
+                // Player collision check
+                physics::AABB new_block_aabb(
+                    glm::vec3(new_block_pos),
+                    glm::vec3(new_block_pos) + glm::vec3(1.0f));
+
+                if (!get_world_bounding_box().intersects(new_block_aabb))
+                {
+                    chunk.setBlock(
+                        new_block_pos.x,
+                        new_block_pos.y,
+                        new_block_pos.z,
+                        BlockType::Grass);
+                    m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         void Player::handle_input(const SDL_Event &event)
         {
             if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
@@ -89,6 +138,12 @@ namespace flint
 
         void Player::update(float dt, const flint::Chunk &chunk)
         {
+            // Update cooldown
+            if (m_block_action_cooldown > 0.0f)
+            {
+                m_block_action_cooldown -= dt;
+            }
+
             // Raycasting
             cast_ray(chunk);
 

@@ -33,6 +33,7 @@ namespace flint
             void handle_input(const SDL_Event &event);
             void process_mouse_movement(float delta_x, float delta_y);
             void update(float dt, const flint::Chunk &chunk);
+            bool on_mouse_click(const SDL_MouseButtonEvent &button, Chunk &chunk);
 
             glm::vec3 get_position() const;
             float get_yaw() const;
@@ -61,6 +62,10 @@ namespace flint
             PlayerMovementIntention movement_intention;
 
             std::optional<raycast::RaycastResult> selected_block;
+
+            // Cooldown for block placement/removal to prevent single-press multi-actions
+            const float BLOCK_ACTION_COOLDOWN_SECONDS = 0.2f; // 200ms
+            float m_block_action_cooldown = 0.0f;
         };
     }
 }

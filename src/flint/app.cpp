@@ -87,12 +87,6 @@ namespace flint
             float dt = static_cast<float>(current_tick - last_tick) / static_cast<float>(SDL_GetPerformanceFrequency());
             last_tick = current_tick;
 
-            // Update cooldown
-            if (m_block_action_cooldown > 0.0f)
-            {
-                m_block_action_cooldown -= dt;
-            }
-
             // Handle events
             while (SDL_PollEvent(&e))
             {
@@ -132,48 +126,9 @@ namespace flint
                         continue;
                     }
 
-                    if (m_block_action_cooldown <= 0.0f)
+                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getChunk()))
                     {
-                        if (e.button.button == SDL_BUTTON_LEFT) // Remove block
-                        {
-                            auto selected_block_opt = m_player.get_selected_block();
-                            if (selected_block_opt.has_value())
-                            {
-                                auto selected_block = selected_block_opt.value();
-                                m_worldRenderer.getChunk().setBlock(
-                                    selected_block.block_position.x,
-                                    selected_block.block_position.y,
-                                    selected_block.block_position.z,
-                                    BlockType::Air);
-                                m_worldRenderer.rebuild_chunk_mesh(m_device);
-                                m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
-                            }
-                        }
-                        else if (e.button.button == SDL_BUTTON_RIGHT) // Place block
-                        {
-                            auto selected_block_opt = m_player.get_selected_block();
-                            if (selected_block_opt.has_value())
-                            {
-                                auto selected_block = selected_block_opt.value();
-                                glm::ivec3 new_block_pos = selected_block.block_position + selected_block.face_normal;
-
-                                // Player collision check
-                                physics::AABB new_block_aabb(
-                                    glm::vec3(new_block_pos),
-                                    glm::vec3(new_block_pos) + glm::vec3(1.0f));
-
-                                if (!m_player.get_world_bounding_box().intersects(new_block_aabb))
-                                {
-                                    m_worldRenderer.getChunk().setBlock(
-                                        new_block_pos.x,
-                                        new_block_pos.y,
-                                        new_block_pos.z,
-                                        BlockType::Grass);
-                                    m_worldRenderer.rebuild_chunk_mesh(m_device);
-                                    m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
-                                }
-                            }
-                        }
+                        m_worldRenderer.rebuild_chunk_mesh(m_device);
                     }
                 }
             }

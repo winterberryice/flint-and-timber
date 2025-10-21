@@ -60,9 +60,6 @@ namespace flint
         int m_windowHeight = 600;
         float m_initialFovY = 60.0f;
 
-        // Cooldown for block placement/removal to prevent single-press multi-actions
-        const float BLOCK_ACTION_COOLDOWN_SECONDS = 0.2f; // 200ms
-        float m_block_action_cooldown = 0.0f;
     };
 
 } // namespace flint
