@@ -14,12 +14,14 @@ struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) color: vec3<f32>,
     @location(2) uv: vec2<f32>,
+    @location(3) sky_light: f32,
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec3<f32>,
     @location(1) uv: vec2<f32>,
+    @location(2) sky_light: f32,
 };
 
 @vertex
@@ -28,6 +30,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = uniforms.viewProjectionMatrix * vec4<f32>(in.position, 1.0);
     out.color = in.color;
     out.uv = in.uv;
+    out.sky_light = in.sky_light;
     return out;
 }
 )";
@@ -39,6 +42,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 struct FragmentInput {
     @location(0) color: vec3<f32>,
     @location(1) uv: vec2<f32>,
+    @location(2) sky_light: f32,
 };
 
 // A sentinel color to indicate that the texture should be tinted.
@@ -58,15 +62,16 @@ fn fs_main(in: FragmentInput) -> @location(0) vec4<f32> {
 
     // If the vertex color is the sentinel value, tint the texture.
     // Otherwise, use the texture color directly.
+    let light_factor = in.sky_light / 15.0;
     if (all(in.color == TINT_SENTINEL)) {
         // We assume the texture is grayscale, so we can just use one channel (e.g., R)
         // and multiply it by the desired tint color.
         // For now, we'll just hardcode a green tint for demonstration.
         let tint_color = vec3<f32>(0.2, 0.8, 0.2); // A nice green
-        return vec4<f32>(texture_color.r * tint_color, texture_color.a);
+        return vec4<f32>(texture_color.r * tint_color * light_factor, texture_color.a);
     } else {
         // Regular texturing, multiply by vertex color for lighting/shading
-        return vec4<f32>(texture_color.rgb * in.color, texture_color.a);
+        return vec4<f32>(texture_color.rgb * in.color * light_factor, texture_color.a);
     }
 }
 )";

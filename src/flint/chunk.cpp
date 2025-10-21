@@ -77,6 +77,26 @@ namespace flint
         }
     }
 
+    void Chunk::setBlockSkyLight(size_t x, size_t y, size_t z, uint8_t sky_light)
+    {
+        if (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_DEPTH)
+        {
+            m_blocks[x][y][z].sky_light = sky_light;
+        }
+    }
+
+    Block *Chunk::getBlock(size_t x, size_t y, size_t z)
+    {
+        if (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_DEPTH)
+        {
+            return &m_blocks[x][y][z];
+        }
+        else
+        {
+            return nullptr; // Equivalent to Rust's `None`
+        }
+    }
+
     const Block *Chunk::getBlock(size_t x, size_t y, size_t z) const
     {
         if (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_DEPTH)

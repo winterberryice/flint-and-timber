@@ -8,6 +8,7 @@
 #include "init/pipeline.h"
 #include "init/texture.h"
 #include "shader.wgsl.h"
+#include "light.h"
 
 #include "atlas_bytes.hpp"
 
@@ -43,6 +44,8 @@ namespace flint
 
         m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_worldRenderer.generateChunk(m_device);
+
+        Light::calculate_sky_light(m_worldRenderer.getChunk());
 
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
@@ -128,6 +131,7 @@ namespace flint
 
                     if (m_player.on_mouse_click(e.button, m_worldRenderer.getChunk()))
                     {
+                        Light::calculate_sky_light(m_worldRenderer.getChunk());
                         m_worldRenderer.rebuild_chunk_mesh(m_device);
                     }
                 }

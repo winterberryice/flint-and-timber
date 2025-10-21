@@ -191,6 +191,7 @@ namespace flint
                                         .color = face_info.color,
                                         // Assign the UV coordinates for this vertex.
                                         .uv = face_info.uvs[j],
+                                        .sky_light = neighborBlock ? (float)neighborBlock->sky_light : (float)currentBlock->sky_light,
                                     });
                                 }
 

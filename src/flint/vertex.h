@@ -14,6 +14,7 @@ namespace flint
         glm::vec3 position;
         glm::vec3 color;
         glm::vec2 uv; // New UV coordinates
+        float sky_light;
 
         static inline WGPUVertexBufferLayout getLayout()
         {
@@ -38,7 +39,15 @@ namespace flint
                     .format = WGPUVertexFormat_Float32x2,
                     .offset = offsetof(Vertex, uv),
                     .shaderLocation = 2,
-                }};
+                },
+                // Attribute 3: Sky Light
+                {
+                    .nextInChain = nullptr,
+                    .format = WGPUVertexFormat_Float32,
+                    .offset = offsetof(Vertex, sky_light),
+                    .shaderLocation = 3,
+                }
+            };
 
             WGPUVertexBufferLayout layout{};
             layout.arrayStride = sizeof(Vertex);

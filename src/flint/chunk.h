@@ -24,7 +24,11 @@ namespace flint
         // Gets a read-only pointer to a block.
         // Returning a pointer (`const Block*`) is the C++ equivalent of Rust's `Option<&Block>`.
         // It will be `nullptr` if the coordinates are out of bounds.
+        Block *getBlock(size_t x, size_t y, size_t z);
+
         const Block *getBlock(size_t x, size_t y, size_t z) const;
+
+        void setBlockSkyLight(size_t x, size_t y, size_t z, uint8_t sky_light);
 
         // Sets a block at the given coordinates.
         // Returning a `bool` is a common C++ way to handle Rust's `Result<(), &str>`.
