@@ -59,6 +59,7 @@ namespace flint
         int m_windowWidth = 800;
         int m_windowHeight = 600;
         float m_initialFovY = 60.0f;
+
     };
 
 } // namespace flint

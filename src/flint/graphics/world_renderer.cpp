@@ -179,6 +179,11 @@ namespace flint::graphics
         std::cout << "Chunk mesh generated." << std::endl;
     }
 
+    void WorldRenderer::rebuild_chunk_mesh(WGPUDevice device)
+    {
+        m_chunkMesh.generate(device, m_chunk);
+    }
+
     Chunk &WorldRenderer::getChunk()
     {
         return m_chunk;

@@ -39,44 +39,36 @@ namespace flint
                 (step.z != 0) ? std::abs(1.0f / ray_direction.z) : std::numeric_limits<float>::max());
 
             float distance = 0.0f;
+            glm::ivec3 face_normal(0);
 
             while (distance < max_distance)
             {
                 if (chunk.is_solid(current_block.x, current_block.y, current_block.z))
                 {
-                    return RaycastResult{current_block};
+                    return RaycastResult{current_block, face_normal};
                 }
 
                 // Advance to the next block
-                if (tMax.x < tMax.y)
+                if (tMax.x < tMax.y && tMax.x < tMax.z)
                 {
-                    if (tMax.x < tMax.z)
-                    {
-                        current_block.x += step.x;
-                        distance = tMax.x;
-                        tMax.x += tDelta.x;
-                    }
-                    else
-                    {
-                        current_block.z += step.z;
-                        distance = tMax.z;
-                        tMax.z += tDelta.z;
-                    }
+                    distance = tMax.x;
+                    tMax.x += tDelta.x;
+                    current_block.x += step.x;
+                    face_normal = glm::ivec3(-step.x, 0, 0);
+                }
+                else if (tMax.y < tMax.z)
+                {
+                    distance = tMax.y;
+                    tMax.y += tDelta.y;
+                    current_block.y += step.y;
+                    face_normal = glm::ivec3(0, -step.y, 0);
                 }
                 else
                 {
-                    if (tMax.y < tMax.z)
-                    {
-                        current_block.y += step.y;
-                        distance = tMax.y;
-                        tMax.y += tDelta.y;
-                    }
-                    else
-                    {
-                        current_block.z += step.z;
-                        distance = tMax.z;
-                        tMax.z += tDelta.z;
-                    }
+                    distance = tMax.z;
+                    tMax.z += tDelta.z;
+                    current_block.z += step.z;
+                    face_normal = glm::ivec3(0, 0, -step.z);
                 }
             }
 

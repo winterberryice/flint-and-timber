@@ -12,7 +12,7 @@ namespace flint
         struct RaycastResult
         {
             glm::ivec3 block_position;
-            // Can add face information later if needed
+            glm::ivec3 face_normal;
         };
 
         std::optional<RaycastResult> raycast(

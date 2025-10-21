@@ -118,9 +118,18 @@ namespace flint
                         m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
                     }
                 }
-                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && e.button.button == SDL_BUTTON_LEFT)
+                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
                 {
-                    SDL_SetWindowRelativeMouseMode(m_window, true);
+                    if (!SDL_GetWindowRelativeMouseMode(m_window))
+                    {
+                        SDL_SetWindowRelativeMouseMode(m_window, true);
+                        continue;
+                    }
+
+                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getChunk()))
+                    {
+                        m_worldRenderer.rebuild_chunk_mesh(m_device);
+                    }
                 }
             }
 
