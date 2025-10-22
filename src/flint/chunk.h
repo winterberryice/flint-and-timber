@@ -24,16 +24,13 @@ namespace flint
         // Gets a read-only pointer to a block.
         // Returning a pointer (`const Block*`) is the C++ equivalent of Rust's `Option<&Block>`.
         // It will be `nullptr` if the coordinates are out of bounds.
-        Block *getBlock(size_t x, size_t y, size_t z);
-
-        const Block *getBlock(size_t x, size_t y, size_t z) const;
-
-        void setBlockSkyLight(size_t x, size_t y, size_t z, uint8_t sky_light);
+        Block *getBlock(int x, int y, int z);
+        const Block *getBlock(int x, int y, int z) const;
 
         // Sets a block at the given coordinates.
         // Returning a `bool` is a common C++ way to handle Rust's `Result<(), &str>`.
         // It returns `true` on success and `false` on failure (out of bounds).
-        bool setBlock(size_t x, size_t y, size_t z, BlockType type);
+        bool setBlock(int x, int y, int z, BlockType type);
 
         // Checks if a block at the given world coordinates is solid.
         // This is a new method for physics checks.

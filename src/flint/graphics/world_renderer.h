@@ -3,7 +3,7 @@
 #include <webgpu/webgpu.h>
 
 #include "../camera.h"
-#include "../chunk.h"
+#include "../world.h"
 #include "chunk_mesh.hpp"
 #include "render_pipeline.h"
 #include "texture.hpp"
@@ -21,17 +21,16 @@ namespace flint::graphics
         void render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera);
         void cleanup();
 
-        void generateChunk(WGPUDevice device);
         void rebuild_chunk_mesh(WGPUDevice device);
 
-        Chunk &getChunk();
-        const Chunk &getChunk() const;
+        World &getWorld();
+        const World &getWorld() const;
 
     private:
         WGPUShaderModule m_vertexShader = nullptr;
         WGPUShaderModule m_fragmentShader = nullptr;
 
-        Chunk m_chunk;
+        World m_world;
         ChunkMesh m_chunkMesh;
         Texture m_atlas;
 

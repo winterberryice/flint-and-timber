@@ -1,4 +1,5 @@
 #include "raycast.h"
+#include "world.h"
 #include <cmath>
 #include <algorithm>
 
@@ -10,7 +11,7 @@ namespace flint
             const glm::vec3 &ray_origin,
             const glm::vec3 &ray_direction,
             float max_distance,
-            const flint::Chunk &chunk)
+            const flint::World &world)
         {
             // Initial block coordinates
             glm::ivec3 current_block(std::floor(ray_origin.x), std::floor(ray_origin.y), std::floor(ray_origin.z));
@@ -43,7 +44,8 @@ namespace flint
 
             while (distance < max_distance)
             {
-                if (chunk.is_solid(current_block.x, current_block.y, current_block.z))
+                const Block *block = world.getBlock(current_block.x, current_block.y, current_block.z);
+                if (block && block->isSolid())
                 {
                     return RaycastResult{current_block, face_normal};
                 }

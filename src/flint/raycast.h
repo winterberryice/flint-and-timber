@@ -3,10 +3,10 @@
 #include <glm/glm.hpp>
 #include <optional>
 
-#include "chunk.h"
-
 namespace flint
 {
+    class World; // Forward declaration
+
     namespace raycast
     {
         struct RaycastResult
@@ -19,6 +19,6 @@ namespace flint
             const glm::vec3 &ray_origin,
             const glm::vec3 &ray_direction,
             float max_distance,
-            const flint::Chunk &chunk);
+            const flint::World &world);
     }
 }

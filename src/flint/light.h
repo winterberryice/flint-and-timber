@@ -1,16 +1,17 @@
 #pragma once
 
-#include "chunk.h"
-#include <vector>
+#include "world.h"
 #include <queue>
-#include <tuple>
+#include <glm/glm.hpp>
 
 namespace flint
 {
     class Light
     {
     public:
-        static void calculate_sky_light(Chunk *chunk);
+        static void calculate_sky_light(World *world);
+        static void propagate_light_addition(World *world, int x, int y, int z);
+        static void propagate_light_removal(World *world, int x, int y, int z, uint8_t light_level);
     };
 
 } // namespace flint
