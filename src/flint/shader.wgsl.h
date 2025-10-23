@@ -62,7 +62,8 @@ fn fs_main(in: FragmentInput) -> @location(0) vec4<f32> {
 
     // If the vertex color is the sentinel value, tint the texture.
     // Otherwise, use the texture color directly.
-    let light_factor = in.sky_light / 15.0;
+    const AMBIENT_LIGHT = 0.2;
+    let light_factor = AMBIENT_LIGHT + (in.sky_light / 15.0) * (1.0 - AMBIENT_LIGHT);
     if (all(in.color == TINT_SENTINEL)) {
         // We assume the texture is grayscale, so we can just use one channel (e.g., R)
         // and multiply it by the desired tint color.
