@@ -11,7 +11,7 @@
 
 namespace flint
 {
-    class Chunk; // Forward declaration
+    class World; // Forward declaration
 
     namespace player
     {
@@ -32,8 +32,8 @@ namespace flint
 
             void handle_input(const SDL_Event &event);
             void process_mouse_movement(float delta_x, float delta_y);
-            void update(float dt, const flint::Chunk &chunk);
-            bool on_mouse_click(const SDL_MouseButtonEvent &button, Chunk &chunk);
+            void update(float dt, const flint::World &world);
+            bool on_mouse_click(const SDL_MouseButtonEvent &button, World &world);
 
             glm::vec3 get_position() const;
             float get_yaw() const;
@@ -44,7 +44,7 @@ namespace flint
             physics::AABB get_world_bounding_box() const;
 
         private:
-            void cast_ray(const flint::Chunk &chunk);
+            void cast_ray(const flint::World &world);
 
             glm::vec3 position; // Position of the player's feet
             glm::vec3 velocity;

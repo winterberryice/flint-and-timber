@@ -168,30 +168,23 @@ namespace flint::graphics
         }
 
         std::cout << "World renderer initialized." << std::endl;
-    }
 
-    void WorldRenderer::generateChunk(WGPUDevice device)
-    {
-        std::cout << "Generating terrain..." << std::endl;
-        m_chunk.generateTerrain();
-        std::cout << "Generating chunk mesh..." << std::endl;
-        m_chunkMesh.generate(device, m_chunk);
-        std::cout << "Chunk mesh generated." << std::endl;
+        rebuild_chunk_mesh(device);
     }
 
     void WorldRenderer::rebuild_chunk_mesh(WGPUDevice device)
     {
-        m_chunkMesh.generate(device, m_chunk);
+        m_chunkMesh.generate(device, *m_world.getChunk());
     }
 
-    Chunk &WorldRenderer::getChunk()
+    World &WorldRenderer::getWorld()
     {
-        return m_chunk;
+        return m_world;
     }
 
-    const Chunk &WorldRenderer::getChunk() const
+    const World &WorldRenderer::getWorld() const
     {
-        return m_chunk;
+        return m_world;
     }
 
     void WorldRenderer::render(WGPURenderPassEncoder renderPass, WGPUQueue queue, const Camera &camera)

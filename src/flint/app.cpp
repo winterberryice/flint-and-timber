@@ -42,7 +42,6 @@ namespace flint
         );
 
         m_worldRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
-        m_worldRenderer.generateChunk(m_device);
 
         m_selectionRenderer.init(m_device, m_queue, m_surfaceFormat, m_depthTextureFormat);
         m_selectionRenderer.create_mesh(m_device);
@@ -126,7 +125,7 @@ namespace flint
                         continue;
                     }
 
-                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getChunk()))
+                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getWorld()))
                     {
                         m_worldRenderer.rebuild_chunk_mesh(m_device);
                     }
@@ -134,7 +133,7 @@ namespace flint
             }
 
             // Update player physics and state
-            m_player.update(dt, m_worldRenderer.getChunk());
+            m_player.update(dt, m_worldRenderer.getWorld());
 
             // Render the scene
             render();

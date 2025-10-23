@@ -77,28 +77,40 @@ namespace flint
         }
     }
 
-    const Block *Chunk::getBlock(size_t x, size_t y, size_t z) const
+    Block *Chunk::getBlock(int x, int y, int z)
     {
-        if (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_DEPTH)
+        if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH)
         {
             return &m_blocks[x][y][z];
         }
         else
         {
-            return nullptr; // Equivalent to Rust's `None`
+            return nullptr;
         }
     }
 
-    bool Chunk::setBlock(size_t x, size_t y, size_t z, BlockType type)
+    const Block *Chunk::getBlock(int x, int y, int z) const
     {
-        if (x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_DEPTH)
+        if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH)
         {
-            m_blocks[x][y][z] = Block(type);
-            return true; // Equivalent to Rust's `Ok(())`
+            return &m_blocks[x][y][z];
         }
         else
         {
-            return false; // Equivalent to Rust's `Err(...)`
+            return nullptr;
+        }
+    }
+
+    bool Chunk::setBlock(int x, int y, int z, BlockType type)
+    {
+        if (x >= 0 && x < CHUNK_WIDTH && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_DEPTH)
+        {
+            m_blocks[x][y][z] = Block(type);
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 

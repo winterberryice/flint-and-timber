@@ -20,4 +20,9 @@ namespace flint
         }
     }
 
+    bool Block::isTransparent() const
+    {
+        return !isSolid();
+    }
+
 } // namespace flint

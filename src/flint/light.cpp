@@ -1,0 +1,202 @@
+#include "light.h"
+#include "chunk.h"
+#include <algorithm>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
+namespace flint
+{
+
+    void Light::calculate_sky_light(World *world)
+    {
+        Chunk *chunk = world->getChunk();
+        // Phase 0: Reset
+        for (int x = 0; x < CHUNK_WIDTH; ++x)
+        {
+            for (int y = 0; y < CHUNK_HEIGHT; ++y)
+            {
+                for (int z = 0; z < CHUNK_DEPTH; ++z)
+                {
+                    chunk->getBlock(x, y, z)->sky_light = 0;
+                }
+            }
+        }
+
+        std::queue<glm::ivec3> light_queue;
+
+        // Phase 1: Vertical Sky Light Pass & Optimized Queue Seeding
+        for (int x = 0; x < CHUNK_WIDTH; ++x)
+        {
+            for (int z = 0; z < CHUNK_DEPTH; ++z)
+            {
+                for (int y = CHUNK_HEIGHT - 1; y >= 0; --y)
+                {
+                    Block *block = chunk->getBlock(x, y, z);
+                    if (block && block->isTransparent())
+                    {
+                        block->sky_light = 15;
+                        light_queue.push({x, y, z});
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Phase 2: Propagation Flood Fill
+        while (!light_queue.empty())
+        {
+            glm::ivec3 pos = light_queue.front();
+            light_queue.pop();
+
+            uint8_t current_light_level = chunk->getBlock(pos.x, pos.y, pos.z)->sky_light;
+
+            const glm::ivec3 neighbors[6] = {
+                pos + glm::ivec3(-1, 0, 0),
+                pos + glm::ivec3(1, 0, 0),
+                pos + glm::ivec3(0, -1, 0),
+                pos + glm::ivec3(0, 1, 0),
+                pos + glm::ivec3(0, 0, -1),
+                pos + glm::ivec3(0, 0, 1)};
+
+            for (const auto &neighbor : neighbors)
+            {
+                uint8_t light_level_to_propagate = (neighbor.y < pos.y && current_light_level == 15) ? 15 : (current_light_level > 0 ? current_light_level - 1 : 0);
+
+                if (light_level_to_propagate == 0)
+                {
+                    continue;
+                }
+
+                Block *neighbor_block = world->getBlock(neighbor.x, neighbor.y, neighbor.z);
+                if (neighbor_block && neighbor_block->isTransparent() && neighbor_block->sky_light < light_level_to_propagate)
+                {
+                    neighbor_block->sky_light = light_level_to_propagate;
+                    light_queue.push(neighbor);
+                }
+            }
+        }
+    }
+
+    void Light::run_light_propagation_queue(World *world, std::queue<glm::ivec3> &queue)
+    {
+        while (!queue.empty())
+        {
+            glm::ivec3 pos = queue.front();
+            queue.pop();
+
+            uint8_t current_light_level = world->getBlock(pos.x, pos.y, pos.z)->sky_light;
+
+            const glm::ivec3 neighbors[6] = {
+                pos + glm::ivec3(-1, 0, 0),
+                pos + glm::ivec3(1, 0, 0),
+                pos + glm::ivec3(0, -1, 0),
+                pos + glm::ivec3(0, 1, 0),
+                pos + glm::ivec3(0, 0, -1),
+                pos + glm::ivec3(0, 0, 1)};
+
+            for (const auto &neighbor : neighbors)
+            {
+                uint8_t light_level_to_propagate = (neighbor.y < pos.y && current_light_level == 15) ? 15 : (current_light_level > 0 ? current_light_level - 1 : 0);
+
+                if (light_level_to_propagate == 0)
+                {
+                    continue;
+                }
+
+                Block *neighbor_block = world->getBlock(neighbor.x, neighbor.y, neighbor.z);
+                if (neighbor_block && neighbor_block->isTransparent() && neighbor_block->sky_light < light_level_to_propagate)
+                {
+                    neighbor_block->sky_light = light_level_to_propagate;
+                    queue.push(neighbor);
+                }
+            }
+        }
+    }
+
+    void Light::propagate_light_addition(World *world, int x, int y, int z)
+    {
+        std::queue<glm::ivec3> light_queue;
+
+        uint8_t max_light = 0;
+        const glm::ivec3 neighbors[6] = {
+            {x - 1, y, z},
+            {x + 1, y, z},
+            {x, y - 1, z},
+            {x, y + 1, z},
+            {x, y, z - 1},
+            {x, y, z + 1}};
+
+        for (const auto &neighbor : neighbors)
+        {
+            Block *neighbor_block = world->getBlock(neighbor.x, neighbor.y, neighbor.z);
+            if (neighbor_block)
+            {
+                if (neighbor_block->sky_light > 0)
+                {
+                    uint8_t potential_light = (y < neighbor.y && neighbor_block->sky_light == 15) ? 15 : neighbor_block->sky_light - 1;
+                    max_light = std::max(max_light, potential_light);
+                }
+            }
+        }
+
+        Block *block = world->getBlock(x, y, z);
+        if (block && block->sky_light < max_light)
+        {
+            block->sky_light = max_light;
+            light_queue.push({x, y, z});
+        }
+
+        run_light_propagation_queue(world, light_queue);
+    }
+
+    void Light::propagate_light_removal(World *world, int x, int y, int z, uint8_t light_level)
+    {
+        if (light_level == 0)
+        {
+            return; // Optimization: No light to remove.
+        }
+
+        std::queue<std::pair<glm::ivec3, uint8_t>> removal_queue;
+        removal_queue.push({{x, y, z}, light_level});
+
+        std::queue<glm::ivec3> relight_queue;
+
+        while (!removal_queue.empty())
+        {
+            auto [pos, light] = removal_queue.front();
+            removal_queue.pop();
+
+            const glm::ivec3 neighbors[6] = {
+                pos + glm::ivec3(-1, 0, 0),
+                pos + glm::ivec3(1, 0, 0),
+                pos + glm::ivec3(0, -1, 0),
+                pos + glm::ivec3(0, 1, 0),
+                pos + glm::ivec3(0, 0, -1),
+                pos + glm::ivec3(0, 0, 1)};
+
+            for (const auto &neighbor : neighbors)
+            {
+                Block *neighbor_block = world->getBlock(neighbor.x, neighbor.y, neighbor.z);
+                if (neighbor_block)
+                {
+                    uint8_t neighbor_light = neighbor_block->sky_light;
+                    if (neighbor_light != 0 && neighbor_light < light)
+                    {
+                        neighbor_block->sky_light = 0;
+                        removal_queue.push({neighbor, neighbor_light});
+                    }
+                    else if (neighbor_light >= light)
+                    {
+                        relight_queue.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        run_light_propagation_queue(world, relight_queue);
+    }
+
+} // namespace flint

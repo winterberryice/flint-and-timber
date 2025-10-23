@@ -184,6 +184,17 @@ namespace flint
 
                                 for (size_t j = 0; j < faceVertices.size(); ++j)
                                 {
+                                    float sky_light = 0.0f;
+                                    if (neighborBlock)
+                                    {
+                                        sky_light = (float)neighborBlock->sky_light;
+                                    }
+                                    else
+                                    {
+                                        // If there is no neighbor, it's a chunk boundary
+                                        sky_light = 15.0f;
+                                    }
+
                                     vertices.push_back({
                                         // Offset the vertex position by the block's position in the chunk.
                                         .position = faceVertices[j].position + glm::vec3(x, y, z),
@@ -191,6 +202,7 @@ namespace flint
                                         .color = face_info.color,
                                         // Assign the UV coordinates for this vertex.
                                         .uv = face_info.uvs[j],
+                                        .sky_light = sky_light,
                                     });
                                 }
 
