@@ -4,7 +4,7 @@
 
 namespace flint::graphics {
 
-inline constexpr std::string_view kTextShader = R"wgsl(
+inline constexpr std::string_view TEXT_WGSL_shaderSource = R"wgsl(
 struct VertexInput {
     @location(0) position: vec2<f32>,
     @location(1) tex_coords: vec2<f32>,

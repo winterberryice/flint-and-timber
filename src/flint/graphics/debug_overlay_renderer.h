@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wgpu.h>
+#include <webgpu/webgpu.h>
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>

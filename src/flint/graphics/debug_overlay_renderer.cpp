@@ -109,7 +109,7 @@ namespace flint::graphics {
     }
 
     void DebugOverlayRenderer::createPipeline(WGPUTextureFormat surfaceFormat) {
-        WGPUShaderModule shaderModule = init::create_shader_module(m_device, kTextShader);
+        WGPUShaderModule shaderModule = init::create_shader_module(m_device, TEXT_WGSL_shaderSource);
 
         WGPUBlendState blendState = {};
         blendState.color.operation = WGPUBlendOperation_Add;
