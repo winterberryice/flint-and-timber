@@ -61,13 +61,13 @@ namespace flint::init
 
         *pTextureView = wgpuTextureCreateView(*pTexture, &textureViewDesc);
 
-        WGPUImageCopyTexture destination = {};
+        WGPUTexelCopyTextureInfo destination = {};
         destination.texture = *pTexture;
         destination.mipLevel = 0;
         destination.origin = {0, 0, 0};
         destination.aspect = WGPUTextureAspect_All;
 
-        WGPUTextureDataLayout source = {};
+        WGPUTexelCopyBufferLayout source = {};
         source.offset = 0;
         source.bytesPerRow = width;
         source.rowsPerImage = height;
@@ -80,8 +80,7 @@ namespace flint::init
         WGPUSamplerDescriptor samplerDesc = {};
         samplerDesc.nextInChain = nullptr;
         samplerDesc.label = makeStringView("Font Sampler");
-        samplerDesc.addressModeU = WGPUAddressM
-ode_ClampToEdge;
+        samplerDesc.addressModeU = WGPUAddressMode_ClampToEdge;
         samplerDesc.addressModeV = WGPUAddressMode_ClampToEdge;
         samplerDesc.addressModeW = WGPUAddressMode_ClampToEdge;
         samplerDesc.magFilter = WGPUFilterMode_Linear;
