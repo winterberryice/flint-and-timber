@@ -48,6 +48,9 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
+        m_debugOverlayRenderer = std::make_unique<graphics::DebugOverlayRenderer>();
+        m_debugOverlayRenderer->init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -96,15 +99,23 @@ namespace flint
                 {
                     m_running = false;
                 }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
+                else if (e.type == SDL_EVENT_KEY_DOWN)
                 {
-                    if (SDL_GetWindowRelativeMouseMode(m_window))
+                    switch (e.key.key)
                     {
-                        SDL_SetWindowRelativeMouseMode(m_window, false);
-                    }
-                    else
-                    {
-                        m_running = false;
+                    case SDLK_ESCAPE:
+                        if (SDL_GetWindowRelativeMouseMode(m_window))
+                        {
+                            SDL_SetWindowRelativeMouseMode(m_window, false);
+                        }
+                        else
+                        {
+                            m_running = false;
+                        }
+                        break;
+                    case SDLK_F3:
+                        m_debugOverlayRenderer->toggle();
+                        break;
                     }
                 }
                 else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
@@ -144,6 +155,7 @@ namespace flint
     {
         // Update camera from player state
         glm::vec3 player_pos = m_player.get_position();
+        m_debugOverlayRenderer->update(player_pos);
         float player_yaw_deg = m_player.get_yaw();
         float player_pitch_deg = m_player.get_pitch();
 
@@ -197,6 +209,7 @@ namespace flint
 
         // Update crosshair
         m_crosshairRenderer.onResize(m_windowWidth, m_windowHeight);
+        m_debugOverlayRenderer->onResize(m_windowWidth, m_windowHeight);
     }
 
     void App::render()
@@ -232,6 +245,7 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
+            m_debugOverlayRenderer->render(overlayRenderPass);
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -258,6 +272,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_debugOverlayRenderer->cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();

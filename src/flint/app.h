@@ -2,17 +2,22 @@
 
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
+#include <memory>
 
 #include "camera.h"
 #include "chunk.h"
-#include "camera.h"
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
 #include "graphics/crosshair_renderer.h"
+#include "graphics/debug_overlay_renderer.h"
 #include "player.h"
 
 namespace flint
 {
+    namespace graphics
+    {
+        class DebugOverlayRenderer;
+    }
 
     class App
     {
@@ -50,6 +55,7 @@ namespace flint
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
+        std::unique_ptr<graphics::DebugOverlayRenderer> m_debugOverlayRenderer;
 
         Camera m_camera;
         player::Player m_player;
