@@ -2,7 +2,6 @@
 
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
-#include <memory>
 
 #include "camera.h"
 #include "chunk.h"
@@ -14,11 +13,6 @@
 
 namespace flint
 {
-    namespace graphics
-    {
-        class DebugOverlayRenderer;
-    }
-
     class App
     {
     public:
@@ -45,9 +39,6 @@ namespace flint
         WGPUTextureFormat m_surfaceFormat;
 
         // Depth texture for the main render pass.
-        // This is owned by the App class because its lifecycle is tied to the
-        // application window's size and the main render loop. It is passed to
-        // the WorldRenderer, which uses it as the depth attachment.
         WGPUTexture m_depthTexture = nullptr;
         WGPUTextureView m_depthTextureView = nullptr;
         WGPUTextureFormat m_depthTextureFormat = WGPUTextureFormat_Depth24Plus;
@@ -55,7 +46,7 @@ namespace flint
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
-        std::unique_ptr<graphics::DebugOverlayRenderer> m_debugOverlayRenderer;
+        graphics::DebugOverlayRenderer m_debugOverlayRenderer;
 
         Camera m_camera;
         player::Player m_player;

@@ -6,7 +6,7 @@
 #include <vector>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "vendor/stb_truetype.h" // User-provided dependency.
+#include "stb_truetype.h" // User-provided dependency.
 
 #include "../init/buffer.h"
 #include "../init/pipeline.h"
@@ -33,12 +33,8 @@ namespace flint::graphics {
         }
     }
 
-    DebugOverlayRenderer::DebugOverlayRenderer() {
-        // We bake the first 96 characters of the ASCII set (from character code 32).
-        m_charData = std::make_unique<stbtt_bakedchar[]>(96);
+    DebugOverlayRenderer::DebugOverlayRenderer() : m_charData(96) {
     }
-
-    DebugOverlayRenderer::~DebugOverlayRenderer() = default;
 
     void DebugOverlayRenderer::init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, uint32_t width, uint32_t height) {
         m_device = device;
@@ -95,7 +91,7 @@ namespace flint::graphics {
             FONT_ATLAS_HEIGHT,
             32, // First character to bake
             96, // Number of characters to bake
-            m_charData.get()
+            m_charData.data()
         );
 
         init::create_texture(
@@ -186,7 +182,7 @@ namespace flint::graphics {
         for (char c : m_textToRender) {
             if (c >= 32 && c < 128) {
                 stbtt_aligned_quad q;
-                stbtt_GetBakedQuad(m_charData.get(), FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, c - 32, &x, &y, &q, 1);
+                stbtt_GetBakedQuad(m_charData.data(), FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, c - 32, &x, &y, &q, 1);
 
                 // Convert from screen pixel coordinates to clip space coordinates (-1 to 1)
                 float x1 = (q.x0 / m_width) * 2.0f - 1.0f;

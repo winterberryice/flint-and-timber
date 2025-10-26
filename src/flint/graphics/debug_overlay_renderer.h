@@ -3,7 +3,7 @@
 #include <wgpu.h>
 #include <glm/glm.hpp>
 #include <string>
-#include <memory>
+#include <vector>
 
 // Forward declaration for stb_truetype to avoid including the header here.
 struct stbtt_bakedchar;
@@ -14,7 +14,6 @@ namespace graphics {
 class DebugOverlayRenderer {
 public:
     DebugOverlayRenderer();
-    ~DebugOverlayRenderer();
 
     void init(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat surfaceFormat, uint32_t width, uint32_t height);
     void cleanup();
@@ -45,7 +44,7 @@ private:
     static constexpr int FONT_ATLAS_WIDTH = 512;
     static constexpr int FONT_ATLAS_HEIGHT = 512;
     // We bake the first 96 characters of the ASCII set (from character code 32).
-    std::unique_ptr<stbtt_bakedchar[]> m_charData;
+    std::vector<stbtt_bakedchar> m_charData;
 
     WGPUTexture m_fontTexture = nullptr;
     WGPUTextureView m_fontTextureView = nullptr;

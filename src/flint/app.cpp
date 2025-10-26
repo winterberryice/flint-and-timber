@@ -48,8 +48,7 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
-        m_debugOverlayRenderer = std::make_unique<graphics::DebugOverlayRenderer>();
-        m_debugOverlayRenderer->init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
+        m_debugOverlayRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
@@ -114,7 +113,7 @@ namespace flint
                         }
                         break;
                     case SDLK_F3:
-                        m_debugOverlayRenderer->toggle();
+                        m_debugOverlayRenderer.toggle();
                         break;
                     }
                 }
@@ -155,7 +154,7 @@ namespace flint
     {
         // Update camera from player state
         glm::vec3 player_pos = m_player.get_position();
-        m_debugOverlayRenderer->update(player_pos);
+        m_debugOverlayRenderer.update(player_pos);
         float player_yaw_deg = m_player.get_yaw();
         float player_pitch_deg = m_player.get_pitch();
 
@@ -209,7 +208,7 @@ namespace flint
 
         // Update crosshair
         m_crosshairRenderer.onResize(m_windowWidth, m_windowHeight);
-        m_debugOverlayRenderer->onResize(m_windowWidth, m_windowHeight);
+        m_debugOverlayRenderer.onResize(m_windowWidth, m_windowHeight);
     }
 
     void App::render()
@@ -228,7 +227,7 @@ namespace flint
             encoderDesc.nextInChain = nullptr;
             encoderDesc.label = {nullptr, 0};
 
-            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+            WGPUCommandEncoder encoder = wgpuDeviceCreateEncoder(m_device, &encoderDesc);
 
             // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);
@@ -245,7 +244,7 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
-            m_debugOverlayRenderer->render(overlayRenderPass);
+            m_debugOverlayRenderer.render(overlayRenderPass);
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -272,7 +271,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        m_debugOverlayRenderer->cleanup();
+        m_debugOverlayRenderer.cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();
