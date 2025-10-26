@@ -68,4 +68,47 @@ namespace flint::init
         return wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
     }
 
+    WGPURenderPipeline create_render_pipeline(WGPUDevice device, WGPUShaderModule shaderModule, WGPUFragmentState *fragmentState, WGPUVertexBufferLayout *vertexBufferLayout, WGPUPrimitiveTopology primitiveTopology, WGPUDepthStencilState *depthStencilState)
+    {
+        WGPURenderPipelineDescriptor pipelineDesc = {};
+        pipelineDesc.nextInChain = nullptr;
+        pipelineDesc.label = "Render Pipeline";
+
+        pipelineDesc.vertex.module = shaderModule;
+        pipelineDesc.vertex.entryPoint = "vs_main";
+        pipelineDesc.vertex.bufferCount = 1;
+        pipelineDesc.vertex.buffers = vertexBufferLayout;
+
+        pipelineDesc.primitive.topology = primitiveTopology;
+        pipelineDesc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+        pipelineDesc.primitive.frontFace = WGPUFrontFace_CCW;
+        pipelineDesc.primitive.cullMode = WGPUCullMode_Back;
+
+        pipelineDesc.fragment = fragmentState;
+
+        pipelineDesc.depthStencil = depthStencilState;
+
+        pipelineDesc.multisample.count = 1;
+        pipelineDesc.multisample.mask = 0xFFFFFFFF;
+        pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+        return wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
+    }
+
+    WGPUBindGroup create_bind_group(WGPUDevice device, WGPURenderPipeline pipeline, uint32_t groupIndex, WGPUBindGroupEntry *entries, uint32_t entryCount)
+    {
+        WGPUBindGroupLayout bindGroupLayout = wgpuRenderPipelineGetBindGroupLayout(pipeline, groupIndex);
+
+        WGPUBindGroupDescriptor bindGroupDesc = {};
+        bindGroupDesc.nextInChain = nullptr;
+        bindGroupDesc.label = "Bind Group";
+        bindGroupDesc.layout = bindGroupLayout;
+        bindGroupDesc.entryCount = entryCount;
+        bindGroupDesc.entries = entries;
+
+        WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
+        wgpuBindGroupLayoutRelease(bindGroupLayout);
+        return bindGroup;
+    }
+
 } // namespace flint::init

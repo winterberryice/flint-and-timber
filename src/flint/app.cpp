@@ -227,7 +227,7 @@ namespace flint
             encoderDesc.nextInChain = nullptr;
             encoderDesc.label = {nullptr, 0};
 
-            WGPUCommandEncoder encoder = wgpuDeviceCreateEncoder(m_device, &encoderDesc);
+            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
             // --- Main 3D Render Pass ---
             WGPURenderPassEncoder renderPass = init::begin_render_pass(encoder, textureView, m_depthTextureView);

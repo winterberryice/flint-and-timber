@@ -5,8 +5,7 @@
 #include <string>
 #include <vector>
 
-// Forward declaration for stb_truetype to avoid including the header here.
-struct stbtt_bakedchar;
+#include "stb_truetype.h"
 
 namespace flint {
 namespace graphics {

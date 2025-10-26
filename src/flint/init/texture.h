@@ -13,4 +13,16 @@ namespace flint::init
         WGPUTexture *pTexture,
         WGPUTextureView *pTextureView);
 
+    void create_texture(
+        WGPUDevice device,
+        WGPUQueue queue,
+        const void *data,
+        uint32_t width,
+        uint32_t height,
+        WGPUTextureFormat format,
+        WGPUTexture *pTexture,
+        WGPUTextureView *pTextureView);
+
+    WGPUSampler create_sampler(WGPUDevice device);
+
 } // namespace flint::init

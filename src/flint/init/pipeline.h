@@ -14,4 +14,19 @@ namespace flint::init
         WGPUCommandEncoder encoder,
         WGPUTextureView textureView);
 
+    WGPURenderPipeline create_render_pipeline(
+        WGPUDevice device,
+        WGPUShaderModule shaderModule,
+        WGPUFragmentState *fragmentState,
+        WGPUVertexBufferLayout *vertexBufferLayout,
+        WGPUPrimitiveTopology primitiveTopology,
+        WGPUDepthStencilState *depthStencilState);
+
+    WGPUBindGroup create_bind_group(
+        WGPUDevice device,
+        WGPURenderPipeline pipeline,
+        uint32_t groupIndex,
+        WGPUBindGroupEntry *entries,
+        uint32_t entryCount);
+
 } // namespace flint::init

@@ -6,7 +6,6 @@
 #include <vector>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h" // User-provided dependency.
 
 #include "../init/buffer.h"
 #include "../init/pipeline.h"
@@ -109,7 +108,7 @@ namespace flint::graphics {
     }
 
     void DebugOverlayRenderer::createPipeline(WGPUTextureFormat surfaceFormat) {
-        WGPUShaderModule shaderModule = init::create_shader_module(m_device, TEXT_WGSL_shaderSource);
+        WGPUShaderModule shaderModule = init::create_shader_module(m_device, "Text Shader", TEXT_WGSL_shaderSource.data());
 
         WGPUBlendState blendState = {};
         blendState.color.operation = WGPUBlendOperation_Add;
@@ -208,7 +207,7 @@ namespace flint::graphics {
         if (requiredBufferSize > m_vertexBufferSize) {
             if (m_vertexBuffer) wgpuBufferRelease(m_vertexBuffer);
             m_vertexBufferSize = requiredBufferSize;
-            m_vertexBuffer = init::create_buffer(m_device, m_vertexBufferSize, WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst);
+            m_vertexBuffer = init::create_buffer(m_device, "Debug Overlay Vertex Buffer", m_vertexBufferSize, WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst);
         }
 
         wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, vertexData.data(), requiredBufferSize);
