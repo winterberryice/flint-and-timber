@@ -59,7 +59,6 @@ namespace flint::graphics {
 
     void DebugOverlayRenderer::toggle() {
         m_isVisible = !m_isVisible;
-        std::cout << "DebugOverlayRenderer visibility toggled to: " << m_isVisible << std::endl;
     }
 
     void DebugOverlayRenderer::update(const glm::vec3& playerPosition) {
@@ -69,10 +68,6 @@ namespace flint::graphics {
         ss << std::fixed;
         ss << "x: " << playerPosition.x << " y: " << playerPosition.y << " z: " << playerPosition.z;
         m_textToRender = ss.str();
-        // Don't spam the console; only log if visible.
-        if (m_isVisible) {
-            std::cout << "DebugOverlayRenderer update: text='" << m_textToRender << "'" << std::endl;
-        }
     }
 
     void DebugOverlayRenderer::onResize(uint32_t width, uint32_t height) {
@@ -174,24 +169,20 @@ namespace flint::graphics {
     }
 
     void DebugOverlayRenderer::render(WGPURenderPassEncoder renderPass) {
-        if (!m_isVisible) {
-            return; // Exit if not visible, no log needed as toggle() already logs.
-        }
-        if (m_textToRender.empty()) {
-            std::cout << "DebugOverlayRenderer render: m_textToRender is empty, skipping." << std::endl;
+        if (!m_isVisible) { // Only check for visibility
             return;
         }
-        std::cout << "DebugOverlayRenderer render: text='" << m_textToRender << "'" << std::endl;
 
+        const std::string text = "Hello, World!";
 
         // --- Generate vertex data for the text string ---
         std::vector<float> vertexData;
-        vertexData.reserve(m_textToRender.length() * 6 * 4); // 6 vertices, 4 floats per vertex
+        vertexData.reserve(text.length() * 6 * 4); // 6 vertices, 4 floats per vertex
 
-        float x = 10.0f; // Start position x (in pixels)
-        float y = 32.0f; // Start position y (in pixels), font size + padding
+        float x = m_width / 2.0f - 100; // Center the text roughly
+        float y = m_height / 2.0f;
 
-        for (char c : m_textToRender) {
+        for (char c : text) {
             if (c >= 32 && c < 128) {
                 stbtt_aligned_quad q;
                 stbtt_GetBakedQuad(m_charData.data(), FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, c - 32, &x, &y, &q, 1);
@@ -214,13 +205,9 @@ namespace flint::graphics {
         }
         m_vertexCount = vertexData.size() / 4;
 
-        if (m_vertexCount == 0) {
-            std::cout << "DebugOverlayRenderer render: No vertices generated, skipping draw." << std::endl;
-            return;
-        }
+        if (m_vertexCount == 0) return;
 
         uint32_t requiredBufferSize = vertexData.size() * sizeof(float);
-        std::cout << "DebugOverlayRenderer render: vertexCount=" << m_vertexCount << ", requiredBufferSize=" << requiredBufferSize << std::endl;
         if (requiredBufferSize > m_vertexBufferSize) {
             if (m_vertexBuffer) wgpuBufferRelease(m_vertexBuffer);
             m_vertexBufferSize = requiredBufferSize;
