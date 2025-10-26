@@ -1,4 +1,5 @@
 #include "texture.h"
+#include "utils.h"
 
 namespace flint::init
 {

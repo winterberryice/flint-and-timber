@@ -38,7 +38,7 @@ namespace flint::init
 
         WGPURenderPassDescriptor renderPassDesc = {};
         renderPassDesc.nextInChain = nullptr;
-        renderPassDesc.label = {nullptr, 0};
+        renderPassDesc.label = "Render Pass";
         renderPassDesc.colorAttachmentCount = 1;
         renderPassDesc.colorAttachments = &colorAttachment;
         renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
@@ -60,7 +60,7 @@ namespace flint::init
 
         WGPURenderPassDescriptor renderPassDesc = {};
         renderPassDesc.nextInChain = nullptr;
-        renderPassDesc.label = {nullptr, 0};
+        renderPassDesc.label = "Overlay Render Pass";
         renderPassDesc.colorAttachmentCount = 1;
         renderPassDesc.colorAttachments = &colorAttachment;
         renderPassDesc.depthStencilAttachment = nullptr; // No depth/stencil

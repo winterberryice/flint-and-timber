@@ -11,6 +11,7 @@
 #include "../init/pipeline.h"
 #include "../init/shader.h"
 #include "../init/texture.h"
+#include "../init/utils.h"
 #include "text_shader.wgsl.h"
 
 namespace flint::graphics {
