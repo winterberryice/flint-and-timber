@@ -28,7 +28,7 @@ private:
     void createBindGroup();
 
     // Member variables
-    bool m_isVisible = true;
+    bool m_isVisible = false;
     glm::vec3 m_playerPosition;
     std::string m_textToRender;
 

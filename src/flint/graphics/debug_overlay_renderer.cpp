@@ -169,20 +169,18 @@ namespace flint::graphics {
     }
 
     void DebugOverlayRenderer::render(WGPURenderPassEncoder renderPass) {
-        if (!m_isVisible) { // Only check for visibility
+        if (!m_isVisible || m_textToRender.empty()) {
             return;
         }
 
-        const std::string text = "Hello, World!";
-
         // --- Generate vertex data for the text string ---
         std::vector<float> vertexData;
-        vertexData.reserve(text.length() * 6 * 4); // 6 vertices, 4 floats per vertex
+        vertexData.reserve(m_textToRender.length() * 6 * 4); // 6 vertices, 4 floats per vertex
 
-        float x = m_width / 2.0f - 100; // Center the text roughly
-        float y = m_height / 2.0f;
+        float x = 10.0f; // Start position x (in pixels)
+        float y = 32.0f; // Start position y (in pixels), font size + padding
 
-        for (char c : text) {
+        for (char c : m_textToRender) {
             if (c >= 32 && c < 128) {
                 stbtt_aligned_quad q;
                 stbtt_GetBakedQuad(m_charData.data(), FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, c - 32, &x, &y, &q, 1);
