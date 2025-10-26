@@ -38,7 +38,7 @@ namespace flint::init
 
         WGPURenderPassDescriptor renderPassDesc = {};
         renderPassDesc.nextInChain = nullptr;
-        renderPassDesc.label = "Render Pass";
+        renderPassDesc.label = makeStringView("Render Pass");
         renderPassDesc.colorAttachmentCount = 1;
         renderPassDesc.colorAttachments = &colorAttachment;
         renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
@@ -60,7 +60,7 @@ namespace flint::init
 
         WGPURenderPassDescriptor renderPassDesc = {};
         renderPassDesc.nextInChain = nullptr;
-        renderPassDesc.label = "Overlay Render Pass";
+        renderPassDesc.label = makeStringView("Overlay Render Pass");
         renderPassDesc.colorAttachmentCount = 1;
         renderPassDesc.colorAttachments = &colorAttachment;
         renderPassDesc.depthStencilAttachment = nullptr; // No depth/stencil
@@ -72,10 +72,10 @@ namespace flint::init
     {
         WGPURenderPipelineDescriptor pipelineDesc = {};
         pipelineDesc.nextInChain = nullptr;
-        pipelineDesc.label = "Render Pipeline";
+        pipelineDesc.label = makeStringView("Render Pipeline");
 
         pipelineDesc.vertex.module = shaderModule;
-        pipelineDesc.vertex.entryPoint = "vs_main";
+        pipelineDesc.vertex.entryPoint = makeStringView("vs_main");
         pipelineDesc.vertex.bufferCount = 1;
         pipelineDesc.vertex.buffers = vertexBufferLayout;
 
@@ -101,7 +101,7 @@ namespace flint::init
 
         WGPUBindGroupDescriptor bindGroupDesc = {};
         bindGroupDesc.nextInChain = nullptr;
-        bindGroupDesc.label = "Bind Group";
+        bindGroupDesc.label = makeStringView("Bind Group");
         bindGroupDesc.layout = bindGroupLayout;
         bindGroupDesc.entryCount = entryCount;
         bindGroupDesc.entries = entries;

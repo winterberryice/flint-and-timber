@@ -225,7 +225,7 @@ namespace flint
 
             WGPUCommandEncoderDescriptor encoderDesc = {};
             encoderDesc.nextInChain = nullptr;
-            encoderDesc.label = "Command Encoder";
+            encoderDesc.label = init::makeStringView("Command Encoder");
 
             WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
 
@@ -249,7 +249,7 @@ namespace flint
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.nextInChain = nullptr;
-            cmdBufferDesc.label = "Command Buffer";
+            cmdBufferDesc.label = init::makeStringView("Command Buffer");
 
             WGPUCommandBuffer cmdBuffer = wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
             wgpuQueueSubmit(m_queue, 1, &cmdBuffer);

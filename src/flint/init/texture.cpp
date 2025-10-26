@@ -38,7 +38,7 @@ namespace flint::init
     {
         WGPUTextureDescriptor textureDesc = {};
         textureDesc.nextInChain = nullptr;
-        textureDesc.label = "Font Texture";
+        textureDesc.label = makeStringView("Font Texture");
         textureDesc.usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst;
         textureDesc.dimension = WGPUTextureDimension_2D;
         textureDesc.size = {width, height, 1};
@@ -50,7 +50,7 @@ namespace flint::init
 
         WGPUTextureViewDescriptor textureViewDesc = {};
         textureViewDesc.nextInChain = nullptr;
-        textureViewDesc.label = "Font Texture View";
+        textureViewDesc.label = makeStringView("Font Texture View");
         textureViewDesc.format = format;
         textureViewDesc.dimension = WGPUTextureViewDimension_2D;
         textureViewDesc.baseMipLevel = 0;
@@ -79,8 +79,9 @@ namespace flint::init
     {
         WGPUSamplerDescriptor samplerDesc = {};
         samplerDesc.nextInChain = nullptr;
-        samplerDesc.label = "Font Sampler";
-        samplerDesc.addressModeU = WGPUAddressMode_ClampToEdge;
+        samplerDesc.label = makeStringView("Font Sampler");
+        samplerDesc.addressModeU = WGPUAddressM
+ode_ClampToEdge;
         samplerDesc.addressModeV = WGPUAddressMode_ClampToEdge;
         samplerDesc.addressModeW = WGPUAddressMode_ClampToEdge;
         samplerDesc.magFilter = WGPUFilterMode_Linear;

@@ -124,7 +124,7 @@ namespace flint::graphics {
 
         WGPUFragmentState fragmentState = {};
         fragmentState.module = shaderModule;
-        fragmentState.entryPoint = "fs_main";
+        fragmentState.entryPoint = init::makeStringView("fs_main");
         fragmentState.targetCount = 1;
         fragmentState.targets = &colorTargetState;
 
