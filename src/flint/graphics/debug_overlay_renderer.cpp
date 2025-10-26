@@ -5,6 +5,9 @@
 #include <sstream>
 #include <vector>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #include "../init/buffer.h"
 #include "../init/pipeline.h"
 #include "../init/shader.h"

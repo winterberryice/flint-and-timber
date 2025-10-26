@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "utils.h"
+
 #include <glm/glm.hpp>
 
 #include "../vertex.h"
