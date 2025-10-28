@@ -4,8 +4,8 @@
 #include "../init/shader.h"
 #include "../init/pipeline.h"
 #include "../init/texture.h"
+#include "../init/utils.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
 #include <iostream>
@@ -19,7 +19,7 @@ namespace flint::graphics
         create_font_texture(device);
         create_vertex_buffer(device);
 
-        WGPUShaderModule shaderModule = init::create_shader_module(device, shaders::text_shader_source);
+        WGPUShaderModule shaderModule = init::create_shader_module(device, "Text Shader", shaders::text_shader_source.c_str());
 
         WGPURenderPipelineDescriptor pipelineDesc = {};
         pipelineDesc.nextInChain = nullptr;
@@ -69,7 +69,7 @@ namespace flint::graphics
         fragmentState.targetCount = 1;
         WGPUColorTargetState colorTarget = {};
         colorTarget.format = surfaceFormat;
-        colorTarget.blend = &(WGPUBlendState){
+        WGPUBlendState blendState = {
             .color = {
                 .operation = WGPUBlendOperation_Add,
                 .srcFactor = WGPUBlendFactor_SrcAlpha,
@@ -81,6 +81,7 @@ namespace flint::graphics
                 .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
             }
         };
+        colorTarget.blend = &blendState;
         colorTarget.writeMask = WGPUColorWriteMask_All;
         fragmentState.targets = &colorTarget;
         pipelineDesc.fragment = &fragmentState;
@@ -164,17 +165,23 @@ namespace flint::graphics
         const char* text = "hello world";
         for (int i = 0; text[i]; ++i)
         {
-            int glyph;
-            stbtt_GetCodepointHMetrics(&font, text[i], &glyph, 0);
+            int advance_width;
+            stbtt_GetCodepointHMetrics(&font, text[i], &advance_width, 0);
+
+            int glyph = stbtt_FindGlyphIndex(&font, text[i]);
+
             int x0, y0, x1, y1;
-            stbtt_GetGlyphBitmapBox(&font, text[i], scale, scale, &x0, &y0, &x1, &y1);
+            stbtt_GetGlyphBitmapBox(&font, glyph, scale, scale, &x0, &y0, &x1, &y1);
 
             int byteOffset = x + (y + y0) * m_textureWidth;
-            stbtt_MakeGlyphBitmap(&font, bitmap.data() + byteOffset, x1 - x0, y1 - y0, m_textureWidth, scale, scale, text[i]);
+            stbtt_MakeGlyphBitmap(&font, bitmap.data() + byteOffset, x1 - x0, y1 - y0, m_textureWidth, scale, scale, glyph);
 
-            x += glyph * scale;
+            x += advance_width * scale;
             if (text[i+1])
-                x += stbtt_GetCodepointKernAdvance(&font, text[i], text[i+1]) * scale;
+            {
+                int kern = stbtt_GetCodepointKernAdvance(&font, text[i], text[i+1]);
+                x += kern * scale;
+            }
 
         }
 
