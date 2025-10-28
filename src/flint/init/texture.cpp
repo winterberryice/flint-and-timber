@@ -1,5 +1,6 @@
 #include "texture.h"
 #include "utils.h"
+#include <webgpu/webgpu.h>
 
 namespace flint::init
 {

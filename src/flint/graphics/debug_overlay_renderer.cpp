@@ -6,7 +6,7 @@
 #include <vector>
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+#include "stb_truetype.h" // User-provided dependency.
 
 #include "../init/buffer.h"
 #include "../init/pipeline.h"
