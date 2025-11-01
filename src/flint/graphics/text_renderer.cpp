@@ -4,9 +4,6 @@
 #include <fstream>
 #include <vector>
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-
 #include "../init/shader.h"
 #include "../init/utils.h"
 #include "text_shader.wgsl.h"

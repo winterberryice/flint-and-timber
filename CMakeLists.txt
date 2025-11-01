@@ -54,8 +54,8 @@ add_subdirectory(third_party/webgpu)
 add_subdirectory(third_party/sdl3webgpu)
 
 # Collect all source files from src directory
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
-file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c" "src/flint/graphics/*.cpp")
+file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp" "src/flint/graphics/*.h")
 
 # Create executable
 add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})

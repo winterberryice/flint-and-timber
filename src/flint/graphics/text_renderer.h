@@ -2,11 +2,11 @@
 
 #include <webgpu/webgpu.h>
 #include <vector>
+#include <string>
 #include "render_pipeline.h"
 #include "../vertex.h"
 
-// Forward declaration
-struct stbtt_bakedchar;
+#include "stb_truetype.h"
 
 namespace flint::graphics
 {
