@@ -46,7 +46,7 @@ namespace flint::graphics
 
         // Vertex state
         pipelineDesc.vertex.module = shaderModule;
-        pipelineDesc.vertex.entryPoint = "vs_main";
+        pipelineDesc.vertex.entryPoint = init::makeStringView("vs_main");
         pipelineDesc.vertex.bufferCount = 1;
         WGPUVertexBufferLayout vertexBufferLayout = {};
         vertexBufferLayout.arrayStride = 4 * sizeof(float); // 2 for pos, 2 for uv
@@ -65,7 +65,7 @@ namespace flint::graphics
         // Fragment state
         WGPUFragmentState fragmentState = {};
         fragmentState.module = shaderModule;
-        fragmentState.entryPoint = "fs_main";
+        fragmentState.entryPoint = init::makeStringView("fs_main");
         fragmentState.targetCount = 1;
         WGPUColorTargetState colorTarget = {};
         colorTarget.format = surfaceFormat;
@@ -217,16 +217,17 @@ namespace flint::graphics
         m_sampler = wgpuDeviceCreateSampler(device, &samplerDesc);
 
         WGPUQueue queue = wgpuDeviceGetQueue(device);
-        WGPUImageCopyTexture imageCopyTexture = {};
-        imageCopyTexture.texture = m_fontTexture;
-        imageCopyTexture.mipLevel = 0;
-        imageCopyTexture.origin = { 0, 0, 0 };
-        WGPUTextureDataLayout textureDataLayout = {};
-        textureDataLayout.offset = 0;
-        textureDataLayout.bytesPerRow = m_textureWidth;
-        textureDataLayout.rowsPerImage = m_textureHeight;
+        WGPUTexelCopyTextureInfo destination = {};
+        destination.texture = m_fontTexture;
+        destination.mipLevel = 0;
+        destination.origin = { 0, 0, 0 };
+        destination.aspect = WGPUTextureAspect_All;
+        WGPUTexelCopyBufferLayout dataLayout = {};
+        dataLayout.offset = 0;
+        dataLayout.bytesPerRow = m_textureWidth;
+        dataLayout.rowsPerImage = m_textureHeight;
         WGPUExtent3D writeSize = { (uint32_t)m_textureWidth, (uint32_t)m_textureHeight, 1 };
-        wgpuQueueWriteTexture(queue, &imageCopyTexture, bitmap.data(), bitmap.size(), &textureDataLayout, &writeSize);
+        wgpuQueueWriteTexture(queue, &destination, bitmap.data(), bitmap.size(), &dataLayout, &writeSize);
     }
 
     void TextRenderer::create_vertex_buffer(WGPUDevice device)
