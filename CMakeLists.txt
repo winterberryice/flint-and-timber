@@ -34,7 +34,8 @@ FetchContent_MakeAvailable(SDL3 glm)
 set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
 
 # NEW: Tell WebGPU-distribution to build Dawn from source
-set(WEBGPU_BUILD_FROM_SOURCE ON CACHE BOOL "Build Dawn from source")
+set(WEBGPU_BUILD_FROM_SOURCE OFF CACHE BOOL "Build Dawn from source")
+set(WEBGPU_LINK_TYPE "SHARED" CACHE STRING "Link Dawn as a shared library")
 if(UNIX AND NOT APPLE)
     set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
     set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
