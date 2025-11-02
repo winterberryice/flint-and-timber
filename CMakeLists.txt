@@ -86,12 +86,15 @@ add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES})
 target_include_directories(${TARGET_NAME} PRIVATE src)
 
 # Link libraries
-target_link_libraries(${TARGET_NAME} PRIVATE 
+target_link_libraries(${TARGET_NAME} PRIVATE
     glm::glm
     SDL3::SDL3
     webgpu
     sdl3webgpu
 )
+
+# Define ImGui WebGPU backend (using Dawn)
+target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 
 # Set RPATH for Linux to find shared libraries in the executable's directory
 if(UNIX AND NOT APPLE)
