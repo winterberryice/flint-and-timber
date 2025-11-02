@@ -229,8 +229,18 @@ namespace flint
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // Create a simple ImGui window with "Hello World" text
-        ImGui::Begin("Hello ImGui!");
+        // Create a simple text overlay (like Minecraft HUD)
+        // Position in top-left corner with no window decorations
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.0f); // Transparent background
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration |
+                                        ImGuiWindowFlags_AlwaysAutoResize |
+                                        ImGuiWindowFlags_NoSavedSettings |
+                                        ImGuiWindowFlags_NoFocusOnAppearing |
+                                        ImGuiWindowFlags_NoNav |
+                                        ImGuiWindowFlags_NoMove;
+
+        ImGui::Begin("Overlay", nullptr, window_flags);
         ImGui::Text("Hello World");
         ImGui::End();
 
