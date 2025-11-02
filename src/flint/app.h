@@ -2,6 +2,9 @@
 
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_wgpu.h>
 
 #include "camera.h"
 #include "chunk.h"

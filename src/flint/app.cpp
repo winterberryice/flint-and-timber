@@ -69,6 +69,24 @@ namespace flint
             &m_depthTextureView);
 
         // ====
+        // Initialize ImGui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO &io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+
+        // Setup ImGui style
+        ImGui::StyleColorsDark();
+
+        // Setup Platform/Renderer backends
+        ImGui_ImplSDL3_InitForOther(m_window);
+        ImGui_ImplWGPU_InitInfo init_info = {};
+        init_info.Device = m_device;
+        init_info.NumFramesInFlight = 3;
+        init_info.RenderTargetFormat = (WGPUTextureFormat)m_surfaceFormat;
+        init_info.DepthStencilFormat = (WGPUTextureFormat)WGPUTextureFormat_Undefined;
+        ImGui_ImplWGPU_Init(&init_info);
+
         m_running = true;
     }
 
@@ -89,6 +107,9 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
+                // Let ImGui process the event first
+                ImGui_ImplSDL3_ProcessEvent(&e);
+
                 // Let the player handle keyboard input
                 m_player.handle_input(e);
 
@@ -203,6 +224,19 @@ namespace flint
     {
         update_camera();
 
+        // Start ImGui frame
+        ImGui_ImplWGPU_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        // Create a simple ImGui window with "Hello World" text
+        ImGui::Begin("Hello ImGui!");
+        ImGui::Text("Hello World");
+        ImGui::End();
+
+        // Finalize ImGui frame
+        ImGui::Render();
+
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
@@ -232,6 +266,10 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
+
+            // Render ImGui
+            ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), overlayRenderPass);
+
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -257,6 +295,11 @@ namespace flint
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
+
+        // Cleanup ImGui
+        ImGui_ImplWGPU_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+        ImGui::DestroyContext();
 
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
