@@ -48,6 +48,8 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
+        m_debugScreenRenderer.init(m_window, m_device, m_surfaceFormat);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -69,24 +71,6 @@ namespace flint
             &m_depthTextureView);
 
         // ====
-        // Initialize ImGui
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO &io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-
-        // Setup ImGui style
-        ImGui::StyleColorsDark();
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplSDL3_InitForOther(m_window);
-        ImGui_ImplWGPU_InitInfo init_info = {};
-        init_info.Device = m_device;
-        init_info.NumFramesInFlight = 3;
-        init_info.RenderTargetFormat = (WGPUTextureFormat)m_surfaceFormat;
-        init_info.DepthStencilFormat = (WGPUTextureFormat)WGPUTextureFormat_Undefined;
-        ImGui_ImplWGPU_Init(&init_info);
-
         m_running = true;
     }
 
@@ -107,8 +91,8 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
-                // Let ImGui process the event first
-                ImGui_ImplSDL3_ProcessEvent(&e);
+                // Let debug screen renderer process the event first
+                m_debugScreenRenderer.process_event(e);
 
                 // Let the player handle keyboard input
                 m_player.handle_input(e);
@@ -224,28 +208,8 @@ namespace flint
     {
         update_camera();
 
-        // Start ImGui frame
-        ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
-        // Create a simple text overlay (like Minecraft HUD)
-        // Position in top-left corner with no window decorations
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.0f); // Transparent background
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration |
-                                        ImGuiWindowFlags_AlwaysAutoResize |
-                                        ImGuiWindowFlags_NoSavedSettings |
-                                        ImGuiWindowFlags_NoFocusOnAppearing |
-                                        ImGuiWindowFlags_NoNav |
-                                        ImGuiWindowFlags_NoMove;
-
-        ImGui::Begin("Overlay", nullptr, window_flags);
-        ImGui::Text("Hello World");
-        ImGui::End();
-
-        // Finalize ImGui frame
-        ImGui::Render();
+        // Begin debug screen frame
+        m_debugScreenRenderer.begin_frame();
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -276,10 +240,7 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
-
-            // Render ImGui
-            ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), overlayRenderPass);
-
+            m_debugScreenRenderer.render(overlayRenderPass);
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -306,11 +267,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        // Cleanup ImGui
-        ImGui_ImplWGPU_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
-        ImGui::DestroyContext();
-
+        m_debugScreenRenderer.cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();
