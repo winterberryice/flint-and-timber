@@ -55,21 +55,22 @@ set(IMGUI_SOURCES
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
 set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
 
-# NEW: Tell WebGPU-distribution to build Dawn from source
-set(WEBGPU_BUILD_FROM_SOURCE ON CACHE BOOL "Build Dawn from source")
-if(UNIX AND NOT APPLE)
-    set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
-    set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
-    set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
-endif()
-set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
+# Use precompiled Dawn binaries from winterberryice/flint-and-timber-dawn
+set(WEBGPU_BUILD_FROM_SOURCE OFF CACHE BOOL "Build Dawn from source")
 
-# Speed up build by disabling unnecessary Dawn features
-set(TINT_BUILD_TESTS OFF CACHE BOOL "Skip Tint tests")
-set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
-set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
+# NOTE: The following options are only relevant when building from source
+# Keeping them commented for reference if we need to switch back
+# if(UNIX AND NOT APPLE)
+#     set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
+#     set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
+#     set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
+# endif()
+# set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
+# set(TINT_BUILD_TESTS OFF CACHE BOOL "Skip Tint tests")
+# set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
+# set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
 
-# Add WebGPU-distribution (Dawn) - now it will build from source!
+# Add WebGPU-distribution (Dawn) - will use precompiled binaries
 add_subdirectory(third_party/webgpu)
 
 # Add SDL3WebGPU helper

@@ -1,19 +1,19 @@
 # This file is part of the "Learn WebGPU for C++" book.
 #   https://eliemichel.github.io/LearnWebGPU
-# 
+#
 # MIT License
 # Copyright (c) 2022-2025 Elie Michel and the wgpu-native authors
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,11 +22,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-include(FetchContent)
+# Modified to fetch from winterberryice/flint-and-timber-dawn releases
 
-# Not using emscripten, so we download binaries. There are many different
-# combinations of OS, CPU architecture and compiler (the later is only
-# relevant when using static linking), so here are a lot of boring "if".
+include(FetchContent)
 
 detect_system_architecture()
 
@@ -41,68 +39,93 @@ else()
 	message(FATAL_ERROR "Link type '${WEBGPU_LINK_TYPE}' is not valid. Possible values for WEBGPU_LINK_TYPE are SHARED and STATIC.")
 endif()
 
-# Build URL to fetch
-set(URL_OS)
+# Build URL to fetch from winterberryice/flint-and-timber-dawn
+set(URL_PLATFORM)
+set(URL_ARCHIVE_EXT)
+set(LIB_FILENAME)
+set(LIB_DIR)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-
-	set(URL_OS "windows")
-
+	set(URL_PLATFORM "windows")
+	set(URL_ARCHIVE_EXT "zip")
+	set(LIB_FILENAME "webgpu_dawn.dll")
+	set(LIB_DIR "windows/lib")
+	set(INCLUDE_DIR "windows/include")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-
-	set(URL_OS "linux")
-
+	set(URL_PLATFORM "linux")
+	set(URL_ARCHIVE_EXT "tar.gz")
+	set(LIB_FILENAME "libwebgpu_dawn.so")
+	set(LIB_DIR "linux/lib")
+	set(INCLUDE_DIR "linux/include")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-
-	set(URL_OS "macos")
-
+	set(URL_PLATFORM "macos")
+	set(URL_ARCHIVE_EXT "tar.gz")
+	set(LIB_FILENAME "libwebgpu_dawn.dylib")
+	set(LIB_DIR "macos/lib")
+	set(INCLUDE_DIR "macos/include")
 else()
-
-	message(FATAL_ERROR "Platform system '${CMAKE_SYSTEM_NAME}' not supported by this release of WebGPU. You may consider building it yourself from its source (see https://dawn.googlesource.com/dawn)")
-
+	message(FATAL_ERROR "Platform system '${CMAKE_SYSTEM_NAME}' not supported by this release of WebGPU.")
 endif()
 
+# Determine architecture suffix for URL
 set(URL_ARCH)
-if (ARCH STREQUAL "x86_64" AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+	# macOS uses universal binaries
+	set(URL_ARCH "universal")
+elseif (ARCH STREQUAL "x86_64")
 	set(URL_ARCH "x64")
-elseif (ARCH STREQUAL "x86_64" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	set(URL_ARCH "x64")
-elseif (ARCH STREQUAL "x86_64" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-	set(URL_ARCH "x64")
-elseif (ARCH STREQUAL "aarch64" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+elseif (ARCH STREQUAL "aarch64")
 	set(URL_ARCH "aarch64")
 else()
-	message(FATAL_ERROR "Platform architecture '${ARCH}' not supported for system '${CMAKE_SYSTEM_NAME}' by this release of WebGPU. You may consider building it yourself from its source (see https://dawn.googlesource.com/dawn)")
+	message(FATAL_ERROR "Platform architecture '${ARCH}' not supported for system '${CMAKE_SYSTEM_NAME}'.")
 endif()
 
-# We only fetch release builds (NB: this may cause issue when using static
-# linking, but not with dynamic)
-set(URL_CONFIG Release)
-set(URL_NAME "Dawn-${DAWN_VERSION}-${URL_OS}-${URL_ARCH}-${URL_CONFIG}")
-string(TOLOWER "${URL_NAME}" FC_NAME)
-set(URL "${DAWN_BINARY_MIRROR}/releases/download/chromium%2F${DAWN_VERSION}/${URL_NAME}.zip")
+# Read the Dawn version tag
+file(READ "${CMAKE_CURRENT_LIST_DIR}/dawn-git-tag.txt" DAWN_GIT_TAG_CONTENT)
+string(STRIP "${DAWN_GIT_TAG_CONTENT}" DAWN_GIT_TAG)
 
-# Declare FetchContent, then make available
+# Construct URL: https://github.com/winterberryice/flint-and-timber-dawn/releases/download/chromium%2F7187/dawn-linux-x64.tar.gz
+set(URL_NAME "dawn-${URL_PLATFORM}-${URL_ARCH}")
+string(TOLOWER "${URL_NAME}" FC_NAME)
+set(URL "https://github.com/winterberryice/flint-and-timber-dawn/releases/download/${DAWN_GIT_TAG}/${URL_NAME}.${URL_ARCHIVE_EXT}")
+
+# Declare and fetch
 FetchContent_Declare(${FC_NAME}
 	URL ${URL}
 )
-# TODO: Display the "Fetching" message only when actually downloading
 message(STATUS "Fetching WebGPU implementation from '${URL}'")
 FetchContent_MakeAvailable(${FC_NAME})
 
 set(Dawn_ROOT "${${FC_NAME}_SOURCE_DIR}")
-set(Dawn_DIR "${${FC_NAME}_SOURCE_DIR}/lib64/cmake/Dawn")
-find_package(Dawn CONFIG REQUIRED)
 
-# Unify target name with other backends and provide webgpu.hpp
+# Create imported library target manually (no CMake config provided)
+add_library(dawn_webgpu_imported SHARED IMPORTED GLOBAL)
+
+# Set library location
+set(WEBGPU_RUNTIME_LIB "${Dawn_ROOT}/${LIB_DIR}/${LIB_FILENAME}")
+if (NOT EXISTS "${WEBGPU_RUNTIME_LIB}")
+	message(FATAL_ERROR "WebGPU library not found at expected location: ${WEBGPU_RUNTIME_LIB}")
+endif()
+
+set_target_properties(dawn_webgpu_imported PROPERTIES
+	IMPORTED_LOCATION "${WEBGPU_RUNTIME_LIB}"
+)
+
+# Set include directories
+target_include_directories(dawn_webgpu_imported INTERFACE
+	"${Dawn_ROOT}/${INCLUDE_DIR}"
+)
+
+# Create webgpu interface target that matches other backends
 add_library(webgpu INTERFACE)
-target_link_libraries(webgpu INTERFACE dawn::webgpu_dawn)
-# This is used to advertise the flavor of WebGPU that this zip provides
+target_link_libraries(webgpu INTERFACE dawn_webgpu_imported)
+
+# This is used to advertise the flavor of WebGPU that this provides
 target_compile_definitions(webgpu INTERFACE WEBGPU_BACKEND_DAWN)
-# This add webgpu.hpp
+
+# Add webgpu.hpp from the distribution's include directory
 target_include_directories(webgpu INTERFACE "${CMAKE_CURRENT_LIST_DIR}/include")
 
-# Get path to .dll/.so/.dylib, for target_copy_webgpu_binaries
-get_target_property(WEBGPU_RUNTIME_LIB dawn::webgpu_dawn IMPORTED_LOCATION_RELEASE)
 message(STATUS "Using WebGPU runtime from '${WEBGPU_RUNTIME_LIB}'")
 set(WEBGPU_RUNTIME_LIB ${WEBGPU_RUNTIME_LIB} CACHE INTERNAL "Path to the WebGPU library binary")
 
