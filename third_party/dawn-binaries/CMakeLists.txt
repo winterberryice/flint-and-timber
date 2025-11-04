@@ -79,13 +79,42 @@ FetchContent_MakeAvailable(${FC_NAME})
 
 set(Dawn_ROOT "${${FC_NAME}_SOURCE_DIR}")
 
+# Debug: Show what was extracted
+message(STATUS "Dawn_ROOT: ${Dawn_ROOT}")
+file(GLOB_RECURSE DAWN_CONTENTS "${Dawn_ROOT}/*")
+message(STATUS "Contents of Dawn_ROOT (first 10 items):")
+list(LENGTH DAWN_CONTENTS CONTENT_COUNT)
+if(CONTENT_COUNT GREATER 10)
+	list(SUBLIST DAWN_CONTENTS 0 10 DAWN_CONTENTS_SUBSET)
+	foreach(item ${DAWN_CONTENTS_SUBSET})
+		message(STATUS "  ${item}")
+	endforeach()
+else()
+	foreach(item ${DAWN_CONTENTS})
+		message(STATUS "  ${item}")
+	endforeach()
+endif()
+
 # Create imported library target manually (no CMake config provided)
 add_library(dawn_webgpu_imported SHARED IMPORTED GLOBAL)
 
-# Set library location
+# Set library location - try with platform subdirectory first
 set(WEBGPU_RUNTIME_LIB "${Dawn_ROOT}/${LIB_DIR}/${LIB_FILENAME}")
 if (NOT EXISTS "${WEBGPU_RUNTIME_LIB}")
-	message(FATAL_ERROR "WebGPU library not found at expected location: ${WEBGPU_RUNTIME_LIB}")
+	# Try without platform subdirectory (files might be at root)
+	if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+		set(LIB_DIR "lib")
+	elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		set(LIB_DIR "lib")
+	elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+		set(LIB_DIR "lib")
+	endif()
+	set(INCLUDE_DIR "include")
+	set(WEBGPU_RUNTIME_LIB "${Dawn_ROOT}/${LIB_DIR}/${LIB_FILENAME}")
+
+	if (NOT EXISTS "${WEBGPU_RUNTIME_LIB}")
+		message(FATAL_ERROR "WebGPU library not found at expected location: ${WEBGPU_RUNTIME_LIB}")
+	endif()
 endif()
 
 set_target_properties(dawn_webgpu_imported PROPERTIES
