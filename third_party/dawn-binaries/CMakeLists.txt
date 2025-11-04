@@ -24,12 +24,14 @@ endif()
 set(URL_PLATFORM)
 set(URL_ARCHIVE_EXT)
 set(LIB_FILENAME)
+set(LIB_IMPLIB_FILENAME)  # Import library for Windows
 set(LIB_DIR)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	set(URL_PLATFORM "windows")
 	set(URL_ARCHIVE_EXT "zip")
 	set(LIB_FILENAME "webgpu_dawn.dll")
+	set(LIB_IMPLIB_FILENAME "webgpu_dawn.lib")  # Windows import library
 	set(LIB_DIR "windows/lib")
 	set(INCLUDE_DIR "windows/include")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -120,6 +122,18 @@ endif()
 set_target_properties(dawn_webgpu_imported PROPERTIES
 	IMPORTED_LOCATION "${WEBGPU_RUNTIME_LIB}"
 )
+
+# On Windows, we also need to set the import library (.lib file)
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	set(WEBGPU_IMPLIB "${Dawn_ROOT}/${LIB_DIR}/${LIB_IMPLIB_FILENAME}")
+	if (NOT EXISTS "${WEBGPU_IMPLIB}")
+		message(FATAL_ERROR "WebGPU import library not found at expected location: ${WEBGPU_IMPLIB}")
+	endif()
+	set_target_properties(dawn_webgpu_imported PROPERTIES
+		IMPORTED_IMPLIB "${WEBGPU_IMPLIB}"
+	)
+	message(STATUS "Using WebGPU import library from '${WEBGPU_IMPLIB}'")
+endif()
 
 # Set include directories
 target_include_directories(dawn_webgpu_imported INTERFACE
