@@ -150,6 +150,13 @@ target_compile_definitions(webgpu INTERFACE WEBGPU_BACKEND_DAWN)
 message(STATUS "Using WebGPU runtime from '${WEBGPU_RUNTIME_LIB}'")
 set(WEBGPU_RUNTIME_LIB ${WEBGPU_RUNTIME_LIB} CACHE INTERNAL "Path to the WebGPU library binary")
 
+# On macOS, Dawn binaries from winterberryice/flint-and-timber-dawn are universal
+# This flag helps CI scripts know not to lipo Dawn binaries
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+	set(DAWN_IS_UNIVERSAL_BINARY TRUE CACHE BOOL "Dawn binary is already universal (arm64+x86_64)")
+	message(STATUS "Dawn binary is universal (contains both arm64 and x86_64)")
+endif()
+
 # The application's binary must find the .dll/.so/.dylib at runtime,
 # so we automatically copy it next to the binary.
 function(target_copy_webgpu_binaries Target)
