@@ -104,9 +104,6 @@ target_link_libraries(webgpu INTERFACE dawn_webgpu_imported)
 # This is used to advertise the flavor of WebGPU that this provides
 target_compile_definitions(webgpu INTERFACE WEBGPU_BACKEND_DAWN)
 
-# Add webgpu.hpp C++ wrapper from include directory
-target_include_directories(webgpu INTERFACE "${CMAKE_CURRENT_LIST_DIR}/include")
-
 message(STATUS "Using WebGPU runtime from '${WEBGPU_RUNTIME_LIB}'")
 set(WEBGPU_RUNTIME_LIB ${WEBGPU_RUNTIME_LIB} CACHE INTERNAL "Path to the WebGPU library binary")
 
