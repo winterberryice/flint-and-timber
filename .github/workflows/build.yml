@@ -17,7 +17,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: build/release
-        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/dawn-binaries/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
 
     - name: Install dependencies
       run: >
@@ -49,7 +49,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: build/release
-        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/dawn-binaries/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
 
     - name: Set up MSBuild
       uses: microsoft/setup-msbuild@v1.3
@@ -86,7 +86,7 @@ jobs:
         path: |
           build/release-arm64
           build/release-x86_64
-        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/webgpu/dawn/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
+        key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'third_party/dawn-binaries/dawn-git-tag.txt', 'third_party/sdl3-git-tag.txt') }}
 
     - name: Build for Apple Silicon (ARM64)
       run: |
@@ -105,10 +105,9 @@ jobs:
         lipo -create -output artifact/flint-and-timber \
           build/release-arm64/flint-and-timber \
           build/release-x86_64/flint-and-timber
-        # Create universal dawn library
-        lipo -create -output artifact/libwebgpu_dawn.dylib \
-          build/release-arm64/libwebgpu_dawn.dylib \
-          build/release-x86_64/libwebgpu_dawn.dylib
+        # Dawn library is already universal (contains both arm64 and x86_64)
+        # Just copy from either build since they're identical
+        cp build/release-arm64/libwebgpu_dawn.dylib artifact/
         # Create universal SDL3 library
         lipo -create -output artifact/libSDL3.0.dylib \
           build/release-arm64/_deps/sdl3-build/libSDL3.0.dylib \
