@@ -52,26 +52,9 @@ set(IMGUI_SOURCES
 )
 
 # ============ WebGPU Configuration ============
-# Set WebGPU backend to Dawn BEFORE adding subdirectory
-set(WEBGPU_BACKEND "DAWN" CACHE STRING "WebGPU backend to use")
-
 # Use precompiled Dawn binaries from winterberryice/flint-and-timber-dawn
-set(WEBGPU_BUILD_FROM_SOURCE OFF CACHE BOOL "Build Dawn from source")
-
-# NOTE: The following options are only relevant when building from source
-# Keeping them commented for reference if we need to switch back
-# if(UNIX AND NOT APPLE)
-#     set(DAWN_ENABLE_WAYLAND ON CACHE BOOL "Enable Wayland support")
-#     set(DAWN_USE_WAYLAND ON CACHE BOOL "Use Wayland platform")
-#     set(DAWN_ENABLE_X11 ON CACHE BOOL "Enable X11 support")
-# endif()
-# set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "Let Dawn fetch dependencies")
-# set(TINT_BUILD_TESTS OFF CACHE BOOL "Skip Tint tests")
-# set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Skip Dawn samples")
-# set(DAWN_USE_GLFW OFF CACHE BOOL "Skip GLFW in Dawn")
-
-# Add WebGPU-distribution (Dawn) - will use precompiled binaries
-add_subdirectory(third_party/webgpu)
+# This creates the 'webgpu' target and target_copy_webgpu_binaries() function
+add_subdirectory(third_party/dawn-binaries)
 
 # Add SDL3WebGPU helper
 add_subdirectory(third_party/sdl3webgpu)
@@ -135,7 +118,6 @@ add_dependencies(${TARGET_NAME} GenerateAtlasHeader)
 
 # Include directories
 target_include_directories(${TARGET_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
     ${CMAKE_CURRENT_BINARY_DIR}/generated
@@ -144,8 +126,7 @@ target_include_directories(${TARGET_NAME} PRIVATE
 )
 
 
-# Copy WebGPU binaries using the proper function provided by WebGPU-distribution
-# This should handle the Dawn binary copying automatically
+# Copy WebGPU binaries using the function provided by dawn-binaries
 if(COMMAND target_copy_webgpu_binaries)
     target_copy_webgpu_binaries(${TARGET_NAME})
 endif()
