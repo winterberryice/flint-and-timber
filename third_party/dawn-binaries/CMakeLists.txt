@@ -7,9 +7,29 @@ if (TARGET webgpu)
 	return()
 endif()
 
-# Include utility functions from webgpu distribution
-include("${CMAKE_CURRENT_SOURCE_DIR}/../webgpu/cmake/utils.cmake")
 include(FetchContent)
+
+# Target architecture detection
+function(detect_system_architecture)
+	if (NOT ARCH)
+		set(SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR})
+		if (SYSTEM_PROCESSOR STREQUAL "AMD64" OR SYSTEM_PROCESSOR STREQUAL "x86_64")
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set(ARCH "x86_64")
+			elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+				set(ARCH "i686")
+			endif()
+		elseif (SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|armv8|arm)$")
+			set(ARCH "aarch64")
+		elseif(SYSTEM_PROCESSOR MATCHES "^(armv7|armv6|armhf)$")
+			set(ARCH "arm")
+		else()
+			message(WARNING "Unknown architecture: ${SYSTEM_PROCESSOR}")
+			set(ARCH "unknown")
+		endif()
+	endif()
+	set(ARCH "${ARCH}" PARENT_SCOPE)
+endfunction()
 
 # Detect system architecture
 detect_system_architecture()
