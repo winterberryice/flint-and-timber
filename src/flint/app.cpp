@@ -48,6 +48,8 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
+        m_debugScreenRenderer.init(m_window, m_device, m_surfaceFormat);
+
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
         m_camera = Camera(
@@ -89,6 +91,9 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
+                // Let debug screen renderer process the event first
+                m_debugScreenRenderer.process_event(e);
+
                 // Let the player handle keyboard input
                 m_player.handle_input(e);
 
@@ -203,6 +208,9 @@ namespace flint
     {
         update_camera();
 
+        // Begin debug screen frame
+        m_debugScreenRenderer.begin_frame();
+
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
@@ -232,6 +240,7 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
+            m_debugScreenRenderer.render(overlayRenderPass);
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -258,6 +267,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
+        m_debugScreenRenderer.cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();

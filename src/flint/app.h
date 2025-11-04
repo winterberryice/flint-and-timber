@@ -9,6 +9,7 @@
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
 #include "graphics/crosshair_renderer.h"
+#include "graphics/debug_screen_renderer.h"
 #include "player.h"
 
 namespace flint
@@ -50,6 +51,7 @@ namespace flint
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
+        graphics::DebugScreenRenderer m_debugScreenRenderer;
 
         Camera m_camera;
         player::Player m_player;

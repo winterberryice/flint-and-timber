@@ -27,7 +27,29 @@ FetchContent_Declare(
     GIT_TAG ${GLM_GIT_TAG}
 )
 
-FetchContent_MakeAvailable(SDL3 glm)
+# Fetch ImGui
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui-git-tag.txt IMGUI_GIT_TAG)
+string(STRIP ${IMGUI_GIT_TAG} IMGUI_GIT_TAG)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG ${IMGUI_GIT_TAG}
+)
+
+FetchContent_MakeAvailable(SDL3 glm imgui)
+
+# ============ ImGui Configuration ============
+# ImGui doesn't provide a CMakeLists.txt, so we need to build it ourselves
+set(IMGUI_DIR ${imgui_SOURCE_DIR})
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp
+)
 
 # ============ WebGPU Configuration ============
 # Set WebGPU backend to Dawn BEFORE adding subdirectory
@@ -57,19 +79,22 @@ add_subdirectory(third_party/sdl3webgpu)
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
 file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
 
-# Create executable
-add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS})
+# Create executable (including ImGui sources)
+add_executable(${TARGET_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES})
 
 # Include src directory for headers
 target_include_directories(${TARGET_NAME} PRIVATE src)
 
 # Link libraries
-target_link_libraries(${TARGET_NAME} PRIVATE 
+target_link_libraries(${TARGET_NAME} PRIVATE
     glm::glm
     SDL3::SDL3
     webgpu
     sdl3webgpu
 )
+
+# Define ImGui WebGPU backend (using Dawn)
+target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 
 # Set RPATH for Linux to find shared libraries in the executable's directory
 if(UNIX AND NOT APPLE)
@@ -113,6 +138,8 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl3webgpu/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb
     ${CMAKE_CURRENT_BINARY_DIR}/generated
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
 )
 
 
