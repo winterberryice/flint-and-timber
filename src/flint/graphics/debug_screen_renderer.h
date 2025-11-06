@@ -3,6 +3,15 @@
 #include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
 
+namespace flint
+{
+    class World;
+    namespace player
+    {
+        class Player;
+    }
+}
+
 namespace flint::graphics
 {
 
@@ -14,7 +23,7 @@ namespace flint::graphics
 
         void init(SDL_Window *window, WGPUDevice device, WGPUTextureFormat surfaceFormat);
         void process_event(const SDL_Event &event);
-        void begin_frame();
+        void begin_frame(const flint::player::Player &player, const flint::World &world);
         void render(WGPURenderPassEncoder renderPass);
         void cleanup();
 
