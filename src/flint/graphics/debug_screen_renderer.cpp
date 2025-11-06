@@ -92,9 +92,7 @@ namespace flint::graphics
         if (selected_block.has_value())
         {
             glm::ivec3 block = selected_block->block_position;
-            glm::ivec3 face = selected_block->face_normal;
             ImGui::Text("Looking at: %d %d %d", block.x, block.y, block.z);
-            ImGui::Text("Face: %d %d %d", face.x, face.y, face.z);
         }
         else
         {
