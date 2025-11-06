@@ -112,6 +112,10 @@ namespace flint
                         m_running = false;
                     }
                 }
+                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_F3)
+                {
+                    m_showDebugScreen = !m_showDebugScreen;
+                }
                 else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
                     onResize(e.window.data1, e.window.data2);
                 }
@@ -208,8 +212,11 @@ namespace flint
     {
         update_camera();
 
-        // Begin debug screen frame
-        m_debugScreenRenderer.begin_frame();
+        // Begin debug screen frame (if enabled)
+        if (m_showDebugScreen)
+        {
+            m_debugScreenRenderer.begin_frame(m_player, m_worldRenderer.getWorld());
+        }
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -240,7 +247,10 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
-            m_debugScreenRenderer.render(overlayRenderPass);
+            if (m_showDebugScreen)
+            {
+                m_debugScreenRenderer.render(overlayRenderPass);
+            }
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
