@@ -10,6 +10,7 @@
 #include "graphics/selection_renderer.h"
 #include "graphics/crosshair_renderer.h"
 #include "graphics/debug_screen_renderer.h"
+#include "graphics/inventory_ui_renderer.h"
 #include "player.h"
 
 namespace flint
@@ -52,6 +53,7 @@ namespace flint
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
         graphics::DebugScreenRenderer m_debugScreenRenderer;
+        graphics::InventoryUIRenderer m_inventoryUIRenderer;
 
         Camera m_camera;
         player::Player m_player;
@@ -59,6 +61,7 @@ namespace flint
         // App state
         bool m_running = false;
         bool m_showDebugScreen = false;
+        bool m_showInventory = false;
         int m_windowWidth = 800;
         int m_windowHeight = 600;
         float m_initialFovY = 60.0f;
