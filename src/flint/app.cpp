@@ -171,11 +171,8 @@ namespace flint
                 }
             }
 
-            // Update player physics and state (only when inventory is closed)
-            if (!m_showInventory)
-            {
-                m_player.update(dt, m_worldRenderer.getWorld());
-            }
+            // Update player physics and state (always update - world continues even with inventory open)
+            m_player.update(dt, m_worldRenderer.getWorld());
 
             // Render the scene
             render();
