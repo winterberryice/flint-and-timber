@@ -22,7 +22,6 @@ namespace flint::graphics
         ~DebugScreenRenderer();
 
         void init(SDL_Window *window, WGPUDevice device, WGPUTextureFormat surfaceFormat);
-        void process_event(const SDL_Event &event);
         void cleanup();
 
         // Creates ImGui windows (does NOT manage frame lifecycle)

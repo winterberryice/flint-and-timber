@@ -15,13 +15,7 @@ void InventoryUIRenderer::init(SDL_Window *window, WGPUDevice device, WGPUTextur
 
 void InventoryUIRenderer::cleanup()
 {
-    // ImGui context is shared with debug screen, so we don't destroy it here
     m_initialized = false;
-}
-
-void InventoryUIRenderer::process_event(const SDL_Event &event)
-{
-    // ImGui events are handled by debug screen renderer
 }
 
 void InventoryUIRenderer::render_ui(int windowWidth, int windowHeight)

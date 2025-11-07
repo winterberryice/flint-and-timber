@@ -24,8 +24,7 @@ void UIManager::cleanup()
 
 void UIManager::process_event(const SDL_Event &event)
 {
-    // ImGui event processing (shared)
-    m_debugScreenRenderer.process_event(event);
+    ImGui_ImplSDL3_ProcessEvent(&event);
 }
 
 void UIManager::render(

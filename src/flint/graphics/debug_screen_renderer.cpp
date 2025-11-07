@@ -47,11 +47,6 @@ namespace flint::graphics
         std::cout << "Debug screen renderer initialized." << std::endl;
     }
 
-    void DebugScreenRenderer::process_event(const SDL_Event &event)
-    {
-        ImGui_ImplSDL3_ProcessEvent(&event);
-    }
-
     void DebugScreenRenderer::render_ui(const flint::player::Player &player, const flint::World &world)
     {
         // Create a simple text overlay (like Minecraft HUD)
