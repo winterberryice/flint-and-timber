@@ -96,79 +96,7 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
-                // Let debug screen renderer process the event first
-                m_debugScreenRenderer.process_event(e);
-
-                // Let the player handle keyboard input (only when inventory is closed)
-                if (!m_showInventory)
-                {
-                    m_player.handle_input(e);
-                }
-
-                if (e.type == SDL_EVENT_QUIT)
-                {
-                    m_running = false;
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
-                {
-                    if (SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        SDL_SetWindowRelativeMouseMode(m_window, false);
-                    }
-                    else
-                    {
-                        m_running = false;
-                    }
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_F3)
-                {
-                    m_showDebugScreen = !m_showDebugScreen;
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_E)
-                {
-                    m_showInventory = !m_showInventory;
-
-                    // Toggle mouse grab when inventory is toggled
-                    if (m_showInventory)
-                    {
-                        // Opening inventory - ungrab mouse
-                        SDL_SetWindowRelativeMouseMode(m_window, false);
-                    }
-                    else
-                    {
-                        // Closing inventory - grab mouse again
-                        SDL_SetWindowRelativeMouseMode(m_window, true);
-                    }
-                }
-                else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
-                    onResize(e.window.data1, e.window.data2);
-                }
-                else if (e.type == SDL_EVENT_MOUSE_MOTION)
-                {
-                    if (SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
-                    }
-                }
-                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-                {
-                    // Don't handle mouse clicks when inventory is open
-                    if (m_showInventory)
-                    {
-                        continue;
-                    }
-
-                    if (!SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        SDL_SetWindowRelativeMouseMode(m_window, true);
-                        continue;
-                    }
-
-                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getWorld()))
-                    {
-                        m_worldRenderer.rebuild_chunk_mesh(m_device);
-                    }
-                }
+                handle_input_event(e);
             }
 
             // Update player physics and state (always update - world continues even with inventory open)
@@ -243,7 +171,8 @@ namespace flint
         update_camera();
 
         // Manage ImGui frame lifecycle
-        bool needsImGui = m_showDebugScreen || m_showInventory;
+        bool showInventory = m_gameState.is_inventory_open();
+        bool needsImGui = m_showDebugScreen || showInventory;
 
         if (needsImGui)
         {
@@ -253,7 +182,7 @@ namespace flint
                 m_debugScreenRenderer.begin_frame(m_player, m_worldRenderer.getWorld());
 
                 // If inventory is also shown, add its windows to the same frame
-                if (m_showInventory)
+                if (showInventory)
                 {
                     // ImGui is already in a frame, so just create windows
                     // Need to "reopen" the frame for inventory windows
@@ -263,7 +192,7 @@ namespace flint
                 }
                 // else: debug screen already called Render
             }
-            else if (m_showInventory)
+            else if (showInventory)
             {
                 // Only inventory is shown, need to manage ImGui frame manually
                 ImGui_ImplWGPU_NewFrame();
@@ -332,6 +261,84 @@ namespace flint
         }
 
         wgpuTextureRelease(surfaceTexture.texture);
+    }
+
+    void App::handle_input_event(const SDL_Event &event)
+    {
+        // Let ImGui process events
+        m_debugScreenRenderer.process_event(event);
+
+        // Route player input based on game state
+        if (m_gameState.should_process_player_input())
+        {
+            m_player.handle_input(event);
+        }
+
+        // Handle app-level events
+        if (event.type == SDL_EVENT_QUIT)
+        {
+            m_running = false;
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
+        {
+            if (SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                SDL_SetWindowRelativeMouseMode(m_window, false);
+            }
+            else
+            {
+                m_running = false;
+            }
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F3)
+        {
+            m_showDebugScreen = !m_showDebugScreen;
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_E)
+        {
+            m_gameState.toggle_inventory();
+            sync_mouse_state();
+        }
+        else if (event.type == SDL_EVENT_WINDOW_RESIZED)
+        {
+            onResize(event.window.data1, event.window.data2);
+        }
+        else if (event.type == SDL_EVENT_MOUSE_MOTION)
+        {
+            if (SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                m_player.process_mouse_movement(
+                    static_cast<float>(event.motion.xrel),
+                    static_cast<float>(event.motion.yrel)
+                );
+            }
+        }
+        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+        {
+            // Block interaction only allowed in certain game states
+            if (!m_gameState.should_allow_block_interaction())
+            {
+                return;
+            }
+
+            if (!SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                SDL_SetWindowRelativeMouseMode(m_window, true);
+                return;
+            }
+
+            if (m_player.on_mouse_click(event.button, m_worldRenderer.getWorld()))
+            {
+                m_worldRenderer.rebuild_chunk_mesh(m_device);
+            }
+        }
+    }
+
+    void App::sync_mouse_state()
+    {
+        // Sync mouse grab state with game state
+        bool should_grab = m_gameState.should_use_relative_mouse();
+        SDL_SetWindowRelativeMouseMode(m_window, should_grab);
     }
 
     App::~App()

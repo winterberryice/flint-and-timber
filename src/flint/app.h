@@ -12,6 +12,7 @@
 #include "graphics/debug_screen_renderer.h"
 #include "graphics/inventory_ui_renderer.h"
 #include "player.h"
+#include "game_state.h"
 
 namespace flint
 {
@@ -28,6 +29,8 @@ namespace flint
         void render();
         void update_camera();
         void onResize(int width, int height);
+        void handle_input_event(const SDL_Event &event);
+        void sync_mouse_state();
 
     private:
         // SDL resources
@@ -57,11 +60,11 @@ namespace flint
 
         Camera m_camera;
         player::Player m_player;
+        GameState m_gameState;
 
         // App state
         bool m_running = false;
         bool m_showDebugScreen = false;
-        bool m_showInventory = false;
         int m_windowWidth = 800;
         int m_windowHeight = 600;
         float m_initialFovY = 60.0f;
