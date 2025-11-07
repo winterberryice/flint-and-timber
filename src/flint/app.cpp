@@ -99,8 +99,11 @@ namespace flint
                 // Let debug screen renderer process the event first
                 m_debugScreenRenderer.process_event(e);
 
-                // Let the player handle keyboard input
-                m_player.handle_input(e);
+                // Let the player handle keyboard input (only when inventory is closed)
+                if (!m_showInventory)
+                {
+                    m_player.handle_input(e);
+                }
 
                 if (e.type == SDL_EVENT_QUIT)
                 {
@@ -124,6 +127,18 @@ namespace flint
                 else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_E)
                 {
                     m_showInventory = !m_showInventory;
+
+                    // Toggle mouse grab when inventory is toggled
+                    if (m_showInventory)
+                    {
+                        // Opening inventory - ungrab mouse
+                        SDL_SetWindowRelativeMouseMode(m_window, false);
+                    }
+                    else
+                    {
+                        // Closing inventory - grab mouse again
+                        SDL_SetWindowRelativeMouseMode(m_window, true);
+                    }
                 }
                 else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
                     onResize(e.window.data1, e.window.data2);
@@ -137,6 +152,12 @@ namespace flint
                 }
                 else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
                 {
+                    // Don't handle mouse clicks when inventory is open
+                    if (m_showInventory)
+                    {
+                        continue;
+                    }
+
                     if (!SDL_GetWindowRelativeMouseMode(m_window))
                     {
                         SDL_SetWindowRelativeMouseMode(m_window, true);
@@ -150,8 +171,11 @@ namespace flint
                 }
             }
 
-            // Update player physics and state
-            m_player.update(dt, m_worldRenderer.getWorld());
+            // Update player physics and state (only when inventory is closed)
+            if (!m_showInventory)
+            {
+                m_player.update(dt, m_worldRenderer.getWorld());
+            }
 
             // Render the scene
             render();
