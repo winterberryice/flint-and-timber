@@ -24,13 +24,10 @@ void InventoryUIRenderer::process_event(const SDL_Event &event)
     // ImGui events are handled by debug screen renderer
 }
 
-void InventoryUIRenderer::begin_frame(int windowWidth, int windowHeight)
+void InventoryUIRenderer::render_ui(int windowWidth, int windowHeight)
 {
     if (!m_initialized)
         return;
-
-    // NOTE: This method creates ImGui windows but doesn't call NewFrame/Render
-    // Those are handled in the app's render loop to avoid conflicts with debug screen
 
     // Calculate dimensions
     const float inventoryCols = 9.0f;
@@ -85,6 +82,13 @@ void InventoryUIRenderer::begin_frame(int windowWidth, int windowHeight)
 
     ImGui::End();
     ImGui::PopStyleColor();
+}
+
+void InventoryUIRenderer::begin_frame(int windowWidth, int windowHeight)
+{
+    // Legacy method - just calls render_ui
+    // Frame lifecycle should be managed externally
+    render_ui(windowWidth, windowHeight);
 }
 
 void InventoryUIRenderer::render(WGPURenderPassEncoder renderPass)

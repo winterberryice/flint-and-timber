@@ -11,10 +11,6 @@
 
 #include "atlas_bytes.hpp"
 
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_wgpu.h>
-
 namespace flint
 {
     App::App()
@@ -52,8 +48,7 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
-        m_debugScreenRenderer.init(m_window, m_device, m_surfaceFormat);
-        m_inventoryUIRenderer.init(m_window, m_device, m_surfaceFormat);
+        m_uiManager.init(m_window, m_device, m_surfaceFormat);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
@@ -170,40 +165,15 @@ namespace flint
     {
         update_camera();
 
-        // Manage ImGui frame lifecycle
-        bool showInventory = m_gameState.is_inventory_open();
-        bool needsImGui = m_showDebugScreen || showInventory;
-
-        if (needsImGui)
-        {
-            if (m_showDebugScreen)
-            {
-                // Debug screen renderer manages the ImGui frame (calls NewFrame internally)
-                m_debugScreenRenderer.begin_frame(m_player, m_worldRenderer.getWorld());
-
-                // If inventory is also shown, add its windows to the same frame
-                if (showInventory)
-                {
-                    // ImGui is already in a frame, so just create windows
-                    // Need to "reopen" the frame for inventory windows
-                    m_inventoryUIRenderer.begin_frame(m_windowWidth, m_windowHeight);
-                    // Render the combined frame
-                    ImGui::Render();
-                }
-                // else: debug screen already called Render
-            }
-            else if (showInventory)
-            {
-                // Only inventory is shown, need to manage ImGui frame manually
-                ImGui_ImplWGPU_NewFrame();
-                ImGui_ImplSDL3_NewFrame();
-                ImGui::NewFrame();
-
-                m_inventoryUIRenderer.begin_frame(m_windowWidth, m_windowHeight);
-
-                ImGui::Render();
-            }
-        }
+        // Render all UI (UIManager handles frame lifecycle internally)
+        m_uiManager.render(
+            m_showDebugScreen,
+            m_gameState.is_inventory_open(),
+            m_player,
+            m_worldRenderer.getWorld(),
+            m_windowWidth,
+            m_windowHeight
+        );
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -235,11 +205,8 @@ namespace flint
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
 
-            // Render ImGui (only once, as all windows are in the same frame)
-            if (needsImGui)
-            {
-                ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), overlayRenderPass);
-            }
+            // Render all UI (managed by UIManager)
+            m_uiManager.render_to_pass(overlayRenderPass);
 
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
@@ -265,8 +232,8 @@ namespace flint
 
     void App::handle_input_event(const SDL_Event &event)
     {
-        // Let ImGui process events
-        m_debugScreenRenderer.process_event(event);
+        // Let UI manager process events
+        m_uiManager.process_event(event);
 
         // Route player input based on game state
         if (m_gameState.should_process_player_input())
@@ -345,8 +312,7 @@ namespace flint
     {
         std::cout << "Terminating app..." << std::endl;
 
-        m_inventoryUIRenderer.cleanup();
-        m_debugScreenRenderer.cleanup();
+        m_uiManager.cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();

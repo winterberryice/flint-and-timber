@@ -52,13 +52,8 @@ namespace flint::graphics
         ImGui_ImplSDL3_ProcessEvent(&event);
     }
 
-    void DebugScreenRenderer::begin_frame(const flint::player::Player &player, const flint::World &world)
+    void DebugScreenRenderer::render_ui(const flint::player::Player &player, const flint::World &world)
     {
-        // Start ImGui frame
-        ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
         // Create a simple text overlay (like Minecraft HUD)
         // Position in top-left corner with no window decorations
         ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
@@ -111,8 +106,17 @@ namespace flint::graphics
         }
 
         ImGui::End();
+    }
 
-        // Finalize ImGui frame
+    void DebugScreenRenderer::begin_frame(const flint::player::Player &player, const flint::World &world)
+    {
+        // Legacy method - manages frame lifecycle
+        ImGui_ImplWGPU_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        render_ui(player, world);
+
         ImGui::Render();
     }
 

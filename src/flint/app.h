@@ -9,8 +9,7 @@
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
 #include "graphics/crosshair_renderer.h"
-#include "graphics/debug_screen_renderer.h"
-#include "graphics/inventory_ui_renderer.h"
+#include "ui/ui_manager.h"
 #include "player.h"
 #include "game_state.h"
 
@@ -55,8 +54,7 @@ namespace flint
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
-        graphics::DebugScreenRenderer m_debugScreenRenderer;
-        graphics::InventoryUIRenderer m_inventoryUIRenderer;
+        ui::UIManager m_uiManager;
 
         Camera m_camera;
         player::Player m_player;

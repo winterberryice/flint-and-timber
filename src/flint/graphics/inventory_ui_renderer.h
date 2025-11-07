@@ -15,6 +15,11 @@ public:
     void init(SDL_Window *window, WGPUDevice device, WGPUTextureFormat surfaceFormat);
     void cleanup();
     void process_event(const SDL_Event &event);
+
+    // Creates ImGui windows (does NOT manage frame lifecycle)
+    void render_ui(int windowWidth, int windowHeight);
+
+    // Legacy method - use render_ui() instead
     void begin_frame(int windowWidth, int windowHeight);
     void render(WGPURenderPassEncoder renderPass);
 
