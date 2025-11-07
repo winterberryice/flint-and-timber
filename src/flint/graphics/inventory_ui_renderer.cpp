@@ -84,19 +84,6 @@ void InventoryUIRenderer::render_ui(int windowWidth, int windowHeight)
     ImGui::PopStyleColor();
 }
 
-void InventoryUIRenderer::begin_frame(int windowWidth, int windowHeight)
-{
-    // Legacy method - just calls render_ui
-    // Frame lifecycle should be managed externally
-    render_ui(windowWidth, windowHeight);
-}
-
-void InventoryUIRenderer::render(WGPURenderPassEncoder renderPass)
-{
-    // Rendering is handled by ImGui_ImplWGPU_RenderDrawData in the main render loop
-    // This function is here for consistency with other renderers
-}
-
 void InventoryUIRenderer::render_dimmed_background(int windowWidth, int windowHeight)
 {
     // Create a fullscreen dimmed overlay

@@ -108,24 +108,6 @@ namespace flint::graphics
         ImGui::End();
     }
 
-    void DebugScreenRenderer::begin_frame(const flint::player::Player &player, const flint::World &world)
-    {
-        // Legacy method - manages frame lifecycle
-        ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
-        render_ui(player, world);
-
-        ImGui::Render();
-    }
-
-    void DebugScreenRenderer::render(WGPURenderPassEncoder renderPass)
-    {
-        // Render ImGui
-        ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
-    }
-
     void DebugScreenRenderer::cleanup()
     {
         std::cout << "Cleaning up debug screen renderer..." << std::endl;

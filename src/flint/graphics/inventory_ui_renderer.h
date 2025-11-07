@@ -19,10 +19,6 @@ public:
     // Creates ImGui windows (does NOT manage frame lifecycle)
     void render_ui(int windowWidth, int windowHeight);
 
-    // Legacy method - use render_ui() instead
-    void begin_frame(int windowWidth, int windowHeight);
-    void render(WGPURenderPassEncoder renderPass);
-
 private:
     void render_inventory_grid(int startX, int startY, int cols, int rows, const char *label);
     void render_dimmed_background(int windowWidth, int windowHeight);
