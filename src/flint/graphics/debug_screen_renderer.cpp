@@ -47,18 +47,8 @@ namespace flint::graphics
         std::cout << "Debug screen renderer initialized." << std::endl;
     }
 
-    void DebugScreenRenderer::process_event(const SDL_Event &event)
+    void DebugScreenRenderer::render_ui(const flint::player::Player &player, const flint::World &world)
     {
-        ImGui_ImplSDL3_ProcessEvent(&event);
-    }
-
-    void DebugScreenRenderer::begin_frame(const flint::player::Player &player, const flint::World &world)
-    {
-        // Start ImGui frame
-        ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
         // Create a simple text overlay (like Minecraft HUD)
         // Position in top-left corner with no window decorations
         ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
@@ -111,15 +101,6 @@ namespace flint::graphics
         }
 
         ImGui::End();
-
-        // Finalize ImGui frame
-        ImGui::Render();
-    }
-
-    void DebugScreenRenderer::render(WGPURenderPassEncoder renderPass)
-    {
-        // Render ImGui
-        ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
     }
 
     void DebugScreenRenderer::cleanup()

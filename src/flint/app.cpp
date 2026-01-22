@@ -48,7 +48,7 @@ namespace flint
 
         m_crosshairRenderer.init(m_device, m_queue, m_surfaceFormat, m_windowWidth, m_windowHeight);
 
-        m_debugScreenRenderer.init(m_window, m_device, m_surfaceFormat);
+        m_uiManager.init(m_window, m_device, m_surfaceFormat);
 
         // The camera is now controlled by the player, so we initialize it with placeholder values.
         // It will be updated every frame in the `render` loop based on the player's state.
@@ -91,57 +91,10 @@ namespace flint
             // Handle events
             while (SDL_PollEvent(&e))
             {
-                // Let debug screen renderer process the event first
-                m_debugScreenRenderer.process_event(e);
-
-                // Let the player handle keyboard input
-                m_player.handle_input(e);
-
-                if (e.type == SDL_EVENT_QUIT)
-                {
-                    m_running = false;
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
-                {
-                    if (SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        SDL_SetWindowRelativeMouseMode(m_window, false);
-                    }
-                    else
-                    {
-                        m_running = false;
-                    }
-                }
-                else if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_F3)
-                {
-                    m_showDebugScreen = !m_showDebugScreen;
-                }
-                else if (e.type == SDL_EVENT_WINDOW_RESIZED) {
-                    onResize(e.window.data1, e.window.data2);
-                }
-                else if (e.type == SDL_EVENT_MOUSE_MOTION)
-                {
-                    if (SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        m_player.process_mouse_movement(static_cast<float>(e.motion.xrel), static_cast<float>(e.motion.yrel));
-                    }
-                }
-                else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-                {
-                    if (!SDL_GetWindowRelativeMouseMode(m_window))
-                    {
-                        SDL_SetWindowRelativeMouseMode(m_window, true);
-                        continue;
-                    }
-
-                    if (m_player.on_mouse_click(e.button, m_worldRenderer.getWorld()))
-                    {
-                        m_worldRenderer.rebuild_chunk_mesh(m_device);
-                    }
-                }
+                handle_input_event(e);
             }
 
-            // Update player physics and state
+            // Update player physics and state (always update - world continues even with inventory open)
             m_player.update(dt, m_worldRenderer.getWorld());
 
             // Render the scene
@@ -212,11 +165,15 @@ namespace flint
     {
         update_camera();
 
-        // Begin debug screen frame (if enabled)
-        if (m_showDebugScreen)
-        {
-            m_debugScreenRenderer.begin_frame(m_player, m_worldRenderer.getWorld());
-        }
+        // Render all UI (UIManager handles frame lifecycle internally)
+        m_uiManager.render(
+            m_showDebugScreen,
+            m_gameState.is_inventory_open(),
+            m_player,
+            m_worldRenderer.getWorld(),
+            m_windowWidth,
+            m_windowHeight
+        );
 
         // Get surface texture
         WGPUSurfaceTexture surfaceTexture;
@@ -247,10 +204,10 @@ namespace flint
             // --- UI Overlay Render Pass ---
             WGPURenderPassEncoder overlayRenderPass = init::begin_overlay_render_pass(encoder, textureView);
             m_crosshairRenderer.render(overlayRenderPass);
-            if (m_showDebugScreen)
-            {
-                m_debugScreenRenderer.render(overlayRenderPass);
-            }
+
+            // Render all UI (managed by UIManager)
+            m_uiManager.render_to_pass(overlayRenderPass);
+
             wgpuRenderPassEncoderEnd(overlayRenderPass);
 
             WGPUCommandBufferDescriptor cmdBufferDesc = {};
@@ -273,11 +230,89 @@ namespace flint
         wgpuTextureRelease(surfaceTexture.texture);
     }
 
+    void App::handle_input_event(const SDL_Event &event)
+    {
+        // Let UI manager process events
+        m_uiManager.process_event(event);
+
+        // Route player input based on game state
+        if (m_gameState.should_process_player_input())
+        {
+            m_player.handle_input(event);
+        }
+
+        // Handle app-level events
+        if (event.type == SDL_EVENT_QUIT)
+        {
+            m_running = false;
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
+        {
+            if (SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                SDL_SetWindowRelativeMouseMode(m_window, false);
+            }
+            else
+            {
+                m_running = false;
+            }
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F3)
+        {
+            m_showDebugScreen = !m_showDebugScreen;
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_E)
+        {
+            m_gameState.toggle_inventory();
+            sync_mouse_state();
+        }
+        else if (event.type == SDL_EVENT_WINDOW_RESIZED)
+        {
+            onResize(event.window.data1, event.window.data2);
+        }
+        else if (event.type == SDL_EVENT_MOUSE_MOTION)
+        {
+            if (SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                m_player.process_mouse_movement(
+                    static_cast<float>(event.motion.xrel),
+                    static_cast<float>(event.motion.yrel)
+                );
+            }
+        }
+        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+        {
+            // Block interaction only allowed in certain game states
+            if (!m_gameState.should_allow_block_interaction())
+            {
+                return;
+            }
+
+            if (!SDL_GetWindowRelativeMouseMode(m_window))
+            {
+                SDL_SetWindowRelativeMouseMode(m_window, true);
+                return;
+            }
+
+            if (m_player.on_mouse_click(event.button, m_worldRenderer.getWorld()))
+            {
+                m_worldRenderer.rebuild_chunk_mesh(m_device);
+            }
+        }
+    }
+
+    void App::sync_mouse_state()
+    {
+        // Sync mouse grab state with game state
+        bool should_grab = m_gameState.should_use_relative_mouse();
+        SDL_SetWindowRelativeMouseMode(m_window, should_grab);
+    }
+
     App::~App()
     {
         std::cout << "Terminating app..." << std::endl;
 
-        m_debugScreenRenderer.cleanup();
+        m_uiManager.cleanup();
         m_crosshairRenderer.cleanup();
         m_selectionRenderer.cleanup();
         m_worldRenderer.cleanup();

@@ -9,8 +9,9 @@
 #include "graphics/world_renderer.h"
 #include "graphics/selection_renderer.h"
 #include "graphics/crosshair_renderer.h"
-#include "graphics/debug_screen_renderer.h"
+#include "ui/ui_manager.h"
 #include "player.h"
+#include "game_state.h"
 
 namespace flint
 {
@@ -27,6 +28,8 @@ namespace flint
         void render();
         void update_camera();
         void onResize(int width, int height);
+        void handle_input_event(const SDL_Event &event);
+        void sync_mouse_state();
 
     private:
         // SDL resources
@@ -51,10 +54,11 @@ namespace flint
         graphics::WorldRenderer m_worldRenderer;
         graphics::SelectionRenderer m_selectionRenderer;
         graphics::CrosshairRenderer m_crosshairRenderer;
-        graphics::DebugScreenRenderer m_debugScreenRenderer;
+        ui::UIManager m_uiManager;
 
         Camera m_camera;
         player::Player m_player;
+        GameState m_gameState;
 
         // App state
         bool m_running = false;

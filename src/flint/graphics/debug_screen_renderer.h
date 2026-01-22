@@ -22,10 +22,10 @@ namespace flint::graphics
         ~DebugScreenRenderer();
 
         void init(SDL_Window *window, WGPUDevice device, WGPUTextureFormat surfaceFormat);
-        void process_event(const SDL_Event &event);
-        void begin_frame(const flint::player::Player &player, const flint::World &world);
-        void render(WGPURenderPassEncoder renderPass);
         void cleanup();
+
+        // Creates ImGui windows (does NOT manage frame lifecycle)
+        void render_ui(const flint::player::Player &player, const flint::World &world);
 
     private:
         SDL_Window *m_window = nullptr;
