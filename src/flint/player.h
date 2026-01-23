@@ -8,6 +8,7 @@
 
 #include "physics.h"
 #include "raycast.h"
+#include "inventory.h"
 
 namespace flint
 {
@@ -42,6 +43,8 @@ namespace flint
             glm::vec3 get_camera_position() const;
             std::optional<raycast::RaycastResult> get_selected_block() const;
             physics::AABB get_world_bounding_box() const;
+            inventory::Inventory& get_inventory();
+            const inventory::Inventory& get_inventory() const;
 
         private:
             void cast_ray(const flint::World &world);
@@ -66,6 +69,9 @@ namespace flint
             // Cooldown for block placement/removal to prevent single-press multi-actions
             const float BLOCK_ACTION_COOLDOWN_SECONDS = 0.2f; // 200ms
             float m_block_action_cooldown = 0.0f;
+
+            // Inventory
+            inventory::Inventory inventory;
         };
     }
 }

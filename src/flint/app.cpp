@@ -282,6 +282,21 @@ namespace flint
         }
         else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
         {
+            // If inventory is open, handle inventory clicks
+            if (m_gameState.is_inventory_open())
+            {
+                bool isLeftClick = (event.button.button == SDL_BUTTON_LEFT);
+                m_uiManager.handle_inventory_click(
+                    event.button.x,
+                    event.button.y,
+                    isLeftClick,
+                    m_player,
+                    m_windowWidth,
+                    m_windowHeight
+                );
+                return;
+            }
+
             // Block interaction only allowed in certain game states
             if (!m_gameState.should_allow_block_interaction())
             {

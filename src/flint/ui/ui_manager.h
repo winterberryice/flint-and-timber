@@ -25,11 +25,14 @@ namespace flint::ui
         void render(
             bool showDebugScreen,
             bool showInventory,
-            const player::Player &player,
+            player::Player &player,
             const World &world,
             int windowWidth,
             int windowHeight
         );
+
+        // Handle mouse click on inventory UI (returns true if handled)
+        bool handle_inventory_click(float mouseX, float mouseY, bool isLeftClick, player::Player &player, int windowWidth, int windowHeight);
 
         // Render the ImGui draw data to the render pass
         void render_to_pass(WGPURenderPassEncoder renderPass);
