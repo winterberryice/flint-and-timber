@@ -39,7 +39,8 @@ void UIManager::render(
     if (!m_initialized)
         return;
 
-    bool needsImGui = showDebugScreen || showInventory;
+    // Always need ImGui if we're showing any UI (debug screen, inventory, or hotbar)
+    bool needsImGui = showDebugScreen || showInventory || true; // Always true for hotbar
     if (!needsImGui)
     {
         m_hasActiveFrame = false;
@@ -59,7 +60,13 @@ void UIManager::render(
 
     if (showInventory)
     {
-        m_inventoryUIRenderer.render_ui(windowWidth, windowHeight);
+        // Render full inventory UI
+        m_inventoryUIRenderer.render_ui(windowWidth, windowHeight, player.get_inventory());
+    }
+    else
+    {
+        // Always render hotbar during gameplay
+        m_inventoryUIRenderer.render_hotbar(windowWidth, windowHeight, player.get_inventory());
     }
 
     // Finalize ImGui frame (ONCE for all UI elements)

@@ -89,13 +89,18 @@ namespace flint
 
                 if (!get_world_bounding_box().intersects(new_block_aabb))
                 {
-                    world.setBlock(
-                        new_block_pos.x,
-                        new_block_pos.y,
-                        new_block_pos.z,
-                        BlockType::Grass);
-                    m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
-                    return true;
+                    // Get the block type from the selected hotbar slot
+                    auto selected_block_type = inventory.getSelectedBlockType();
+                    if (selected_block_type.has_value())
+                    {
+                        world.setBlock(
+                            new_block_pos.x,
+                            new_block_pos.y,
+                            new_block_pos.z,
+                            selected_block_type.value());
+                        m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
+                        return true;
+                    }
                 }
             }
 
@@ -123,6 +128,33 @@ namespace flint
                     break;
                 case SDLK_SPACE:
                     movement_intention.jump = pressed;
+                    break;
+                case SDLK_1:
+                    if (pressed) inventory.selectHotbarSlot(0);
+                    break;
+                case SDLK_2:
+                    if (pressed) inventory.selectHotbarSlot(1);
+                    break;
+                case SDLK_3:
+                    if (pressed) inventory.selectHotbarSlot(2);
+                    break;
+                case SDLK_4:
+                    if (pressed) inventory.selectHotbarSlot(3);
+                    break;
+                case SDLK_5:
+                    if (pressed) inventory.selectHotbarSlot(4);
+                    break;
+                case SDLK_6:
+                    if (pressed) inventory.selectHotbarSlot(5);
+                    break;
+                case SDLK_7:
+                    if (pressed) inventory.selectHotbarSlot(6);
+                    break;
+                case SDLK_8:
+                    if (pressed) inventory.selectHotbarSlot(7);
+                    break;
+                case SDLK_9:
+                    if (pressed) inventory.selectHotbarSlot(8);
                     break;
                 }
             }
@@ -307,6 +339,16 @@ namespace flint
         physics::AABB Player::get_world_bounding_box() const
         {
             return physics::AABB(position + local_bounding_box.min, position + local_bounding_box.max);
+        }
+
+        inventory::Inventory& Player::get_inventory()
+        {
+            return inventory;
+        }
+
+        const inventory::Inventory& Player::get_inventory() const
+        {
+            return inventory;
         }
     }
 }
