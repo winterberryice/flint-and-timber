@@ -4,6 +4,9 @@
 #include <webgpu/webgpu.h>
 #include "../inventory.h"
 
+// Forward declarations
+struct ImVec2;
+
 namespace flint::graphics
 {
 
