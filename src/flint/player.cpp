@@ -70,13 +70,36 @@ namespace flint
 
             if (button.button == SDL_BUTTON_LEFT) // Remove block
             {
-                world.setBlock(
+                // Get the block type before removing it
+                const Block* block = world.getBlock(
                     selected_block.block_position.x,
                     selected_block.block_position.y,
-                    selected_block.block_position.z,
-                    BlockType::Air);
-                m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
-                return true;
+                    selected_block.block_position.z);
+
+                if (block)
+                {
+                    BlockType blockType = block->getType();
+
+                    // Remove the block from the world
+                    world.setBlock(
+                        selected_block.block_position.x,
+                        selected_block.block_position.y,
+                        selected_block.block_position.z,
+                        BlockType::Air);
+
+                    // Try to add the block to inventory
+                    if (blockType != BlockType::Air)
+                    {
+                        if (!inventory.addItem(blockType, 1))
+                        {
+                            // Inventory is full - for now just ignore the item
+                            // TODO: Drop item into world
+                        }
+                    }
+
+                    m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
+                    return true;
+                }
             }
             else if (button.button == SDL_BUTTON_RIGHT) // Place block
             {
@@ -93,13 +116,20 @@ namespace flint
                     auto selected_block_type = inventory.getSelectedBlockType();
                     if (selected_block_type.has_value())
                     {
-                        world.setBlock(
-                            new_block_pos.x,
-                            new_block_pos.y,
-                            new_block_pos.z,
-                            selected_block_type.value());
-                        m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
-                        return true;
+                        BlockType blockType = selected_block_type.value();
+
+                        // Try to remove one from inventory
+                        if (inventory.removeItem(blockType, 1))
+                        {
+                            // Successfully consumed item, place the block
+                            world.setBlock(
+                                new_block_pos.x,
+                                new_block_pos.y,
+                                new_block_pos.z,
+                                blockType);
+                            m_block_action_cooldown = BLOCK_ACTION_COOLDOWN_SECONDS;
+                            return true;
+                        }
                     }
                 }
             }
