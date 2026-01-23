@@ -291,8 +291,8 @@ namespace flint
                     event.button.y,
                     isLeftClick,
                     m_player,
-                    m_surfaceWidth,
-                    m_surfaceHeight
+                    m_windowWidth,
+                    m_windowHeight
                 );
                 return;
             }
