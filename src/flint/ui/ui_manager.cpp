@@ -30,7 +30,7 @@ void UIManager::process_event(const SDL_Event &event)
 void UIManager::render(
     bool showDebugScreen,
     bool showInventory,
-    const player::Player &player,
+    player::Player &player,
     const World &world,
     int windowWidth,
     int windowHeight
@@ -39,7 +39,8 @@ void UIManager::render(
     if (!m_initialized)
         return;
 
-    bool needsImGui = showDebugScreen || showInventory;
+    // Always need ImGui if we're showing any UI (debug screen, inventory, or hotbar)
+    bool needsImGui = showDebugScreen || showInventory || true; // Always true for hotbar
     if (!needsImGui)
     {
         m_hasActiveFrame = false;
@@ -59,12 +60,23 @@ void UIManager::render(
 
     if (showInventory)
     {
-        m_inventoryUIRenderer.render_ui(windowWidth, windowHeight);
+        // Render full inventory UI
+        m_inventoryUIRenderer.render_ui(windowWidth, windowHeight, player.get_inventory());
+    }
+    else
+    {
+        // Always render hotbar during gameplay
+        m_inventoryUIRenderer.render_hotbar(windowWidth, windowHeight, player.get_inventory());
     }
 
     // Finalize ImGui frame (ONCE for all UI elements)
     ImGui::Render();
     m_hasActiveFrame = true;
+}
+
+bool UIManager::handle_inventory_click(float mouseX, float mouseY, bool isLeftClick, player::Player &player, int windowWidth, int windowHeight)
+{
+    return m_inventoryUIRenderer.handle_inventory_click(mouseX, mouseY, isLeftClick, player.get_inventory(), windowWidth, windowHeight);
 }
 
 void UIManager::render_to_pass(WGPURenderPassEncoder renderPass)
