@@ -78,7 +78,7 @@ namespace flint
 
                 if (block)
                 {
-                    BlockType blockType = block->getType();
+                    BlockType blockType = block->type;
 
                     // Remove the block from the world
                     world.setBlock(
